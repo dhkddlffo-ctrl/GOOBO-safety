@@ -94,12 +94,12 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             <h3>📞 긴급 연락처</h3>
             <div className="contact-list">
               <div className="contact-item">
-                <span>안전관리팀:</span>
-                <strong>02-XXXX-XXXX</strong>
+                <span>안전팀:</span>
+                <strong>070-8233-3214</strong>
               </div>
               <div className="contact-item">
                 <span>본사:</span>
-                <strong>02-XXXX-XXXX</strong>
+                <strong>02-3444-0411</strong>
               </div>
               <a 
                 href="https://open.kakao.com/o/s8fVw05h" 
