@@ -1,6 +1,7 @@
 import { Site } from '../types';
+import { getSites } from '../utils/storage';
 
-export const sites: Site[] = [
+const defaultSites: Site[] = [
   { id: 1, name: '용인시 에코타운 조성 민자사업 현장', location: '용인시', status: 'active' },
   { id: 2, name: '운정3지구A-8BL민간임대주택신축공사', location: '파주시', status: 'active' },
   { id: 3, name: '장위6구역 주택재개발 정비사업파트 신축공사', location: '서울시 성북구', status: 'active' },
@@ -12,3 +13,8 @@ export const sites: Site[] = [
   { id: 9, name: '부천대장 A5 6BL공공주택', location: '부천시', status: 'active' },
   { id: 10, name: '수표구역 도시정비형 재개발사업', location: '서울시', status: 'active' },
 ];
+
+export const sites: Site[] = (() => {
+  const savedSites = getSites();
+  return savedSites.length > 0 ? savedSites : defaultSites;
+})();

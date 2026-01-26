@@ -1,5 +1,6 @@
-import React from 'react';
-import { sites } from '../data/sites';
+import React, { useState, useEffect } from 'react';
+import { getSites } from '../utils/storage';
+import { Site } from '../types';
 import './HomePage.css';
 
 interface HomePageProps {
@@ -7,6 +8,20 @@ interface HomePageProps {
 }
 
 const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
+  const [sites, setSites] = useState<Site[]>([]);
+
+  useEffect(() => {
+    // 초기 로드 시 저장된 현장 목록 불러오기
+    const savedSites = getSites();
+    if (savedSites.length === 0) {
+      // 저장된 현장이 없으면 기본 현장 목록 사용
+      import('../data/sites').then(module => {
+        setSites(module.sites);
+      });
+    } else {
+      setSites(savedSites.filter(s => s.status === 'active'));
+    }
+  }, []);
   return (
     <div className="home-page">
       {/* Hero Section */}

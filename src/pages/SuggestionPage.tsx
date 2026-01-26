@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { sites } from '../data/sites';
-import { Suggestion } from '../types';
+import React, { useState, useEffect } from 'react';
+import { getSites } from '../utils/storage';
+import { Suggestion, Site } from '../types';
 import { saveSuggestion, generateId } from '../utils/storage';
 import './SuggestionPage.css';
 
@@ -10,6 +10,7 @@ interface SuggestionPageProps {
 }
 
 const SuggestionPage: React.FC<SuggestionPageProps> = ({ onNavigate, preselectedSiteId }) => {
+  const [sites, setSites] = useState<Site[]>([]);
   const [formData, setFormData] = useState({
     siteId: preselectedSiteId || 0,
     workerName: '',
@@ -22,6 +23,17 @@ const SuggestionPage: React.FC<SuggestionPageProps> = ({ onNavigate, preselected
   const [images, setImages] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    const savedSites = getSites();
+    if (savedSites.length === 0) {
+      import('../data/sites').then(module => {
+        setSites(module.sites.filter(s => s.status === 'active'));
+      });
+    } else {
+      setSites(savedSites.filter(s => s.status === 'active'));
+    }
+  }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

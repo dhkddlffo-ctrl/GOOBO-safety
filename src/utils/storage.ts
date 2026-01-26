@@ -1,8 +1,10 @@
 import { Suggestion, WorkStopRequest } from '../types';
+import { Site } from '../types';
 
 // 로컬스토리지 키
 const SUGGESTIONS_KEY = 'gubo_suggestions';
 const WORK_STOPS_KEY = 'gubo_work_stops';
+const SITES_KEY = 'gubo_sites';
 
 // 건의사항 관련 함수
 export const getSuggestions = (): Suggestion[] => {
@@ -87,4 +89,45 @@ export const clearAllWorkStops = (): void => {
 export const clearAllData = (): void => {
   clearAllSuggestions();
   clearAllWorkStops();
+};
+
+// 현장 관리 함수
+export const getSites = (): Site[] => {
+  const data = localStorage.getItem(SITES_KEY);
+  if (!data) {
+    // 기본 현장 데이터 반환
+    return [];
+  }
+  return JSON.parse(data);
+};
+
+export const saveSites = (sites: Site[]): void => {
+  localStorage.setItem(SITES_KEY, JSON.stringify(sites));
+};
+
+export const addSite = (site: Site): void => {
+  const sites = getSites();
+  sites.push(site);
+  saveSites(sites);
+};
+
+export const updateSite = (id: number, updates: Partial<Site>): void => {
+  const sites = getSites();
+  const index = sites.findIndex(s => s.id === id);
+  if (index !== -1) {
+    sites[index] = { ...sites[index], ...updates };
+    saveSites(sites);
+  }
+};
+
+export const deleteSite = (id: number): void => {
+  const sites = getSites();
+  const filtered = sites.filter(s => s.id !== id);
+  saveSites(filtered);
+};
+
+export const generateSiteId = (): number => {
+  const sites = getSites();
+  if (sites.length === 0) return 1;
+  return Math.max(...sites.map(s => s.id)) + 1;
 };

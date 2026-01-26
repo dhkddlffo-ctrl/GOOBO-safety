@@ -140,6 +140,118 @@
   transform: translateY(-1px);
 }
 
+.btn-add-site {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #86efac;
+}
+
+.btn-add-site:hover {
+  background: #a7f3d0;
+  transform: translateY(-1px);
+}
+
+.access-denied {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  max-width: 500px;
+  margin: 4rem auto;
+}
+
+.access-denied-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.7;
+}
+
+.access-denied h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.access-denied p {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+
+.sites-management-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.site-management-card {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+}
+
+.site-management-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+}
+
+.site-management-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.site-management-header h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.site-meta {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.badge-secondary {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.site-management-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-body input,
+.modal-body select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: all 0.2s;
+  background: white;
+}
+
+.modal-body input:focus,
+.modal-body select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
 .content-section {
   min-height: 400px;
 }
@@ -563,5 +675,31 @@
 
   .btn-manage {
     width: 100%;
+  }
+
+  .site-management-actions {
+    flex-wrap: wrap;
+  }
+
+  .site-management-actions .btn {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .access-denied {
+    padding: 3rem 1.5rem;
+    margin: 2rem auto;
+  }
+
+  .access-denied-icon {
+    font-size: 3rem;
+  }
+
+  .access-denied h2 {
+    font-size: 1.5rem;
+  }
+
+  .access-denied p {
+    font-size: 1rem;
   }
 }

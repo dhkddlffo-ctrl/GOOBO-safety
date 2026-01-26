@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate } from '../utils/storage';
-import { Suggestion, WorkStopRequest } from '../types';
+import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, saveSites, addSite, updateSite, deleteSite, generateSiteId } from '../utils/storage';
+import { Suggestion, WorkStopRequest, Site } from '../types';
 import './AdminPage.css';
 
 interface AdminPageProps {
   onNavigate: (page: string) => void;
+  isLoggedIn: boolean;
 }
 
 interface CompletionModalData {
@@ -14,11 +15,19 @@ interface CompletionModalData {
   images: string[];
 }
 
-const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
-  const [activeTab, setActiveTab] = useState<'suggestions' | 'workstops'>('workstops');
+const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
+  const [activeTab, setActiveTab] = useState<'suggestions' | 'workstops' | 'sites'>('workstops');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [workStops, setWorkStops] = useState<WorkStopRequest[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showSiteModal, setShowSiteModal] = useState(false);
+  const [editingSite, setEditingSite] = useState<Site | null>(null);
+  const [siteFormData, setSiteFormData] = useState({
+    name: '',
+    location: '',
+    status: 'active' as 'active' | 'inactive'
+  });
   const [completionData, setCompletionData] = useState<CompletionModalData>({
     type: 'suggestion',
     id: '',
@@ -34,6 +43,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   const loadData = () => {
     setSuggestions(getSuggestions());
     setWorkStops(getWorkStops());
+    setSites(getSites());
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,6 +198,71 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     }
   };
 
+  const openSiteModal = (site?: Site) => {
+    if (site) {
+      setEditingSite(site);
+      setSiteFormData({
+        name: site.name,
+        location: site.location,
+        status: site.status
+      });
+    } else {
+      setEditingSite(null);
+      setSiteFormData({
+        name: '',
+        location: '',
+        status: 'active'
+      });
+    }
+    setShowSiteModal(true);
+  };
+
+  const closeSiteModal = () => {
+    setShowSiteModal(false);
+    setEditingSite(null);
+    setSiteFormData({
+      name: '',
+      location: '',
+      status: 'active'
+    });
+  };
+
+  const handleSiteSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!siteFormData.name.trim() || !siteFormData.location.trim()) {
+      alert('현장명과 위치를 입력해주세요.');
+      return;
+    }
+
+    if (editingSite) {
+      // 수정
+      updateSite(editingSite.id, siteFormData);
+      alert('현장이 수정되었습니다.');
+    } else {
+      // 추가
+      const newSite: Site = {
+        id: generateSiteId(),
+        ...siteFormData
+      };
+      addSite(newSite);
+      alert('새 현장이 추가되었습니다.');
+    }
+
+    loadData();
+    closeSiteModal();
+  };
+
+  const handleDeleteSite = (id: number, name: string) => {
+    const confirmMessage = `정말로 "${name}" 현장을 삭제하시겠습니까?\n\n이 현장과 관련된 모든 데이터도 함께 삭제됩니다.\n이 작업은 취소할 수 없습니다.`;
+    
+    if (window.confirm(confirmMessage)) {
+      deleteSite(id);
+      loadData();
+      alert('현장이 삭제되었습니다.');
+    }
+  };
+
   const handleSuggestionStatusChange = (id: string, status: Suggestion['status']) => {
     if (status === '완료') {
       openCompletionModal('suggestion', id);
@@ -235,7 +310,35 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     pendingSuggestions: suggestions.filter(s => s.status === '접수' || s.status === '검토중').length,
     totalWorkStops: workStops.length,
     activeWorkStops: workStops.filter(w => w.status === '요청' || w.status === '승인').length,
+    totalSites: sites.length,
+    activeSites: sites.filter(s => s.status === 'active').length,
   };
+
+  // 로그인하지 않은 경우
+  if (!isLoggedIn) {
+    return (
+      <div className="admin-page">
+        <div className="container">
+          <div className="page-header">
+            <button className="back-button" onClick={() => onNavigate('home')}>
+              ← 뒤로가기
+            </button>
+            <h1>관리자 대시보드</h1>
+            <p>현장 안전 관리 현황</p>
+          </div>
+
+          <div className="access-denied">
+            <div className="access-denied-icon">🔒</div>
+            <h2>접근 권한이 필요합니다</h2>
+            <p>관리자 대시보드에 접근하려면 로그인이 필요합니다.</p>
+            <button className="btn btn-primary" onClick={() => onNavigate('home')}>
+              홈으로 돌아가기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-page">
@@ -271,6 +374,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
               </div>
             </div>
           </div>
+
+          <div className="stat-card">
+            <div className="stat-icon">🏗️</div>
+            <div className="stat-content">
+              <h3>현장</h3>
+              <div className="stat-value">{stats.totalSites}</div>
+              <div className="stat-label">
+                운영중: <strong>{stats.activeSites}</strong>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -287,22 +401,40 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
           >
             건의사항 ({suggestions.length})
           </button>
+          <button
+            className={`tab ${activeTab === 'sites' ? 'active' : ''}`}
+            onClick={() => setActiveTab('sites')}
+          >
+            현장 관리 ({sites.length})
+          </button>
         </div>
 
         {/* Management Actions */}
         <div className="management-actions">
-          <button 
-            className="btn-manage btn-clear-current"
-            onClick={() => handleClearAll(activeTab === 'workstops' ? 'workstop' : 'suggestion')}
-          >
-            🗑️ {activeTab === 'workstops' ? '작업중지 전체 삭제' : '건의사항 전체 삭제'}
-          </button>
-          <button 
-            className="btn-manage btn-clear-all"
-            onClick={() => handleClearAll('all')}
-          >
-            ⚠️ 모든 데이터 삭제
-          </button>
+          {activeTab === 'sites' && (
+            <button 
+              className="btn-manage btn-add-site"
+              onClick={() => openSiteModal()}
+            >
+              ➕ 새 현장 추가
+            </button>
+          )}
+          {activeTab !== 'sites' && (
+            <>
+              <button 
+                className="btn-manage btn-clear-current"
+                onClick={() => handleClearAll(activeTab === 'workstops' ? 'workstop' : 'suggestion')}
+              >
+                🗑️ {activeTab === 'workstops' ? '작업중지 전체 삭제' : '건의사항 전체 삭제'}
+              </button>
+              <button 
+                className="btn-manage btn-clear-all"
+                onClick={() => handleClearAll('all')}
+              >
+                ⚠️ 모든 데이터 삭제
+              </button>
+            </>
+          )}
         </div>
 
         {/* Work Stops Tab */}
@@ -557,6 +689,65 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
           </div>
         )}
 
+        {/* Sites Tab */}
+        {activeTab === 'sites' && (
+          <div className="content-section">
+            {sites.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🏗️</div>
+                <p>등록된 현장이 없습니다.</p>
+                <button className="btn btn-primary" onClick={() => openSiteModal()}>
+                  새 현장 추가하기
+                </button>
+              </div>
+            ) : (
+              <div className="sites-management-list">
+                {sites.map((site) => (
+                  <div key={site.id} className="site-management-card">
+                    <div className="site-management-header">
+                      <div>
+                        <h3>{site.name}</h3>
+                        <p className="site-meta">
+                          📍 {site.location}
+                        </p>
+                      </div>
+                      <span className={`badge ${site.status === 'active' ? 'badge-success' : 'badge-secondary'}`}>
+                        {site.status === 'active' ? '운영중' : '중단'}
+                      </span>
+                    </div>
+
+                    <div className="site-management-actions">
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => openSiteModal(site)}
+                      >
+                        ✏️ 수정
+                      </button>
+                      <button
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => {
+                          const newStatus = site.status === 'active' ? 'inactive' : 'active';
+                          updateSite(site.id, { status: newStatus });
+                          loadData();
+                        }}
+                      >
+                        {site.status === 'active' ? '⏸️ 중단' : '▶️ 재개'}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-delete"
+                        onClick={() => handleDeleteSite(site.id, site.name)}
+                        title="삭제"
+                      >
+                        🗑️ 삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Completion Modal */}
         {showCompletionModal && (
           <div className="modal-overlay" onClick={closeCompletionModal}>
@@ -646,6 +837,65 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                   완료 처리
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Site Modal */}
+        {showSiteModal && (
+          <div className="modal-overlay" onClick={closeSiteModal}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>{editingSite ? '현장 수정' : '새 현장 추가'}</h2>
+                <button className="modal-close" onClick={closeSiteModal}>✕</button>
+              </div>
+
+              <form className="modal-body" onSubmit={handleSiteSubmit}>
+                <div className="form-group">
+                  <label htmlFor="siteName">현장명 *</label>
+                  <input
+                    type="text"
+                    id="siteName"
+                    value={siteFormData.name}
+                    onChange={(e) => setSiteFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="예: 용인시 에코타운 조성 민자사업 현장"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="siteLocation">위치 *</label>
+                  <input
+                    type="text"
+                    id="siteLocation"
+                    value={siteFormData.location}
+                    onChange={(e) => setSiteFormData(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="예: 용인시"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="siteStatus">상태 *</label>
+                  <select
+                    id="siteStatus"
+                    value={siteFormData.status}
+                    onChange={(e) => setSiteFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                  >
+                    <option value="active">운영중</option>
+                    <option value="inactive">중단</option>
+                  </select>
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-secondary" onClick={closeSiteModal}>
+                    취소
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    {editingSite ? '수정하기' : '추가하기'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
