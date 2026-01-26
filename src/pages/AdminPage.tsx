@@ -157,6 +157,24 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                         <strong>상황 설명:</strong>
                         <p>{workStop.description}</p>
                       </div>
+                      {workStop.images && workStop.images.length > 0 && (
+                        <div className="item-images">
+                          <strong>첨부 사진:</strong>
+                          <div className="admin-image-grid">
+                            {workStop.images.map((img, idx) => (
+                              <a 
+                                key={idx} 
+                                href={img} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="admin-image-item"
+                              >
+                                <img src={img} alt={`위험 상황 ${idx + 1}`} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="item-actions">
@@ -229,6 +247,24 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                         <strong>내용:</strong>
                         <p>{suggestion.content}</p>
                       </div>
+                      {suggestion.images && suggestion.images.length > 0 && (
+                        <div className="item-images">
+                          <strong>첨부 사진:</strong>
+                          <div className="admin-image-grid">
+                            {suggestion.images.map((img, idx) => (
+                              <a 
+                                key={idx} 
+                                href={img} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="admin-image-item"
+                              >
+                                <img src={img} alt={`첨부 사진 ${idx + 1}`} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="item-actions">

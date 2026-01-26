@@ -19,8 +19,67 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
     description: '',
   });
 
+  const [images, setImages] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (images.length + files.length > 5) {
+      alert('최대 5개의 이미지만 첨부할 수 있습니다.');
+      return;
+    }
+
+    setUploading(true);
+
+    const newImages: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // 파일 크기 체크 (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`${file.name}은(는) 5MB를 초과합니다.`);
+        continue;
+      }
+
+      // 이미지 파일 체크
+      if (!file.type.startsWith('image/')) {
+        alert(`${file.name}은(는) 이미지 파일이 아닙니다.`);
+        continue;
+      }
+
+      try {
+        const base64 = await fileToBase64(file);
+        newImages.push(base64);
+      } catch (error) {
+        console.error('이미지 변환 실패:', error);
+        alert(`${file.name} 업로드에 실패했습니다.`);
+      }
+    }
+
+    setImages(prev => [...prev, ...newImages]);
+    setUploading(false);
+    
+    // input 초기화
+    e.target.value = '';
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +106,7 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
       location: formData.location,
       dangerType: formData.dangerType,
       description: formData.description,
+      images: images.length > 0 ? images : undefined,
       status: '요청',
       createdAt: new Date().toISOString(),
     };
@@ -97,6 +157,7 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
                 onClick={() => {
                   setSubmitted(false);
                   setConfirmed(false);
+                  setImages([]);
                   setFormData({
                     siteId: preselectedSiteId || 0,
                     workerName: '',
@@ -238,6 +299,45 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
                 required
               />
             </div>
+
+            <div className="form-group">
+              <label htmlFor="images">위험 상황 사진 (선택, 최대 5개)</label>
+              <div className="image-upload-container">
+                <label htmlFor="imageInput" className="image-upload-button">
+                  <span className="upload-icon">📷</span>
+                  <span>사진 추가하기</span>
+                  <span className="upload-hint">JPG, PNG (최대 5MB)</span>
+                </label>
+                <input
+                  type="file"
+                  id="imageInput"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                  disabled={uploading || images.length >= 5}
+                />
+                {uploading && <div className="uploading-text">업로드 중...</div>}
+              </div>
+
+              {images.length > 0 && (
+                <div className="image-preview-grid">
+                  {images.map((img, index) => (
+                    <div key={index} className="image-preview-item">
+                      <img src={img} alt={`위험 상황 ${index + 1}`} />
+                      <button
+                        type="button"
+                        className="image-remove-button"
+                        onClick={() => removeImage(index)}
+                        title="삭제"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="confirm-section">
@@ -258,7 +358,7 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
             <button type="button" className="btn btn-secondary" onClick={() => onNavigate('home')}>
               취소
             </button>
-            <button type="submit" className="btn btn-danger" disabled={!confirmed}>
+            <button type="submit" className="btn btn-danger" disabled={!confirmed || uploading}>
               즉시 신고하기
             </button>
           </div>
