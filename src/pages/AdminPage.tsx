@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, formatDate } from '../utils/storage';
+import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate } from '../utils/storage';
 import { Suggestion, WorkStopRequest } from '../types';
 import './AdminPage.css';
 
@@ -145,6 +145,49 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     alert('처리가 완료되었습니다.');
   };
 
+  const handleDelete = (type: 'suggestion' | 'workstop', id: string, title: string) => {
+    const confirmMessage = `정말로 삭제하시겠습니까?\n\n"${title}"\n\n이 작업은 취소할 수 없습니다.`;
+    
+    if (window.confirm(confirmMessage)) {
+      if (type === 'suggestion') {
+        deleteSuggestion(id);
+      } else {
+        deleteWorkStop(id);
+      }
+      loadData();
+      alert('삭제되었습니다.');
+    }
+  };
+
+  const handleClearAll = (type: 'suggestion' | 'workstop' | 'all') => {
+    let confirmMessage = '';
+    
+    if (type === 'all') {
+      confirmMessage = '⚠️ 모든 데이터를 삭제하시겠습니까?\n\n• 모든 건의사항\n• 모든 작업중지 요청\n\n이 작업은 취소할 수 없습니다!';
+    } else if (type === 'suggestion') {
+      confirmMessage = '⚠️ 모든 건의사항을 삭제하시겠습니까?\n\n이 작업은 취소할 수 없습니다!';
+    } else {
+      confirmMessage = '⚠️ 모든 작업중지 요청을 삭제하시겠습니까?\n\n이 작업은 취소할 수 없습니다!';
+    }
+
+    if (window.confirm(confirmMessage)) {
+      const doubleConfirm = window.confirm('정말로 삭제하시겠습니까? 마지막 확인입니다.');
+      
+      if (doubleConfirm) {
+        if (type === 'all') {
+          clearAllSuggestions();
+          clearAllWorkStops();
+        } else if (type === 'suggestion') {
+          clearAllSuggestions();
+        } else {
+          clearAllWorkStops();
+        }
+        loadData();
+        alert('삭제가 완료되었습니다.');
+      }
+    }
+  };
+
   const handleSuggestionStatusChange = (id: string, status: Suggestion['status']) => {
     if (status === '완료') {
       openCompletionModal('suggestion', id);
@@ -243,6 +286,22 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
             onClick={() => setActiveTab('suggestions')}
           >
             건의사항 ({suggestions.length})
+          </button>
+        </div>
+
+        {/* Management Actions */}
+        <div className="management-actions">
+          <button 
+            className="btn-manage btn-clear-current"
+            onClick={() => handleClearAll(activeTab === 'workstops' ? 'workstop' : 'suggestion')}
+          >
+            🗑️ {activeTab === 'workstops' ? '작업중지 전체 삭제' : '건의사항 전체 삭제'}
+          </button>
+          <button 
+            className="btn-manage btn-clear-all"
+            onClick={() => handleClearAll('all')}
+          >
+            ⚠️ 모든 데이터 삭제
           </button>
         </div>
 
@@ -359,6 +418,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                           작업 재개 승인
                         </button>
                       )}
+                      <button
+                        className="btn btn-sm btn-delete"
+                        onClick={() => handleDelete('workstop', workStop.id, workStop.siteName)}
+                        title="삭제"
+                      >
+                        🗑️ 삭제
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -476,6 +542,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                           완료 처리
                         </button>
                       )}
+                      <button
+                        className="btn btn-sm btn-delete"
+                        onClick={() => handleDelete('suggestion', suggestion.id, suggestion.title)}
+                        title="삭제"
+                      >
+                        🗑️ 삭제
+                      </button>
                     </div>
                   </div>
                 ))}

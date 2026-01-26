@@ -25,6 +25,12 @@ export const updateSuggestion = (id: string, updates: Partial<Suggestion>): void
   }
 };
 
+export const deleteSuggestion = (id: string): void => {
+  const suggestions = getSuggestions();
+  const filtered = suggestions.filter(s => s.id !== id);
+  localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(filtered));
+};
+
 // 작업중지권 관련 함수
 export const getWorkStops = (): WorkStopRequest[] => {
   const data = localStorage.getItem(WORK_STOPS_KEY);
@@ -46,6 +52,12 @@ export const updateWorkStop = (id: string, updates: Partial<WorkStopRequest>): v
   }
 };
 
+export const deleteWorkStop = (id: string): void => {
+  const workStops = getWorkStops();
+  const filtered = workStops.filter(w => w.id !== id);
+  localStorage.setItem(WORK_STOPS_KEY, JSON.stringify(filtered));
+};
+
 // ID 생성 함수
 export const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -61,4 +73,18 @@ export const formatDate = (dateString: string): string => {
     hour: '2-digit',
     minute: '2-digit',
   });
+};
+
+// 전체 데이터 삭제 함수
+export const clearAllSuggestions = (): void => {
+  localStorage.removeItem(SUGGESTIONS_KEY);
+};
+
+export const clearAllWorkStops = (): void => {
+  localStorage.removeItem(WORK_STOPS_KEY);
+};
+
+export const clearAllData = (): void => {
+  clearAllSuggestions();
+  clearAllWorkStops();
 };

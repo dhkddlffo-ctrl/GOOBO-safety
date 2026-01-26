@@ -89,6 +89,57 @@
   color: white;
 }
 
+.management-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-manage {
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.btn-clear-current {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.btn-clear-current:hover {
+  background: #fde68a;
+  transform: translateY(-1px);
+}
+
+.btn-clear-all {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.btn-clear-all:hover {
+  background: #fecaca;
+  transform: translateY(-1px);
+}
+
+.btn-delete {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.btn-delete:hover {
+  background: #fecaca;
+  transform: translateY(-1px);
+}
+
 .content-section {
   min-height: 400px;
 }
@@ -498,6 +549,14 @@
   }
 
   .modal-actions .btn {
+    width: 100%;
+  }
+
+  .management-actions {
+    flex-direction: column;
+  }
+
+  .btn-manage {
     width: 100%;
   }
 }
