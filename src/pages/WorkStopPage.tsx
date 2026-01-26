@@ -27,13 +27,7 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
 
   useEffect(() => {
     const savedSites = getSites();
-    if (savedSites.length === 0) {
-      import('../data/sites').then(module => {
-        setSites(module.sites.filter(s => s.status === 'active'));
-      });
-    } else {
-      setSites(savedSites.filter(s => s.status === 'active'));
-    }
+    setSites(savedSites.filter(s => s.status === 'active'));
   }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

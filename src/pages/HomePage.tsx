@@ -12,15 +12,9 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     // 초기 로드 시 저장된 현장 목록 불러오기
+    // getSites()는 자동으로 기본 10개 현장을 생성함
     const savedSites = getSites();
-    if (savedSites.length === 0) {
-      // 저장된 현장이 없으면 기본 현장 목록 사용
-      import('../data/sites').then(module => {
-        setSites(module.sites);
-      });
-    } else {
-      setSites(savedSites.filter(s => s.status === 'active'));
-    }
+    setSites(savedSites.filter(s => s.status === 'active'));
   }, []);
   return (
     <div className="home-page">
