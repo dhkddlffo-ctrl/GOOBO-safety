@@ -188,6 +188,11 @@
   color: var(--text-secondary);
 }
 
+.item-meta .anonymous {
+  color: #9ca3af;
+  font-style: italic;
+}
+
 .item-body {
   margin-bottom: 1rem;
   padding: 1rem;

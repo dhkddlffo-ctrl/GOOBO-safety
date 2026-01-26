@@ -95,8 +95,8 @@ const SuggestionPage: React.FC<SuggestionPageProps> = ({ onNavigate, preselected
       id: generateId(),
       siteId: formData.siteId,
       siteName: site.name,
-      workerName: formData.workerName,
-      phone: formData.phone,
+      workerName: formData.workerName || '익명',
+      phone: formData.phone || '미제공',
       category: formData.category,
       title: formData.title,
       content: formData.content,
@@ -196,28 +196,26 @@ const SuggestionPage: React.FC<SuggestionPageProps> = ({ onNavigate, preselected
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="workerName">성명 *</label>
+                <label htmlFor="workerName">성명 (선택)</label>
                 <input
                   type="text"
                   id="workerName"
                   name="workerName"
                   value={formData.workerName}
                   onChange={handleChange}
-                  placeholder="홍길동"
-                  required
+                  placeholder="홍길동 (익명 가능)"
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="phone">연락처 *</label>
+                <label htmlFor="phone">연락처 (선택)</label>
                 <input
                   type="tel"
                   id="phone"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="010-1234-5678"
-                  required
+                  placeholder="010-1234-5678 (선택)"
                 />
               </div>
             </div>
@@ -323,7 +321,8 @@ const SuggestionPage: React.FC<SuggestionPageProps> = ({ onNavigate, preselected
           <ul>
             <li>제출된 건의사항은 안전관리팀에서 검토 후 답변 드립니다.</li>
             <li>긴급한 안전 문제는 작업중지권을 행사해주세요.</li>
-            <li>개인정보는 건의사항 처리 목적으로만 사용됩니다.</li>
+            <li>성명과 연락처는 선택사항입니다. 익명으로 제출 가능합니다.</li>
+            <li>답변을 원하시는 경우 연락처를 입력해주세요.</li>
             <li>사진은 최대 5개까지, 각 5MB 이하로 첨부 가능합니다.</li>
           </ul>
         </div>
