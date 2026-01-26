@@ -7,11 +7,25 @@ interface AdminPageProps {
   onNavigate: (page: string) => void;
 }
 
+interface CompletionModalData {
+  type: 'suggestion' | 'workstop';
+  id: string;
+  response: string;
+  images: string[];
+}
+
 const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState<'suggestions' | 'workstops'>('workstops');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [workStops, setWorkStops] = useState<WorkStopRequest[]>([]);
-  const [selectedItem, setSelectedItem] = useState<Suggestion | WorkStopRequest | null>(null);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionData, setCompletionData] = useState<CompletionModalData>({
+    type: 'suggestion',
+    id: '',
+    response: '',
+    images: []
+  });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -22,18 +36,134 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
     setWorkStops(getWorkStops());
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (completionData.images.length + files.length > 5) {
+      alert('최대 5개의 이미지만 첨부할 수 있습니다.');
+      return;
+    }
+
+    setUploading(true);
+
+    const newImages: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`${file.name}은(는) 5MB를 초과합니다.`);
+        continue;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        alert(`${file.name}은(는) 이미지 파일이 아닙니다.`);
+        continue;
+      }
+
+      try {
+        const base64 = await fileToBase64(file);
+        newImages.push(base64);
+      } catch (error) {
+        console.error('이미지 변환 실패:', error);
+        alert(`${file.name} 업로드에 실패했습니다.`);
+      }
+    }
+
+    setCompletionData(prev => ({
+      ...prev,
+      images: [...prev.images, ...newImages]
+    }));
+    setUploading(false);
+    
+    e.target.value = '';
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setCompletionData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  const openCompletionModal = (type: 'suggestion' | 'workstop', id: string) => {
+    setCompletionData({
+      type,
+      id,
+      response: '',
+      images: []
+    });
+    setShowCompletionModal(true);
+  };
+
+  const closeCompletionModal = () => {
+    setShowCompletionModal(false);
+    setCompletionData({
+      type: 'suggestion',
+      id: '',
+      response: '',
+      images: []
+    });
+  };
+
+  const handleCompletion = () => {
+    if (!completionData.response.trim()) {
+      alert('조치 내용을 입력해주세요.');
+      return;
+    }
+
+    const now = new Date().toISOString();
+
+    if (completionData.type === 'suggestion') {
+      updateSuggestion(completionData.id, {
+        status: '완료',
+        response: completionData.response,
+        respondedAt: now,
+        responseImages: completionData.images.length > 0 ? completionData.images : undefined
+      });
+    } else {
+      updateWorkStop(completionData.id, {
+        status: '작업재개',
+        resumedAt: now,
+        remarks: completionData.response,
+        resumeImages: completionData.images.length > 0 ? completionData.images : undefined
+      });
+    }
+
+    loadData();
+    closeCompletionModal();
+    alert('처리가 완료되었습니다.');
+  };
+
   const handleSuggestionStatusChange = (id: string, status: Suggestion['status']) => {
+    if (status === '완료') {
+      openCompletionModal('suggestion', id);
+      return;
+    }
     updateSuggestion(id, { status });
     loadData();
   };
 
   const handleWorkStopStatusChange = (id: string, status: WorkStopRequest['status']) => {
+    if (status === '작업재개') {
+      openCompletionModal('workstop', id);
+      return;
+    }
+
     const updates: Partial<WorkStopRequest> = { status };
     if (status === '승인') {
       updates.approvedAt = new Date().toISOString();
       updates.approvedBy = '안전관리팀';
-    } else if (status === '작업재개') {
-      updates.resumedAt = new Date().toISOString();
     }
     updateWorkStop(id, updates);
     loadData();
@@ -175,6 +305,33 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                           </div>
                         </div>
                       )}
+                      {workStop.status === '작업재개' && workStop.remarks && (
+                        <div className="completion-info">
+                          <strong>조치 내용:</strong>
+                          <p>{workStop.remarks}</p>
+                          <div className="completion-meta">
+                            처리 완료: {formatDate(workStop.resumedAt!)}
+                          </div>
+                          {workStop.resumeImages && workStop.resumeImages.length > 0 && (
+                            <div className="item-images">
+                              <strong>조치 사진:</strong>
+                              <div className="admin-image-grid">
+                                {workStop.resumeImages.map((img, idx) => (
+                                  <a 
+                                    key={idx} 
+                                    href={img} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="admin-image-item"
+                                  >
+                                    <img src={img} alt={`조치 사진 ${idx + 1}`} />
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="item-actions">
@@ -265,6 +422,33 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                           </div>
                         </div>
                       )}
+                      {suggestion.status === '완료' && suggestion.response && (
+                        <div className="completion-info">
+                          <strong>처리 내용:</strong>
+                          <p>{suggestion.response}</p>
+                          <div className="completion-meta">
+                            처리 완료: {formatDate(suggestion.respondedAt!)}
+                          </div>
+                          {suggestion.responseImages && suggestion.responseImages.length > 0 && (
+                            <div className="item-images">
+                              <strong>처리 사진:</strong>
+                              <div className="admin-image-grid">
+                                {suggestion.responseImages.map((img, idx) => (
+                                  <a 
+                                    key={idx} 
+                                    href={img} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="admin-image-item"
+                                  >
+                                    <img src={img} alt={`처리 사진 ${idx + 1}`} />
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="item-actions">
@@ -297,6 +481,99 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate }) => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Completion Modal */}
+        {showCompletionModal && (
+          <div className="modal-overlay" onClick={closeCompletionModal}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>
+                  {completionData.type === 'suggestion' ? '건의사항 완료 처리' : '작업 재개 승인'}
+                </h2>
+                <button className="modal-close" onClick={closeCompletionModal}>✕</button>
+              </div>
+
+              <div className="modal-body">
+                <div className="form-group">
+                  <label htmlFor="response">
+                    {completionData.type === 'suggestion' ? '처리 내용 *' : '조치 내용 *'}
+                  </label>
+                  <textarea
+                    id="response"
+                    value={completionData.response}
+                    onChange={(e) => setCompletionData(prev => ({ ...prev, response: e.target.value }))}
+                    placeholder={completionData.type === 'suggestion' 
+                      ? '건의사항에 대한 처리 내용을 입력하세요' 
+                      : '위험 요소 제거 및 조치 내용을 입력하세요'}
+                    rows={6}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="completionImages">
+                    {completionData.type === 'suggestion' ? '처리 사진' : '조치 사진'} (선택, 최대 5개)
+                  </label>
+                  <div className="image-upload-container">
+                    <label htmlFor="completionImageInput" className="image-upload-button">
+                      <span className="upload-icon">📷</span>
+                      <span>사진 추가하기</span>
+                      <span className="upload-hint">JPG, PNG (최대 5MB)</span>
+                    </label>
+                    <input
+                      type="file"
+                      id="completionImageInput"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      style={{ display: 'none' }}
+                      disabled={uploading || completionData.images.length >= 5}
+                    />
+                    {uploading && <div className="uploading-text">업로드 중...</div>}
+                  </div>
+
+                  {completionData.images.length > 0 && (
+                    <div className="image-preview-grid">
+                      {completionData.images.map((img, index) => (
+                        <div key={index} className="image-preview-item">
+                          <img src={img} alt={`미리보기 ${index + 1}`} />
+                          <button
+                            type="button"
+                            className="image-remove-button"
+                            onClick={() => removeImage(index)}
+                            title="삭제"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="completion-date-info">
+                  <span>처리 날짜: {new Date().toLocaleString('ko-KR')}</span>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={closeCompletionModal}
+                >
+                  취소
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleCompletion}
+                  disabled={uploading || !completionData.response.trim()}
+                >
+                  완료 처리
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

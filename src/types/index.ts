@@ -21,6 +21,7 @@ export interface Suggestion {
   createdAt: string;
   response?: string;
   respondedAt?: string;
+  responseImages?: string[];
 }
 
 // 작업중지권 타입
@@ -40,4 +41,5 @@ export interface WorkStopRequest {
   approvedBy?: string;
   resumedAt?: string;
   remarks?: string;
+  resumeImages?: string[];
 }
