@@ -151,6 +151,28 @@
   transform: translateY(-1px);
 }
 
+.btn-info {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.btn-info:hover {
+  background: #bfdbfe;
+  transform: translateY(-1px);
+}
+
+.btn-success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #86efac;
+}
+
+.btn-success:hover {
+  background: #a7f3d0;
+  transform: translateY(-1px);
+}
+
 .access-denied {
   text-align: center;
   padding: 4rem 2rem;
@@ -224,6 +246,23 @@
 .badge-secondary {
   background-color: #f3f4f6;
   color: #6b7280;
+}
+
+.badge-completed {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.completed-site-card {
+  background: #f9fafb;
+  border-left: 4px solid #60a5fa;
+}
+
+.completed-date {
+  font-size: 0.8125rem;
+  color: #1e40af;
+  margin-top: 0.25rem;
+  font-weight: 500;
 }
 
 .site-management-actions {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, saveSites, addSite, updateSite, deleteSite, generateSiteId } from '../utils/storage';
+import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, saveSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite } from '../utils/storage';
 import { Suggestion, WorkStopRequest, Site } from '../types';
 import './AdminPage.css';
 
@@ -16,17 +16,18 @@ interface CompletionModalData {
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
-  const [activeTab, setActiveTab] = useState<'suggestions' | 'workstops' | 'sites'>('workstops');
+  const [activeTab, setActiveTab] = useState<'suggestions' | 'workstops' | 'sites' | 'completed'>('workstops');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [workStops, setWorkStops] = useState<WorkStopRequest[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
+  const [completedSites, setCompletedSites] = useState<Site[]>([]);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [siteFormData, setSiteFormData] = useState({
     name: '',
     location: '',
-    status: 'active' as 'active' | 'inactive'
+    status: 'active' as 'active' | 'inactive' | 'completed'
   });
   const [completionData, setCompletionData] = useState<CompletionModalData>({
     type: 'suggestion',
@@ -44,6 +45,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     setSuggestions(getSuggestions());
     setWorkStops(getWorkStops());
     setSites(getSites());
+    setCompletedSites(getCompletedSites());
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,12 +256,42 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
   };
 
   const handleDeleteSite = (id: number, name: string) => {
-    const confirmMessage = `정말로 "${name}" 현장을 삭제하시겠습니까?\n\n이 현장과 관련된 모든 데이터도 함께 삭제됩니다.\n이 작업은 취소할 수 없습니다.`;
+    const confirmMessage = `정말로 "${name}" 현장을 삭제하시겠습니까?\n\n이 작업은 취소할 수 없습니다.`;
     
     if (window.confirm(confirmMessage)) {
       deleteSite(id);
       loadData();
       alert('현장이 삭제되었습니다.');
+    }
+  };
+
+  const handleCompleteSite = (id: number, name: string) => {
+    const confirmMessage = `"${name}" 현장을 준공 처리하시겠습니까?\n\n준공된 현장은 보관함으로 이동됩니다.\n이후 필요시 다시 복원할 수 있습니다.`;
+    
+    if (window.confirm(confirmMessage)) {
+      moveSiteToCompleted(id);
+      loadData();
+      alert('현장이 준공 처리되어 보관함으로 이동되었습니다.');
+    }
+  };
+
+  const handleRestoreSite = (id: number, name: string) => {
+    const confirmMessage = `"${name}" 현장을 다시 운영 현장으로 복원하시겠습니까?`;
+    
+    if (window.confirm(confirmMessage)) {
+      restoreSiteFromCompleted(id);
+      loadData();
+      alert('현장이 복원되었습니다.');
+    }
+  };
+
+  const handleDeleteCompletedSite = (id: number, name: string) => {
+    const confirmMessage = `정말로 "${name}" 준공 현장을 영구 삭제하시겠습니까?\n\n이 작업은 취소할 수 없습니다.`;
+    
+    if (window.confirm(confirmMessage)) {
+      deleteCompletedSite(id);
+      loadData();
+      alert('준공 현장이 삭제되었습니다.');
     }
   };
 
@@ -312,6 +344,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     activeWorkStops: workStops.filter(w => w.status === '요청' || w.status === '승인').length,
     totalSites: sites.length,
     activeSites: sites.filter(s => s.status === 'active').length,
+    completedSites: completedSites.length,
   };
 
   // 로그인하지 않은 경우
@@ -407,6 +440,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
           >
             현장 관리 ({sites.length})
           </button>
+          <button
+            className={`tab ${activeTab === 'completed' ? 'active' : ''}`}
+            onClick={() => setActiveTab('completed')}
+          >
+            준공 현장 ({completedSites.length})
+          </button>
         </div>
 
         {/* Management Actions */}
@@ -419,7 +458,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               ➕ 새 현장 추가
             </button>
           )}
-          {activeTab !== 'sites' && (
+          {activeTab === 'completed' && (
+            <button 
+              className="btn-manage btn-info"
+              onClick={() => alert('준공된 현장은 보관 상태입니다.\n필요시 개별적으로 복원하거나 삭제할 수 있습니다.')}
+            >
+              ℹ️ 준공 현장 안내
+            </button>
+          )}
+          {activeTab !== 'sites' && activeTab !== 'completed' && (
             <>
               <button 
                 className="btn-manage btn-clear-current"
@@ -734,11 +781,70 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                         {site.status === 'active' ? '⏸️ 중단' : '▶️ 재개'}
                       </button>
                       <button
+                        className="btn btn-sm btn-success"
+                        onClick={() => handleCompleteSite(site.id, site.name)}
+                        title="준공 처리"
+                      >
+                        ✅ 준공
+                      </button>
+                      <button
                         className="btn btn-sm btn-delete"
                         onClick={() => handleDeleteSite(site.id, site.name)}
                         title="삭제"
                       >
                         🗑️ 삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Completed Sites Tab */}
+        {activeTab === 'completed' && (
+          <div className="content-section">
+            {completedSites.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">📦</div>
+                <p>준공된 현장이 없습니다.</p>
+              </div>
+            ) : (
+              <div className="sites-management-list">
+                {completedSites.map((site) => (
+                  <div key={site.id} className="site-management-card completed-site-card">
+                    <div className="site-management-header">
+                      <div>
+                        <h3>{site.name}</h3>
+                        <p className="site-meta">
+                          📍 {site.location}
+                        </p>
+                        {site.completedAt && (
+                          <p className="completed-date">
+                            ✅ 준공일: {formatDate(site.completedAt)}
+                          </p>
+                        )}
+                      </div>
+                      <span className="badge badge-completed">
+                        준공
+                      </span>
+                    </div>
+
+                    <div className="site-management-actions">
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => handleRestoreSite(site.id, site.name)}
+                        title="복원"
+                      >
+                        🔄 복원
+                      </button>
+                      <button
+                        className="btn btn-sm btn-delete"
+                        onClick={() => handleDeleteCompletedSite(site.id, site.name)}
+                        title="영구 삭제"
+                      >
+                        🗑️ 영구 삭제
                       </button>
                     </div>
                   </div>

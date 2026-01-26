@@ -3,7 +3,8 @@ export interface Site {
   id: number;
   name: string;
   location: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'completed';
+  completedAt?: string;
 }
 
 // 건의사항 타입
