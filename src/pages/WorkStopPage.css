@@ -1,0 +1,186 @@
+.work-stop-page {
+  min-height: 100vh;
+  padding: 2rem 0;
+}
+
+.danger-header {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 2px solid #fecaca;
+  margin-bottom: 2rem;
+}
+
+.danger-header h1 {
+  color: #991b1b;
+}
+
+.warning-box {
+  background: #fffbeb;
+  border: 2px solid #fcd34d;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.warning-box h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 1rem;
+}
+
+.warning-box p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+
+.warning-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.warning-box li {
+  color: var(--text-secondary);
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.warning-box li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #f59e0b;
+  font-weight: bold;
+}
+
+.work-stop-form {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  margin-bottom: 2rem;
+}
+
+.confirm-section {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.confirm-checkbox {
+  display: flex;
+  align-items: flex-start;
+  cursor: pointer;
+  gap: 0.75rem;
+}
+
+.confirm-checkbox input[type="checkbox"] {
+  margin-top: 0.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.confirm-checkbox span {
+  color: #991b1b;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.success-message.danger {
+  border: 2px solid #fecaca;
+}
+
+.success-message.danger h2 {
+  color: #991b1b;
+}
+
+.emergency-info {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  text-align: left;
+}
+
+.emergency-info h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 1rem;
+}
+
+.emergency-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.emergency-info li {
+  color: var(--text-secondary);
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+  font-weight: 500;
+}
+
+.emergency-info li::before {
+  content: '⚠️';
+  position: absolute;
+  left: 0;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .work-stop-page {
+    padding: 1rem 0;
+  }
+
+  .danger-header {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .danger-header h1 {
+    font-size: 1.5rem;
+    margin-top: 2.5rem;
+  }
+
+  .warning-box {
+    padding: 1.25rem;
+  }
+
+  .warning-box h3 {
+    font-size: 1.125rem;
+  }
+
+  .work-stop-form {
+    padding: 1.5rem;
+  }
+
+  .confirm-section {
+    padding: 1.25rem;
+  }
+
+  .confirm-checkbox {
+    gap: 0.5rem;
+  }
+
+  .confirm-checkbox span {
+    font-size: 0.875rem;
+  }
+
+  .emergency-info {
+    padding: 1.25rem;
+  }
+}
