@@ -36,6 +36,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     images: []
   });
   const [uploading, setUploading] = useState(false);
+  const [selectedSiteIds, setSelectedSiteIds] = useState<number[]>([]);
 
   useEffect(() => {
     loadData();
@@ -271,7 +272,43 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     if (window.confirm(confirmMessage)) {
       moveSiteToCompleted(id);
       loadData();
+      setSelectedSiteIds([]);
       alert('현장이 준공 처리되어 보관함으로 이동되었습니다.');
+    }
+  };
+
+  const handleBatchCompleteSites = () => {
+    if (selectedSiteIds.length === 0) {
+      alert('준공 처리할 현장을 선택해주세요.');
+      return;
+    }
+    
+    const selectedSites = sites.filter(s => selectedSiteIds.includes(s.id));
+    const siteNames = selectedSites.map(s => s.name).join('\n- ');
+    
+    const confirmMessage = `다음 ${selectedSiteIds.length}개 현장을 준공 처리하시겠습니까?\n\n- ${siteNames}\n\n준공된 현장은 '준공 현장' 탭에서 확인할 수 있습니다.`;
+    
+    if (window.confirm(confirmMessage)) {
+      selectedSiteIds.forEach(id => moveSiteToCompleted(id));
+      loadData();
+      setSelectedSiteIds([]);
+      alert(`${selectedSiteIds.length}개 현장이 준공 처리되었습니다.`);
+    }
+  };
+
+  const toggleSiteSelection = (id: number) => {
+    setSelectedSiteIds(prev => 
+      prev.includes(id) 
+        ? prev.filter(sId => sId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedSiteIds.length === sites.length) {
+      setSelectedSiteIds([]);
+    } else {
+      setSelectedSiteIds(sites.map(s => s.id));
     }
   };
 
@@ -748,10 +785,38 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                 </button>
               </div>
             ) : (
-              <div className="sites-management-list">
+              <>
+                <div className="batch-actions">
+                  <div className="batch-select">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={selectedSiteIds.length === sites.length && sites.length > 0}
+                        onChange={toggleSelectAll}
+                      />
+                      전체 선택 ({selectedSiteIds.length}/{sites.length})
+                    </label>
+                  </div>
+                  {selectedSiteIds.length > 0 && (
+                    <button
+                      className="btn btn-success"
+                      onClick={handleBatchCompleteSites}
+                    >
+                      ✅ 선택한 현장 준공 처리 ({selectedSiteIds.length})
+                    </button>
+                  )}
+                </div>
+                <div className="sites-management-list">
                 {sites.map((site) => (
-                  <div key={site.id} className="site-management-card">
+                  <div key={site.id} className={`site-management-card ${selectedSiteIds.includes(site.id) ? 'selected' : ''}`}>
                     <div className="site-management-header">
+                      <label className="site-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={selectedSiteIds.includes(site.id)}
+                          onChange={() => toggleSiteSelection(site.id)}
+                        />
+                      </label>
                       <div>
                         <h3>{site.name}</h3>
                         <p className="site-meta">
@@ -798,6 +863,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                   </div>
                 ))}
               </div>
+              </>
             )}
           </div>
         )}

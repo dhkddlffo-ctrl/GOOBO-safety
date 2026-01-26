@@ -203,6 +203,42 @@
   margin-bottom: 2rem;
 }
 
+/* Batch Actions */
+.batch-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.batch-select {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1.125rem;
+  height: 1.125rem;
+  cursor: pointer;
+}
+
 .sites-management-list {
   display: flex;
   flex-direction: column;
@@ -218,6 +254,12 @@
   transition: all 0.2s;
 }
 
+.site-management-card.selected {
+  border-color: var(--primary-color);
+  background: #f0f9ff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 .site-management-card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--primary-color);
@@ -229,6 +271,19 @@
   align-items: flex-start;
   margin-bottom: 1rem;
   gap: 1rem;
+}
+
+.site-checkbox {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-right: 0.75rem;
+}
+
+.site-checkbox input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
 }
 
 .site-management-header h3 {
