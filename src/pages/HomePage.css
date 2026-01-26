@@ -213,6 +213,54 @@
   line-height: 1.6;
 }
 
+.kakao-chat-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #FEE500 0%, #FFEB3B 100%);
+  border-radius: 0.75rem;
+  margin-top: 1rem;
+  text-decoration: none;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(254, 229, 0, 0.3);
+}
+
+.kakao-chat-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(254, 229, 0, 0.5);
+}
+
+.kakao-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.kakao-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.kakao-text strong {
+  color: #3C1E1E;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.kakao-hint {
+  color: #5C4033;
+  font-size: 0.875rem;
+}
+
+.arrow-icon {
+  font-size: 1.5rem;
+  color: #3C1E1E;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .hero-content h1 {
     font-size: 2rem;
@@ -248,5 +296,25 @@
 
   .info-section {
     grid-template-columns: 1fr;
+  }
+
+  .kakao-chat-link {
+    padding: 0.875rem;
+  }
+
+  .kakao-icon {
+    font-size: 1.75rem;
+  }
+
+  .kakao-text strong {
+    font-size: 0.9375rem;
+  }
+
+  .kakao-hint {
+    font-size: 0.8125rem;
+  }
+
+  .arrow-icon {
+    font-size: 1.25rem;
   }
 }

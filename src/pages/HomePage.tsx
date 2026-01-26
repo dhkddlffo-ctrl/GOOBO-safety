@@ -101,6 +101,19 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 <span>본사:</span>
                 <strong>02-XXXX-XXXX</strong>
               </div>
+              <a 
+                href="https://open.kakao.com/o/s8fVw05h" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="kakao-chat-link"
+              >
+                <span className="kakao-icon">💬</span>
+                <div className="kakao-text">
+                  <strong>안전팀장과 1:1 소통방</strong>
+                  <span className="kakao-hint">카카오톡으로 바로 상담</span>
+                </div>
+                <span className="arrow-icon">→</span>
+              </a>
             </div>
           </div>
 
