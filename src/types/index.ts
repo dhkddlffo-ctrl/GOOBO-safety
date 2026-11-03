@@ -51,7 +51,7 @@ export interface AccidentCase {
   siteId: number;
   siteName: string;
   accidentDate: string; // 사고 발생 일시
-  accidentType: '추락' | '낙하비래' | '전도' | '협착' | '전기감전' | '화재폭발' | '끼임' | '부딪힘' | '넘어짐' | '기타';
+  accidentType: '추락' | '낙하비래' | '전도' | '협착' | '전기감전' | '화재폭발' | '끼임' | '부딪힘' | '넘어짐' | '질병' | '기타';
   severity: '경상' | '중상' | '사망' | '무재해';
   location: string; // 사고 발생 장소
   victimName?: string; // 피해자 성명 (선택)
@@ -67,4 +67,7 @@ export interface AccidentCase {
   completedAt?: string;
   investigationResult?: string; // 조사 결과
   investigationImages?: string[];
+  // 새로 추가되는 필드
+  disasterReportSubmitted?: '제출' | '미제출'; // 사업재해조사표 제출 여부
+  treatmentResult?: '공상' | '산재' | '질병성' | '미처리'; // 사고 처리결과
 }

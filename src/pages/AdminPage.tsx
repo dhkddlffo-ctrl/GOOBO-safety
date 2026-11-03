@@ -937,6 +937,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                           <strong>보고자:</strong>
                           <p>{accident.reporterName} ({accident.reporterPhone})</p>
                         </div>
+                        <div className="info-item">
+                          <strong>재해조사표:</strong>
+                          <p>{accident.disasterReportSubmitted || '미제출'}</p>
+                        </div>
+                        <div className="info-item">
+                          <strong>처리결과:</strong>
+                          <p>{accident.treatmentResult || '미처리'}</p>
+                        </div>
                       </div>
 
                       <div className="info-item">

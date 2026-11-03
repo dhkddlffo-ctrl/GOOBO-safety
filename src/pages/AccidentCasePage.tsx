@@ -14,7 +14,7 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
   const [formData, setFormData] = useState({
     siteId: preselectedSiteId || 0,
     accidentDate: '',
-    accidentType: '추락' as '추락' | '낙하비래' | '전도' | '협착' | '전기감전' | '화재폭발' | '끼임' | '부딪힘' | '넘어짐' | '기타',
+    accidentType: '추락' as '추락' | '낙하비래' | '전도' | '협착' | '전기감전' | '화재폭발' | '끼임' | '부딪힘' | '넘어짐' | '질병' | '기타',
     severity: '경상' as '경상' | '중상' | '사망' | '무재해',
     location: '',
     victimName: '',
@@ -24,6 +24,8 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
     preventiveMeasures: '',
     reporterName: '',
     reporterPhone: '',
+    disasterReportSubmitted: '미제출' as '제출' | '미제출',
+    treatmentResult: '미처리' as '공상' | '산재' | '질병성' | '미처리',
   });
 
   const [images, setImages] = useState<string[]>([]);
@@ -136,6 +138,8 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
       createdAt: new Date().toISOString(),
       reporterName: formData.reporterName,
       reporterPhone: formData.reporterPhone,
+      disasterReportSubmitted: formData.disasterReportSubmitted,
+      treatmentResult: formData.treatmentResult,
     };
 
     saveAccidentCase(accidentCase);
@@ -172,6 +176,8 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                     preventiveMeasures: '',
                     reporterName: '',
                     reporterPhone: '',
+                    disasterReportSubmitted: '미제출',
+                    treatmentResult: '미처리',
                   });
                   setImages([]);
                 }}
@@ -249,6 +255,7 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                 <option value="끼임">끼임</option>
                 <option value="부딪힘">부딪힘</option>
                 <option value="넘어짐">넘어짐</option>
+                <option value="질병">질병</option>
                 <option value="기타">기타</option>
               </select>
             </div>
@@ -266,6 +273,37 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                 <option value="경상">경상</option>
                 <option value="중상">중상</option>
                 <option value="사망">사망</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 사업재해조사표 및 처리결과 */}
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="disasterReportSubmitted">사업재해조사표 제출 여부</label>
+              <select
+                id="disasterReportSubmitted"
+                name="disasterReportSubmitted"
+                value={formData.disasterReportSubmitted}
+                onChange={handleInputChange}
+              >
+                <option value="미제출">미제출</option>
+                <option value="제출">제출</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="treatmentResult">사고 처리결과</label>
+              <select
+                id="treatmentResult"
+                name="treatmentResult"
+                value={formData.treatmentResult}
+                onChange={handleInputChange}
+              >
+                <option value="미처리">미처리</option>
+                <option value="공상">공상</option>
+                <option value="산재">산재</option>
+                <option value="질병성">질병성</option>
               </select>
             </div>
           </div>
