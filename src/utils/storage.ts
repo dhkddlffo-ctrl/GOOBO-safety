@@ -1,10 +1,11 @@
-import { Suggestion, WorkStopRequest } from '../types';
+import { Suggestion, WorkStopRequest, AccidentCase } from '../types';
 import { Site } from '../types';
 
 // 로컬스토리지 키
 const SUGGESTIONS_KEY = 'gubo_suggestions';
 const WORK_STOPS_KEY = 'gubo_work_stops';
 const SITES_KEY = 'gubo_sites';
+const ACCIDENT_CASES_KEY = 'gubo_accident_cases';
 
 // 건의사항 관련 함수
 export const getSuggestions = (): Suggestion[] => {
@@ -207,4 +208,35 @@ export const deleteCompletedSite = (id: number): void => {
   const completedSites = getCompletedSites();
   const filtered = completedSites.filter(s => s.id !== id);
   saveCompletedSites(filtered);
+};
+
+// 사고사례 관리 함수
+export const getAccidentCases = (): AccidentCase[] => {
+  const data = localStorage.getItem(ACCIDENT_CASES_KEY);
+  return data ? JSON.parse(data) : [];
+};
+
+export const saveAccidentCase = (accidentCase: AccidentCase): void => {
+  const cases = getAccidentCases();
+  cases.unshift(accidentCase);
+  localStorage.setItem(ACCIDENT_CASES_KEY, JSON.stringify(cases));
+};
+
+export const updateAccidentCase = (id: string, updates: Partial<AccidentCase>): void => {
+  const cases = getAccidentCases();
+  const index = cases.findIndex(c => c.id === id);
+  if (index !== -1) {
+    cases[index] = { ...cases[index], ...updates };
+    localStorage.setItem(ACCIDENT_CASES_KEY, JSON.stringify(cases));
+  }
+};
+
+export const deleteAccidentCase = (id: string): void => {
+  const cases = getAccidentCases();
+  const filtered = cases.filter(c => c.id !== id);
+  localStorage.setItem(ACCIDENT_CASES_KEY, JSON.stringify(filtered));
+};
+
+export const clearAllAccidentCases = (): void => {
+  localStorage.removeItem(ACCIDENT_CASES_KEY);
 };

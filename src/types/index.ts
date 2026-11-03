@@ -44,3 +44,27 @@ export interface WorkStopRequest {
   remarks?: string;
   resumeImages?: string[];
 }
+
+// 사고사례 타입
+export interface AccidentCase {
+  id: string;
+  siteId: number;
+  siteName: string;
+  accidentDate: string; // 사고 발생 일시
+  accidentType: '추락' | '낙하비래' | '전도' | '협착' | '전기감전' | '화재폭발' | '끼임' | '부딪힘' | '넘어짐' | '기타';
+  severity: '경상' | '중상' | '사망' | '무재해';
+  location: string; // 사고 발생 장소
+  victimName?: string; // 피해자 성명 (선택)
+  victimAge?: number; // 피해자 나이
+  description: string; // 사고 경위
+  cause: string; // 사고 원인
+  preventiveMeasures: string; // 재발 방지 대책
+  images?: string[]; // 사고 현장 사진
+  status: '접수' | '조사중' | '완료';
+  createdAt: string;
+  reporterName: string; // 보고자
+  reporterPhone: string;
+  completedAt?: string;
+  investigationResult?: string; // 조사 결과
+  investigationImages?: string[];
+}

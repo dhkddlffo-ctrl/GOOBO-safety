@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import HomePage from './pages/HomePage';
 import SuggestionPage from './pages/SuggestionPage';
 import WorkStopPage from './pages/WorkStopPage';
+import AccidentCasePage from './pages/AccidentCasePage';
 import AdminPage from './pages/AdminPage';
 import LoginModal from './components/LoginModal';
 import { isAuthenticated, logout } from './utils/auth';
 import './App.css';
 
-type Page = 'home' | 'suggestion' | 'work-stop' | 'admin';
+type Page = 'home' | 'suggestion' | 'work-stop' | 'accident-case' | 'admin';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -73,6 +74,9 @@ function App() {
         )}
         {currentPage === 'work-stop' && (
           <WorkStopPage onNavigate={navigate} preselectedSiteId={preselectedSiteId} />
+        )}
+        {currentPage === 'accident-case' && (
+          <AccidentCasePage onNavigate={navigate} preselectedSiteId={preselectedSiteId} />
         )}
         {currentPage === 'admin' && <AdminPage onNavigate={navigate} isLoggedIn={isLoggedIn} />}
       </main>

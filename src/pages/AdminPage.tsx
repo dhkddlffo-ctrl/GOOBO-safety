@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, saveSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite } from '../utils/storage';
-import { Suggestion, WorkStopRequest, Site } from '../types';
+import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, saveSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite, getAccidentCases, updateAccidentCase, deleteAccidentCase } from '../utils/storage';
+import { Suggestion, WorkStopRequest, Site, AccidentCase } from '../types';
 import './AdminPage.css';
 
 interface AdminPageProps {
@@ -16,11 +16,12 @@ interface CompletionModalData {
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
-  const [activeTab, setActiveTab] = useState<'suggestions' | 'workstops' | 'sites' | 'completed'>('workstops');
+  const [activeTab, setActiveTab] = useState<'suggestions' | 'workstops' | 'sites' | 'completed' | 'accidents'>('workstops');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [workStops, setWorkStops] = useState<WorkStopRequest[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [completedSites, setCompletedSites] = useState<Site[]>([]);
+  const [accidentCases, setAccidentCases] = useState<AccidentCase[]>([]);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
@@ -47,6 +48,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     setWorkStops(getWorkStops());
     setSites(getSites());
     setCompletedSites(getCompletedSites());
+    setAccidentCases(getAccidentCases());
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -382,6 +384,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     totalSites: sites.length,
     activeSites: sites.filter(s => s.status === 'active').length,
     completedSites: completedSites.length,
+    totalAccidents: accidentCases.length,
+    pendingAccidents: accidentCases.filter(a => a.status === '접수' || a.status === '조사중').length,
   };
 
   // 로그인하지 않은 경우

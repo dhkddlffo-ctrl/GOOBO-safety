@@ -83,6 +83,16 @@
   background-color: #f9fafb;
 }
 
+.action-warning {
+  border: 2px solid #f59e0b;
+  background-color: #fffbeb;
+}
+
+.action-warning:hover {
+  border-color: #d97706;
+  background-color: #fef3c7;
+}
+
 .action-icon {
   font-size: 3.5rem;
   margin-bottom: 1rem;
