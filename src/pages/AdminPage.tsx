@@ -160,18 +160,28 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     alert('처리가 완료되었습니다.');
   };
 
-  const handleDelete = (type: 'suggestion' | 'workstop', id: string, title: string) => {
+  const handleDelete = (type: 'suggestion' | 'workstop' | 'accident', id: string, title: string) => {
     const confirmMessage = `정말로 삭제하시겠습니까?\n\n"${title}"\n\n이 작업은 취소할 수 없습니다.`;
     
     if (window.confirm(confirmMessage)) {
       if (type === 'suggestion') {
         deleteSuggestion(id);
-      } else {
+      } else if (type === 'workstop') {
         deleteWorkStop(id);
+      } else {
+        deleteAccidentCase(id);
       }
       loadData();
       alert('삭제되었습니다.');
     }
+  };
+
+  const handleAccidentStatusChange = (id: string, status: AccidentCase['status']) => {
+    updateAccidentCase(id, { 
+      status,
+      completedAt: status === '완료' ? new Date().toISOString() : undefined
+    });
+    loadData();
   };
 
   const handleClearAll = (type: 'suggestion' | 'workstop' | 'all') => {
@@ -450,6 +460,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
           </div>
 
           <div className="stat-card">
+            <div className="stat-icon">⚠️</div>
+            <div className="stat-content">
+              <h3>사고사례</h3>
+              <div className="stat-value">{stats.totalAccidents}</div>
+              <div className="stat-label">
+                대기중: <strong>{stats.pendingAccidents}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-card">
             <div className="stat-icon">🏗️</div>
             <div className="stat-content">
               <h3>현장</h3>
@@ -474,6 +495,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
             onClick={() => setActiveTab('suggestions')}
           >
             건의사항 ({suggestions.length})
+          </button>
+          <button
+            className={`tab ${activeTab === 'accidents' ? 'active' : ''}`}
+            onClick={() => setActiveTab('accidents')}
+          >
+            사고사례 ({accidentCases.length})
           </button>
           <button
             className={`tab ${activeTab === 'sites' ? 'active' : ''}`}
@@ -868,6 +895,143 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                 ))}
               </div>
               </>
+            )}
+          </div>
+        )}
+
+        {/* Accident Cases Tab */}
+        {activeTab === 'accidents' && (
+          <div className="content-section">
+            {accidentCases.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">⚠️</div>
+                <p>사고사례가 없습니다.</p>
+              </div>
+            ) : (
+              <div className="items-list">
+                {accidentCases.map((accident) => (
+                  <div key={accident.id} className="item-card">
+                    <div className="item-header">
+                      <div className="item-title-section">
+                        <h3>{accident.siteName} - {accident.accidentType}</h3>
+                        <span className={`badge ${getStatusBadgeClass(accident.status)}`}>
+                          {accident.status}
+                        </span>
+                      </div>
+                      <div className="item-meta">
+                        <span>🗓️ 사고일시: {formatDate(accident.accidentDate)}</span>
+                        <span>📍 {accident.location}</span>
+                        <span className={`severity-badge severity-${accident.severity}`}>
+                          심각도: {accident.severity}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="item-content">
+                      <div className="accident-info-grid">
+                        <div className="info-item">
+                          <strong>피해자:</strong>
+                          <p>{accident.victimName}{accident.victimAge ? ` (${accident.victimAge}세)` : ''}</p>
+                        </div>
+                        <div className="info-item">
+                          <strong>보고자:</strong>
+                          <p>{accident.reporterName} ({accident.reporterPhone})</p>
+                        </div>
+                      </div>
+
+                      <div className="info-item">
+                        <strong>사고 경위:</strong>
+                        <p>{accident.description}</p>
+                      </div>
+                      <div className="info-item">
+                        <strong>사고 원인:</strong>
+                        <p>{accident.cause}</p>
+                      </div>
+                      <div className="info-item">
+                        <strong>재발 방지 대책:</strong>
+                        <p>{accident.preventiveMeasures}</p>
+                      </div>
+
+                      {accident.images && accident.images.length > 0 && (
+                        <div className="item-images">
+                          <strong>사고 현장 사진:</strong>
+                          <div className="admin-image-grid">
+                            {accident.images.map((img, idx) => (
+                              <a 
+                                key={idx} 
+                                href={img} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="admin-image-item"
+                              >
+                                <img src={img} alt={`사고 현장 ${idx + 1}`} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {accident.status === '완료' && accident.investigationResult && (
+                        <div className="completion-info">
+                          <strong>조사 결과:</strong>
+                          <p>{accident.investigationResult}</p>
+                          <div className="completion-meta">
+                            조사 완료: {formatDate(accident.completedAt!)}
+                          </div>
+                          {accident.investigationImages && accident.investigationImages.length > 0 && (
+                            <div className="item-images">
+                              <strong>조사 결과 사진:</strong>
+                              <div className="admin-image-grid">
+                                {accident.investigationImages.map((img, idx) => (
+                                  <a 
+                                    key={idx} 
+                                    href={img} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="admin-image-item"
+                                  >
+                                    <img src={img} alt={`조사 결과 ${idx + 1}`} />
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <p className="item-date">
+                        제출일: {formatDate(accident.createdAt)}
+                      </p>
+                    </div>
+
+                    <div className="item-actions">
+                      {accident.status === '접수' && (
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => handleAccidentStatusChange(accident.id, '조사중')}
+                        >
+                          조사 시작
+                        </button>
+                      )}
+                      {accident.status === '조사중' && (
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => handleAccidentStatusChange(accident.id, '완료')}
+                        >
+                          조사 완료
+                        </button>
+                      )}
+                      <button
+                        className="btn btn-sm btn-delete"
+                        onClick={() => handleDelete('accident', accident.id, `${accident.siteName} - ${accident.accidentType}`)}
+                        title="삭제"
+                      >
+                        🗑️ 삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

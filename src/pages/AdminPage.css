@@ -797,3 +797,49 @@
     font-size: 1rem;
   }
 }
+
+/* 사고사례 관련 스타일 */
+.accident-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.severity-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.severity-무재해 {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.severity-경상 {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.severity-중상 {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.severity-사망 {
+  background: #1f2937;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .accident-info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
