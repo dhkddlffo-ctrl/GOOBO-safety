@@ -6,6 +6,7 @@ import {
   renameDocumentCategory,
   renameDocumentSubcategory,
   reassignDocumentSubcategory,
+  moveDocumentCategory,
 } from './documentStorage';
 
 /**
@@ -241,10 +242,12 @@ export const deleteCategory = (key: string, reassignTo?: string): CategoryResult
     if (sameName(reassignTo, key)) {
       return { ok: false, error: '다른 분류를 선택해주세요.' };
     }
-    if (!categories.some(c => c.key === reassignTo) && !sameName(reassignTo, FALLBACK_CATEGORY)) {
+    const target = categories.find(c => c.key === reassignTo);
+    if (!target && !sameName(reassignTo, FALLBACK_CATEGORY)) {
       return { ok: false, error: '이동할 분류를 찾을 수 없습니다.' };
     }
-    renameDocumentCategory(key, reassignTo);
+    // 대상 분류에 존재하지 않는 소분류는 해제 (고아 소분류 방지)
+    moveDocumentCategory(key, reassignTo, target?.subs ?? []);
   }
 
   persist(categories.filter(c => c.key !== key));
