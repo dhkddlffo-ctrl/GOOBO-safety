@@ -16,17 +16,22 @@ import DocumentArchive from '../components/DocumentArchive';
 import './SiteDetailPage.css';
 
 interface SiteDetailPageProps {
-  onNavigate: (page: string, siteId?: number) => void;
+  onNavigate: (page: string, siteId?: number, tab?: string) => void;
   siteId?: number;
+  /** 해시(#/site/3/documents)로 진입할 때 열 탭 */
+  initialTab?: string;
 }
 
 type Tab = 'info' | 'documents' | 'activity';
 
-const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) => {
+const isTab = (value?: string): value is Tab =>
+  value === 'info' || value === 'documents' || value === 'activity';
+
+const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, initialTab }) => {
   const [site, setSite] = useState<Site | null>(null);
   const [siteInfo, setSiteInfo] = useState<SiteInfo | null>(null);
   const [docs, setDocs] = useState<SiteDocument[]>([]);
-  const [activeTab, setActiveTab] = useState<Tab>('info');
+  const [activeTab, setActiveTab] = useState<Tab>(isTab(initialTab) ? initialTab : 'info');
   const [canManage, setCanManage] = useState(false);
 
   const categories = useCategories();
@@ -196,6 +201,12 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
 
   const docCountByCategory = (key: string) => docs.filter(d => d.category === key).length;
 
+  /** 탭 변경 시 해시도 함께 갱신 (#/site/3/documents 로 공유·북마크 가능) */
+  const changeTab = (tab: Tab) => {
+    setActiveTab(tab);
+    onNavigate('site-detail', site.id, tab);
+  };
+
   /* ---------------- 렌더 ---------------- */
   return (
     <div className="site-detail-page">
@@ -234,19 +245,19 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
         <div className="sd-tabs">
           <button
             className={`sd-tab ${activeTab === 'info' ? 'active' : ''}`}
-            onClick={() => setActiveTab('info')}
+            onClick={() => changeTab('info')}
           >
             🏗️ 현장정보
           </button>
           <button
             className={`sd-tab ${activeTab === 'documents' ? 'active' : ''}`}
-            onClick={() => setActiveTab('documents')}
+            onClick={() => changeTab('documents')}
           >
             📁 문서보관함 <span className="sd-tab-count">{docs.length}</span>
           </button>
           <button
             className={`sd-tab ${activeTab === 'activity' ? 'active' : ''}`}
-            onClick={() => setActiveTab('activity')}
+            onClick={() => changeTab('activity')}
           >
             📋 안전활동
           </button>

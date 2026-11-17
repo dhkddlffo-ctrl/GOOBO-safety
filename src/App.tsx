@@ -40,23 +40,24 @@ const SLUG_TO_PAGE: Record<string, Page> = {
   admin: 'admin',
 };
 
-/** 해시(#/site/3) → 페이지/현장ID 해석 */
-const parseHash = (hash: string): { page: Page; siteId?: number } | null => {
+/** 해시(#/site/3/documents) → 페이지/현장ID/탭 해석 */
+const parseHash = (hash: string): { page: Page; siteId?: number; tab?: string } | null => {
   const clean = hash.replace(/^#\/?/, '');
   if (!clean) return { page: 'home' };
 
-  const [slug, param] = clean.split('/');
+  const [slug, param, tab] = clean.split('/');
   const page = SLUG_TO_PAGE[slug];
   if (!page) return null;
 
   const siteId = param && !Number.isNaN(Number(param)) ? Number(param) : undefined;
-  return { page, siteId };
+  return { page, siteId, tab };
 };
 
 /** 페이지/현장ID → 해시 문자열 */
-const buildHash = (page: Page, siteId?: number): string => {
+const buildHash = (page: Page, siteId?: number, tab?: string): string => {
   const slug = PAGE_TO_SLUG[page];
   if (!slug) return '#/';
+  if (siteId && tab) return `#/${slug}/${siteId}/${tab}`;
   if (siteId) return `#/${slug}/${siteId}`;
   return `#/${slug}`;
 };
@@ -64,17 +65,19 @@ const buildHash = (page: Page, siteId?: number): string => {
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [preselectedSiteId, setPreselectedSiteId] = useState<number | undefined>();
+  const [preselectedTab, setPreselectedTab] = useState<string | undefined>();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     setIsLoggedIn(isAuthenticated());
 
-    // 최초 진입 시 해시 복원 (현장별 페이지 북마크/공유 지원)
+    // 최초 진입 시 해시 복원 (현장별 페이지/탭 북마크·공유 지원)
     const initial = parseHash(window.location.hash);
     if (initial) {
       setCurrentPage(initial.page);
       setPreselectedSiteId(initial.siteId);
+      setPreselectedTab(initial.tab);
     }
 
     // 브라우저 뒤로가기/앞으로가기 대응
@@ -83,21 +86,23 @@ function App() {
       if (parsed) {
         setCurrentPage(parsed.page);
         setPreselectedSiteId(parsed.siteId);
+        setPreselectedTab(parsed.tab);
       }
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  const navigate = (page: string, siteId?: number) => {
+  const navigate = (page: string, siteId?: number, tab?: string) => {
     if (page === 'admin' && !isLoggedIn) {
       setShowLoginModal(true);
       return;
     }
     setCurrentPage(page as Page);
     setPreselectedSiteId(siteId);
+    setPreselectedTab(tab);
 
-    const nextHash = buildHash(page as Page, siteId);
+    const nextHash = buildHash(page as Page, siteId, tab);
     if (window.location.hash !== nextHash) {
       window.location.hash = nextHash;
     }
@@ -157,7 +162,11 @@ function App() {
           <SiteDocumentPage onNavigate={navigate} preselectedSiteId={preselectedSiteId} />
         )}
         {currentPage === 'site-detail' && (
-          <SiteDetailPage onNavigate={navigate} siteId={preselectedSiteId} />
+          <SiteDetailPage
+            onNavigate={navigate}
+            siteId={preselectedSiteId}
+            initialTab={preselectedTab}
+          />
         )}
         {currentPage === 'admin' && <AdminPage onNavigate={navigate} isLoggedIn={isLoggedIn} />}
       </main>
