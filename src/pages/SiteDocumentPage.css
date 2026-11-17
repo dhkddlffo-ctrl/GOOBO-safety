@@ -133,6 +133,13 @@
   min-width: 260px;
 }
 
+.doc-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
 .doc-select,
 .doc-search {
   padding: 0.625rem 0.75rem;

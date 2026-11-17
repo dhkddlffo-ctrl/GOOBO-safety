@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { SiteDocument, DocumentCategory } from '../types';
+import { SiteDocument, CategoryMeta } from '../types';
 import { isAuthenticated } from '../utils/auth';
-import { CATEGORY_META, getCategoryMeta } from '../data/documentCategories';
+import { useCategories } from '../hooks/useCategories';
+import { resolveCategoryMeta, getCategoriesWithOrphans, FALLBACK_CATEGORY } from '../utils/categoryStorage';
+import CategoryManager from './CategoryManager';
 import {
   getDocuments,
   saveDocument,
@@ -37,12 +39,15 @@ const formatDateTime = (iso: string): string =>
 /**
  * 현장 문서보관함
  * - 안전보건관리대장 / 안전계획서 / 안전관리비 / 교육일지 등 분류별 보관
+ * - 분류는 관리자가 직접 추가·수정·삭제할 수 있습니다.
  */
 const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) => {
+  const categories = useCategories();
   const [docs, setDocs] = useState<SiteDocument[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('전체');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -52,7 +57,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docTitle, setDocTitle] = useState('');
   const [uploadForm, setUploadForm] = useState({
-    category: '안전보건관리대장' as DocumentCategory,
+    category: '',
     period: '',
     version: 'v1.0',
     uploadedBy: '',
@@ -94,8 +99,16 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
     });
   }, [docs, activeCategory, searchTerm]);
 
-  const countByCategory = (key: DocumentCategory) =>
+  const countByCategory = (key: string) =>
     docs.filter(d => d.category === key).length;
+
+  /** 목록 + 기존 문서에만 남아있는 분류까지 합쳐서 표시 */
+  const visibleCategories: CategoryMeta[] = useMemo(
+    () => getCategoriesWithOrphans(docs.map(d => d.category)),
+    [categories, docs]
+  );
+
+  const defaultCategory = categories[0]?.key || FALLBACK_CATEGORY;
 
   const totalSize = docs.reduce((s, d) => s + d.fileSize, 0);
 
@@ -123,22 +136,30 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
   };
 
   /* ---------------- 업로드 ---------------- */
-  const openUpload = (category?: DocumentCategory) => {
+  const openUpload = (category?: string) => {
     setUploadForm(f => ({
       ...f,
-      category:
-        category ||
-        (activeCategory !== '전체' ? (activeCategory as DocumentCategory) : '안전보건관리대장'),
+      category: category || (activeCategory !== '전체' ? activeCategory : defaultCategory),
     }));
     setShowUpload(true);
+  };
+
+  const resetUploadForm = () => {
+    setSelectedFile(null);
+    setDocTitle('');
+    setUploadForm({
+      category: defaultCategory,
+      period: '',
+      version: 'v1.0',
+      uploadedBy: '',
+      description: '',
+    });
   };
 
   const closeUpload = () => {
     if (uploading) return;
     setShowUpload(false);
-    setSelectedFile(null);
-    setDocTitle('');
-    setUploadForm({ category: '안전보건관리대장', period: '', version: 'v1.0', uploadedBy: '', description: '' });
+    resetUploadForm();
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -243,7 +264,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
           </div>
         </button>
 
-        {CATEGORY_META.map(meta => (
+        {visibleCategories.map(meta => (
           <button
             key={meta.key}
             className={`da-category-card ${activeCategory === meta.key ? 'active' : ''}`}
@@ -261,6 +282,19 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
             </div>
           </button>
         ))}
+
+        {/* 분류 관리 */}
+        <button
+          className="da-category-card da-category-manage"
+          onClick={() => setShowCategoryManager(true)}
+          title="문서 분류 추가·수정·삭제"
+        >
+          <span className="da-cat-icon da-cat-manage-icon">⚙️</span>
+          <div className="da-cat-body">
+            <div className="da-cat-name">분류 관리</div>
+            <div className="da-cat-desc">분류 추가 · 수정 · 삭제</div>
+          </div>
+        </button>
       </div>
 
       {/* 툴바 */}
@@ -307,7 +341,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
         <div className="da-list">
           {filtered.map(doc => {
             const fmeta = getFileMeta(doc.fileName);
-            const cmeta = getCategoryMeta(doc.category);
+            const cmeta = resolveCategoryMeta(doc.category);
             return (
               <div key={doc.id} className="da-item">
                 <div className="da-file-icon" style={{ color: fmeta.color }}>
@@ -380,11 +414,9 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
                 <select
                   id="daCategory"
                   value={uploadForm.category}
-                  onChange={e =>
-                    setUploadForm(f => ({ ...f, category: e.target.value as DocumentCategory }))
-                  }
+                  onChange={e => setUploadForm(f => ({ ...f, category: e.target.value }))}
                 >
-                  {CATEGORY_META.map(m => (
+                  {visibleCategories.map(m => (
                     <option key={m.key} value={m.key}>
                       {m.icon} {m.key}
                     </option>
@@ -502,6 +534,11 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
             </form>
           </div>
         </div>
+      )}
+
+      {/* 분류 관리 모달 */}
+      {showCategoryManager && (
+        <CategoryManager categories={categories} onClose={() => setShowCategoryManager(false)} />
       )}
 
       {/* 미리보기 모달 */}

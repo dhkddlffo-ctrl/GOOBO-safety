@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Site, SiteDocument, DocumentCategory } from '../types';
+import { Site, SiteDocument } from '../types';
 import { getSites } from '../utils/storage';
 import { isAuthenticated } from '../utils/auth';
 import {
@@ -20,7 +20,9 @@ import {
   ALLOWED_EXTENSIONS,
   MAX_FILE_SIZE,
 } from '../utils/documentStorage';
-import { CATEGORY_KEYS as CATEGORIES } from '../data/documentCategories';
+import { useCategories } from '../hooks/useCategories';
+import { getCategoriesWithOrphans, FALLBACK_CATEGORY } from '../utils/categoryStorage';
+import CategoryManager from '../components/CategoryManager';
 import './SiteDocumentPage.css';
 
 interface SiteDocumentPageProps {
@@ -38,9 +40,11 @@ const formatDateTime = (iso: string): string =>
   });
 
 const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, preselectedSiteId }) => {
+  const categories = useCategories();
   const [sites, setSites] = useState<Site[]>([]);
   const [documents, setDocuments] = useState<SiteDocument[]>([]);
   const [canManage, setCanManage] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   // 업로드 모달
   const [showUpload, setShowUpload] = useState(false);
@@ -50,7 +54,7 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
 
   const [uploadForm, setUploadForm] = useState({
     siteId: preselectedSiteId || 0,
-    category: '도면' as DocumentCategory,
+    category: '',
     version: 'v1.0',
     uploadedBy: '',
     description: '',
@@ -155,12 +159,14 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
   };
 
   /* ------------------------------ 업로드 ------------------------------ */
+  const defaultCategory = categories[0]?.key || FALLBACK_CATEGORY;
+
   const resetUploadForm = () => {
     setSelectedFile(null);
     setDocTitle('');
     setUploadForm({
       siteId: preselectedSiteId || 0,
-      category: '도면',
+      category: defaultCategory,
       version: 'v1.0',
       uploadedBy: '',
       description: '',
@@ -368,9 +374,9 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
               onChange={e => setFilterCategory(e.target.value)}
             >
               <option value="전체">전체 분류</option>
-              {CATEGORIES.map(c => (
-                <option key={c} value={c}>
-                  {c}
+              {getCategoriesWithOrphans(documents.map(d => d.category)).map(c => (
+                <option key={c.key} value={c.key}>
+                  {c.icon} {c.key}
                 </option>
               ))}
             </select>
@@ -384,9 +390,18 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
             />
           </div>
 
-          <button className="btn btn-primary doc-upload-btn" onClick={() => setShowUpload(true)}>
-            ＋ 문서 등록
-          </button>
+          <div className="doc-toolbar-actions">
+            <button
+              className="btn btn-secondary doc-upload-btn"
+              onClick={() => setShowCategoryManager(true)}
+              title="문서 분류 추가·수정·삭제"
+            >
+              ⚙️ 분류 관리
+            </button>
+            <button className="btn btn-primary doc-upload-btn" onClick={() => setShowUpload(true)}>
+              ＋ 문서 등록
+            </button>
+          </div>
         </div>
 
         {/* 문서 목록 */}
@@ -517,13 +532,11 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
                   <select
                     id="docCategory"
                     value={uploadForm.category}
-                    onChange={e =>
-                      setUploadForm(f => ({ ...f, category: e.target.value as DocumentCategory }))
-                    }
+                    onChange={e => setUploadForm(f => ({ ...f, category: e.target.value }))}
                   >
-                    {CATEGORIES.map(c => (
-                      <option key={c} value={c}>
-                        {c}
+                    {getCategoriesWithOrphans(documents.map(d => d.category)).map(c => (
+                      <option key={c.key} value={c.key}>
+                        {c.icon} {c.key}
                       </option>
                     ))}
                   </select>
@@ -662,6 +675,11 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
             </div>
           </div>
         </div>
+      )}
+
+      {/* 분류 관리 모달 */}
+      {showCategoryManager && (
+        <CategoryManager categories={categories} onClose={() => setShowCategoryManager(false)} />
       )}
     </div>
   );

@@ -46,18 +46,18 @@ export interface WorkStopRequest {
 }
 
 // 현장문서 타입
-export type DocumentCategory =
-  | '안전보건관리대장'
-  | '안전계획서'
-  | '안전관리비'
-  | '교육일지'
-  | '안전점검표'
-  | '위험성평가'
-  | '도면'
-  | '계약서'
-  | '시공보고서'
-  | '사진대지'
-  | '기타';
+// 분류는 관리자가 직접 추가·수정·삭제할 수 있으므로 동적 문자열입니다.
+// (기본 분류 목록은 src/data/documentCategories.ts 의 시드 참고)
+export type DocumentCategory = string;
+
+// 문서 분류 정의
+export interface CategoryMeta {
+  key: string; // 분류명 (문서에 저장되는 값)
+  icon: string; // 아이콘 (이모지)
+  color: string; // 대표 색상
+  desc: string; // 설명
+  createdAt?: string;
+}
 
 export interface SiteDocument {
   id: string;

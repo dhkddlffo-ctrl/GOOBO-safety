@@ -1,0 +1,27 @@
+import { useState, useEffect, useCallback } from 'react';
+import { CategoryMeta } from '../types';
+import { getCategories, CATEGORIES_CHANGED_EVENT } from '../utils/categoryStorage';
+
+/**
+ * 문서 분류 목록 훅
+ * - 분류가 추가/수정/삭제되면 커스텀 이벤트로 모든 화면이 즉시 갱신됩니다.
+ * - 다른 탭에서 변경한 경우도 storage 이벤트로 동기화됩니다.
+ */
+export const useCategories = (): CategoryMeta[] => {
+  const [categories, setCategories] = useState<CategoryMeta[]>(() => getCategories());
+
+  const refresh = useCallback(() => {
+    setCategories(getCategories());
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(CATEGORIES_CHANGED_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener(CATEGORIES_CHANGED_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, [refresh]);
+
+  return categories;
+};

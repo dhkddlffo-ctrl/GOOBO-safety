@@ -1,0 +1,499 @@
+/* ================= 문서 분류 관리 ================= */
+.cm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1400;
+}
+
+.cm-panel {
+  position: relative;
+  background: #fff;
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+
+.cm-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.cm-head h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cm-sub {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.1875rem;
+}
+
+.cm-close {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cm-close:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.cm-body {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ---------------- 목록 ---------------- */
+.cm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cm-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.625rem;
+  transition: all 0.2s;
+}
+
+.cm-item:hover {
+  border-color: #cbd5e1;
+  background: #f3f4f6;
+}
+
+.cm-item-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  border-radius: 0.5rem;
+}
+
+.cm-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.cm-item-name {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  flex-wrap: wrap;
+}
+
+.cm-item-count {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #2563eb;
+  background: #dbeafe;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+}
+
+.cm-item-desc {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-item-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.cm-icon-btn {
+  width: 1.875rem;
+  height: 1.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cm-icon-btn:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.cm-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cm-icon-danger:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* ---------------- 폼 ---------------- */
+.cm-form-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: #f9fafb;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.625rem;
+  margin-bottom: 1.25rem;
+}
+
+.cm-preview-icon {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  border-radius: 0.5rem;
+}
+
+.cm-preview-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.cm-preview-desc {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.125rem;
+}
+
+.cm-field {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.cm-field label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.375rem;
+}
+
+.cm-field input[type="text"],
+.cm-field select {
+  width: 100%;
+  padding: 0.5625rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: #fff;
+  color: #1f2937;
+}
+
+.cm-field input[type="text"]:focus,
+.cm-field select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.cm-counter {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.3125rem;
+  font-size: 0.6875rem;
+  color: #9ca3af;
+}
+
+/* 아이콘 선택 */
+.cm-icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3125rem;
+  margin-bottom: 0.5rem;
+}
+
+.cm-icon-option {
+  width: 2.125rem;
+  height: 2.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.0625rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cm-icon-option:hover {
+  background: #f3f4f6;
+}
+
+.cm-icon-option.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.cm-icon-input {
+  font-size: 0.8125rem !important;
+}
+
+/* 색상 선택 */
+.cm-color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.cm-color-option {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cm-color-option:hover {
+  transform: scale(1.12);
+}
+
+.cm-color-option.active {
+  border-color: #111827;
+  box-shadow: 0 0 0 2px #fff inset;
+  transform: scale(1.08);
+}
+
+/* ---------------- 안내 / 오류 ---------------- */
+.cm-notice {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  border-radius: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.75rem;
+  color: #92400e;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.cm-error {
+  background: #fef2f2;
+  border-left: 3px solid #ef4444;
+  border-radius: 0.375rem;
+  padding: 0.5625rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #b91c1c;
+  margin-top: 0.75rem;
+}
+
+/* ---------------- 하단 버튼 ---------------- */
+.cm-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.cm-foot-right {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.cm-foot .btn {
+  padding: 0.5625rem 1rem;
+  font-size: 0.8125rem;
+  border-radius: 0.5rem;
+}
+
+.cm-reset {
+  font-size: 0.75rem !important;
+  color: #6b7280 !important;
+}
+
+.cm-foot-form {
+  justify-content: flex-end;
+  padding: 0;
+  border-top: none;
+  background: transparent;
+  margin-top: 0.5rem;
+}
+
+/* ---------------- 잠금 상태 ---------------- */
+.cm-locked {
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.cm-locked-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.7;
+}
+
+.cm-locked h3 {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 0.375rem;
+}
+
+.cm-locked p {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 1.25rem;
+  line-height: 1.6;
+}
+
+/* ---------------- 삭제 확인 ---------------- */
+.cm-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 10;
+}
+
+.cm-confirm {
+  background: #fff;
+  border-radius: 0.75rem;
+  padding: 1.375rem 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+}
+
+.cm-confirm h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.625rem;
+}
+
+.cm-confirm p {
+  font-size: 0.875rem;
+  color: #4b5563;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.cm-confirm-warn {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  border-radius: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #92400e;
+  line-height: 1.55;
+  margin-bottom: 1rem;
+}
+
+.cm-confirm-ok {
+  color: #059669 !important;
+}
+
+.cm-confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.125rem;
+}
+
+.cm-confirm-actions .btn {
+  flex: 1;
+  padding: 0.5625rem 1rem;
+  font-size: 0.875rem;
+}
+
+/* ---------------- 반응형 ---------------- */
+@media (max-width: 600px) {
+  .cm-head {
+    padding: 1rem 1.125rem;
+  }
+
+  .cm-body {
+    padding: 1rem 1.125rem;
+  }
+
+  .cm-item {
+    flex-wrap: wrap;
+  }
+
+  .cm-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 0.25rem;
+  }
+
+  .cm-foot {
+    padding: 0.875rem 1.125rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cm-foot-right {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .cm-foot .btn {
+    width: 100%;
+  }
+
+  .cm-confirm-actions {
+    flex-direction: column;
+  }
+}

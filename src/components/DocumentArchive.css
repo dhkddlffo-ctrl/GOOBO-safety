@@ -613,3 +613,21 @@
     align-items: stretch;
   }
 }
+
+/* ---------------- 분류 관리 카드 ---------------- */
+.da-category-manage {
+  border-style: dashed;
+  border-color: #cbd5e1;
+  background: #fafafa;
+}
+
+.da-category-manage:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.12);
+}
+
+.da-cat-manage-icon {
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+}

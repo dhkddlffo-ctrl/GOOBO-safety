@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Site, SiteInfo, SiteDocument } from '../types';
 import { getSites, getSuggestions, getWorkStops, getAccidentCases, formatDate } from '../utils/storage';
 import { getSiteInfo, saveSiteInfo, createEmptySiteInfo } from '../utils/siteInfoStorage';
 import { getDocuments, formatFileSize, getTotalUsage } from '../utils/documentStorage';
 import { isAuthenticated } from '../utils/auth';
-import { CATEGORY_META } from '../data/documentCategories';
+import { useCategories } from '../hooks/useCategories';
+import { getCategoriesWithOrphans } from '../utils/categoryStorage';
 import DocumentArchive from '../components/DocumentArchive';
 import './SiteDetailPage.css';
 
@@ -21,6 +22,8 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
   const [docs, setDocs] = useState<SiteDocument[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('info');
   const [canManage, setCanManage] = useState(false);
+
+  const categories = useCategories();
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<SiteInfo | null>(null);
@@ -49,6 +52,13 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
     }
     setCanManage(isAuthenticated());
   }, [siteId]);
+
+  /** 분류 목록 변경(추가·삭제)이 즉시 반영되도록 categories 를 의존성에 포함
+   *  (Rules of Hooks: 조기 return 이전에 모든 훅이 호출되어야 함) */
+  const summaryCategories = useMemo(
+    () => getCategoriesWithOrphans(docs.map(d => d.category)),
+    [categories, docs]
+  );
 
   if (!site) {
     return (
@@ -373,7 +383,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
             </div>
 
             <div className="sd-cat-summary">
-              {CATEGORY_META.map(meta => (
+              {summaryCategories.map(meta => (
                 <div key={meta.key} className="sd-cat-chip">
                   <span className="sd-cat-chip-icon" style={{ color: meta.color }}>
                     {meta.icon}

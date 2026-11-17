@@ -215,6 +215,26 @@ export const generateStorageKey = (fileName: string): string => {
 export const getTotalUsage = (docs?: SiteDocument[]): number =>
   (docs || getDocuments()).reduce((sum, d) => sum + (d.fileSize || 0), 0);
 
+/* ------------------------------------------------------------------ */
+/* 분류 연동 헬퍼 (분류 관리에서 사용)                                   */
+/* ------------------------------------------------------------------ */
+
+/** 특정 분류에 속한 문서 건수 */
+export const countDocumentsByCategory = (category: string): number =>
+  getDocuments().filter(d => d.category === category).length;
+
+/** 분류명 변경 시 기존 문서들의 분류명을 함께 이관 */
+export const renameDocumentCategory = (from: string, to: string): void => {
+  const docs = getDocuments();
+  let changed = false;
+  const next = docs.map(d => {
+    if (d.category !== from) return d;
+    changed = true;
+    return { ...d, category: to };
+  });
+  if (changed) persist(next);
+};
+
 /** 브라우저 저장소 여유 확인 (StorageManager 지원 시) */
 export const getStorageQuota = async (): Promise<{ usage: number; quota: number } | null> => {
   if (!navigator.storage || !navigator.storage.estimate) return null;
