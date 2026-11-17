@@ -156,6 +156,10 @@ export interface ExternalAgency {
   name: string; // 기관명
   phone: string; // 전화번호
   note: string; // 관할 / 비고
+  /** 주소 기반 자동 입력 여부 */
+  autoFilled?: boolean;
+  /** 담당자가 번호를 확인했는지 */
+  verified?: boolean;
 }
 
 /** 지정병원 1행 */
@@ -166,6 +170,10 @@ export interface DesignatedHospital {
   erPhone: string; // 응급실 직통번호
   address: string; // 도로명 주소
   distance: string; // 거리 / 소요시간
+  /** 주소 기반 자동 입력 여부 */
+  autoFilled?: boolean;
+  /** 담당자가 직통번호를 확인했는지 */
+  verified?: boolean;
 }
 
 /** 현장별 비상연락망 게시판 */

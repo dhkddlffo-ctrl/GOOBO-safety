@@ -429,6 +429,16 @@
   align-items: center;
 }
 
+/* 외부기관 행: 구분·기관명·전화번호·관할·확인·검색·삭제 (7개) */
+.em-edit-row.em-row-agency {
+  grid-template-columns: 104px 1.25fr 0.85fr 1.45fr 58px 32px 32px;
+}
+
+/* 지정병원 행: 구분·병원명·직통·주소·거리·확인·검색·삭제 (8개) */
+.em-edit-row.em-row-hospital {
+  grid-template-columns: 104px 1.2fr 0.8fr 1.35fr 0.75fr 58px 32px 32px;
+}
+
 .em-edit-row .em-in-group {
   min-width: 0;
 }
@@ -587,95 +597,96 @@
   /* 제목부 */
   .em-head {
     border-bottom-width: 2pt !important;
-    padding-bottom: 1.5mm !important;
-    margin-bottom: 2mm !important;
+    padding-bottom: 1mm !important;
+    margin-bottom: 1.5mm !important;
   }
 
   .em-head-construction {
-    font-size: 9pt !important;
+    font-size: 8.5pt !important;
   }
 
   .em-head-title {
-    font-size: 17pt !important;
-    letter-spacing: 0.3rem !important;
+    font-size: 15pt !important;
+    letter-spacing: 0.25rem !important;
   }
 
   .em-head-mark {
-    font-size: 7.5pt !important;
+    font-size: 7pt !important;
   }
 
   .em-head-meta {
-    margin-top: 1mm !important;
-    gap: 0 4mm !important;
-    font-size: 7.5pt !important;
+    margin-top: 0.8mm !important;
+    gap: 0 3.5mm !important;
+    font-size: 7pt !important;
   }
 
   /* 섹션 */
   .em-section {
-    margin-bottom: 2mm !important;
+    margin-bottom: 1.5mm !important;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   .em-section-title {
-    gap: 1.5mm !important;
-    font-size: 9pt !important;
-    padding: 1mm 2mm !important;
-    margin-bottom: 1.2mm !important;
-    border-left-width: 4pt !important;
+    gap: 1.2mm !important;
+    font-size: 8.5pt !important;
+    padding: 0.8mm 1.8mm !important;
+    margin-bottom: 1mm !important;
+    border-left-width: 3.5pt !important;
   }
 
   .em-no {
-    width: 4mm !important;
-    height: 4mm !important;
-    font-size: 7pt !important;
+    width: 3.6mm !important;
+    height: 3.6mm !important;
+    font-size: 6.5pt !important;
   }
 
   /* 1. 흐름도 */
   .em-flow {
-    gap: 0.8mm !important;
+    gap: 0.5mm !important;
   }
 
   .em-flow-box {
-    gap: 0.3mm !important;
+    gap: 0.2mm !important;
     max-width: 105mm !important;
-    padding: 1.2mm 2.5mm !important;
+    padding: 0.9mm 2.2mm !important;
   }
 
   .em-flow-box strong {
-    font-size: 8pt !important;
+    font-size: 7.5pt !important;
   }
 
   .em-flow-box small {
-    font-size: 6.8pt !important;
-    line-height: 1.25 !important;
+    font-size: 6.4pt !important;
+    line-height: 1.2 !important;
   }
 
   .em-flow-start,
   .em-flow-end {
     max-width: 65mm !important;
-    padding: 1mm 4mm !important;
-    font-size: 8.5pt !important;
+    padding: 0.8mm 3.5mm !important;
+    font-size: 8pt !important;
   }
 
   .em-flow-arrow {
-    font-size: 6.5pt !important;
+    font-size: 6pt !important;
+    line-height: 1.1 !important;
   }
 
   /* 표 */
   .em-table {
-    font-size: 7pt !important;
+    font-size: 6.5pt !important;
     break-inside: auto;
     page-break-inside: auto;
   }
 
   .em-table th,
   .em-table td {
-    padding: 0.8mm 1.2mm !important;
+    padding: 0.45mm 1mm !important;
   }
 
   .em-table thead th {
-    font-size: 7pt !important;
+    font-size: 6.5pt !important;
   }
 
   .em-table tr {
@@ -688,61 +699,317 @@
   }
 
   .em-hospital-dist {
-    font-size: 6.2pt !important;
+    font-size: 5.8pt !important;
+  }
+
+  /* '확인 필요' 표식은 인쇄 시 축소 */
+  .em-badge-auto {
+    margin-left: 1mm !important;
+    padding: 0 0.8mm !important;
+    font-size: 4.8pt !important;
   }
 
   /* 4. 약도 */
   .em-map {
-    margin-top: 1.2mm !important;
-    padding: 1.2mm !important;
+    margin-top: 0.8mm !important;
+    padding: 0.8mm !important;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   .em-map-label {
-    font-size: 7pt !important;
-    margin-bottom: 0.8mm !important;
+    font-size: 6.5pt !important;
+    margin-bottom: 0.5mm !important;
   }
 
   .em-map-img {
-    max-height: 42mm !important;
+    max-height: 30mm !important;
   }
 
   .em-map-empty {
-    font-size: 7pt !important;
-    padding: 4mm 2mm !important;
+    font-size: 6.5pt !important;
+    padding: 2.5mm 2mm !important;
   }
 
   /* 5. 신고 요령 */
   .em-guide {
-    gap: 1mm !important;
+    gap: 0.6mm !important;
     padding-left: 4mm !important;
   }
 
   .em-guide li,
   .em-guide li strong {
-    font-size: 8pt !important;
+    font-size: 7.5pt !important;
   }
 
   .em-guide li p {
-    font-size: 7.2pt !important;
-    padding: 0.8mm 2mm !important;
-    line-height: 1.35 !important;
+    font-size: 6.8pt !important;
+    padding: 0.5mm 1.8mm !important;
+    line-height: 1.25 !important;
   }
 
   /* 하단 */
   .em-foot {
-    margin-top: 1.2mm !important;
-    padding-top: 1mm !important;
-    font-size: 6.5pt !important;
+    margin-top: 0.8mm !important;
+    padding-top: 0.6mm !important;
+    font-size: 6pt !important;
   }
+}
+
+/* ================================================================
+   주소 기반 관할 조회 / 확인
+   ================================================================ */
+.em-lookup {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 0.5rem;
+}
+
+.em-lookup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+/* 전역 .btn-sm 의 flex:1 이 새어 들어와 버튼이 늘어나는 것을 방지 */
+.em-lookup-head .btn {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.em-lookup-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #075985;
+}
+
+.em-lookup-desc {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+  color: #0369a1;
+  line-height: 1.5;
+}
+
+.em-lookup-region {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #0c4a6e;
+}
+
+.em-lookup-region strong {
+  color: #075985;
+}
+
+.em-lookup-result {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.75rem;
+  color: #0c4a6e;
+  line-height: 1.55;
+}
+
+.em-lookup-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.4375rem;
+  margin-top: 0.5rem;
+}
+
+.em-link-card {
+  display: block;
+  padding: 0.4375rem 0.5625rem;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  text-decoration: none;
+  transition: all 0.18s;
+}
+
+.em-link-card:hover {
+  border-color: #0ea5e9;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.em-link-card strong {
+  display: block;
+  font-size: 0.75rem;
+  color: #0c4a6e;
+}
+
+.em-link-card span {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* 확인 체크박스 */
+.em-verify {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1875rem;
+  font-size: 0.6875rem;
+  color: #6b7280;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.em-verify input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #16a34a;
+}
+
+.em-verify.is-on {
+  color: #15803d;
+  font-weight: 700;
+}
+
+/* 행 검색 링크 (↗) */
+.em-row-link {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0369a1;
+  border-radius: 0.3125rem;
+  font-size: 0.6875rem;
+  text-decoration: none;
+  transition: all 0.18s;
+}
+
+.em-row-link:hover {
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+}
+
+/* ================================================================
+   입력 점검 패널
+   ================================================================ */
+.em-audit {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: #fff;
+}
+
+.em-audit.is-clean {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.em-audit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.em-audit-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.em-audit-count {
+  display: flex;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+}
+
+.em-audit-count span {
+  padding: 0.125rem 0.4375rem;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.em-audit-count .is-error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.em-audit-count .is-warn {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.em-audit-count .is-ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.em-audit-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.em-audit-list li {
+  display: flex;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.em-audit-list li.is-error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.em-audit-list li.is-warn {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.em-audit-list .em-audit-where {
+  flex: 0 0 auto;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+/* 게시판 내 확인 상태 배지 */
+.em-badge-auto {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0 0.25rem;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  line-height: 1.35;
+  border-radius: 0.1875rem;
+  background: #fef3c7;
+  color: #92400e;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 /* ================================================================
    반응형
    ================================================================ */
 @media (max-width: 900px) {
-  .em-edit-row {
+  .em-edit-row,
+  .em-edit-row.em-row-agency,
+  .em-edit-row.em-row-hospital {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -753,6 +1020,10 @@
 
   .em-grid2 {
     grid-template-columns: 1fr;
+  }
+
+  .em-lookup-head .btn {
+    width: 100%;
   }
 }
 

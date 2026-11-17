@@ -16,6 +16,17 @@ import {
 } from '../utils/emergencyStorage';
 import { putFile, getFile, deleteFile } from '../utils/documentStorage';
 import { isAuthenticated } from '../utils/auth';
+import {
+  parseRegion,
+  applyRegionLookup,
+  auditEmergencyPlan,
+  summarizeAudit,
+  hospitalLookupLinks,
+  agencySearchUrl,
+  searchHospital,
+  isNationalNumber,
+  type AuditIssue,
+} from '../utils/emergencyLookup';
 import './EmergencyPlan.css';
 
 interface EmergencyPlanProps {
@@ -48,6 +59,7 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
   const [error, setError] = useState('');
   const [mapUploading, setMapUploading] = useState(false);
   const [mapUrl, setMapUrl] = useState('');
+  const [lookupNote, setLookupNote] = useState<string[]>([]);
   const mapInputRef = useRef<HTMLInputElement>(null);
 
   const canManage = isAuthenticated();
@@ -58,6 +70,7 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
     setEditing(false);
     setDraft(null);
     setError('');
+    setLookupNote([]);
   }, [siteId, siteName, siteAddress]);
 
   /* 약도 이미지 불러오기 */
@@ -222,6 +235,37 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
     window.print();
   };
 
+  /* ---------------- 주소 기반 관할 조회 ---------------- */
+  const activeAddress = draft ? draft.siteAddress : plan.siteAddress;
+  const region = useMemo(() => parseRegion(activeAddress), [activeAddress]);
+
+  const runLookup = () => {
+    if (!draft) return;
+    const parsed = parseRegion(draft.siteAddress);
+    if (!parsed.ok) {
+      setError(
+        '주소에 시·군·구까지 입력해야 관할 정보를 찾을 수 있습니다. 예) 경기도 용인시 처인구 OO로 123'
+      );
+      setLookupNote([]);
+      return;
+    }
+    const result = applyRegionLookup(draft.agencies, parsed);
+    setDraft({ ...draft, agencies: result.agencies });
+    setLookupNote(result.summary);
+    setError('');
+  };
+
+  const clearLookupNote = () => setLookupNote([]);
+
+  /* ---------------- 입력 점검 ---------------- */
+  const auditIssues = useMemo<AuditIssue[]>(
+    () => auditEmergencyPlan(draft ?? plan),
+    [draft, plan]
+  );
+  const auditCounts = useMemo(() => summarizeAudit(auditIssues), [auditIssues]);
+
+  const hospitalLinks = useMemo(() => hospitalLookupLinks(region), [region]);
+
   /* ================= 게시판(포스터) ================= */
   const poster = (
     <div className="em-poster">
@@ -337,7 +381,12 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
             {plan.agencies.map(a => (
               <tr key={a.id}>
                 <td>{a.category || '—'}</td>
-                <td className={a.name ? '' : 'em-empty'}>{a.name || '—'}</td>
+                <td className={a.name ? '' : 'em-empty'}>
+                  {a.name || '—'}
+                  {a.name && !a.verified && !isNationalNumber(a.phone) && (
+                    <span className="em-badge-auto">확인 필요</span>
+                  )}
+                </td>
                 <td className="em-cell-phone">{a.phone || '—'}</td>
                 <td className="em-cell-note">{a.note || '—'}</td>
               </tr>
@@ -462,6 +511,28 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
 
       {!editing ? poster : draft && (
         <div className="em-editor">
+          {/* 입력 점검 */}
+          <div className={`em-audit ${auditIssues.length === 0 ? 'is-clean' : ''}`}>
+            <div className="em-audit-head">
+              <span className="em-audit-title">🔍 게시 전 확인</span>
+              <span className="em-audit-count">
+                {auditCounts.errors > 0 && <span className="is-error">오류 {auditCounts.errors}</span>}
+                {auditCounts.warns > 0 && <span className="is-warn">확인 {auditCounts.warns}</span>}
+                {auditIssues.length === 0 && <span className="is-ok">이상 없음 ✓</span>}
+              </span>
+            </div>
+            {auditIssues.length > 0 && (
+              <ul className="em-audit-list">
+                {auditIssues.map((issue, i) => (
+                  <li key={i} className={`is-${issue.level}`}>
+                    <span className="em-audit-where">{issue.where}</span>
+                    <span>{issue.message}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           {/* 기본 정보 */}
           <div className="em-edit-block">
             <h3 className="em-edit-title">기본 정보</h3>
@@ -573,9 +644,54 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
           {/* 3. 외부 기관 */}
           <div className="em-edit-block">
             <h3 className="em-edit-title">3. 외부 유관기관</h3>
+
+            {/* 주소 기반 관할 조회 */}
+            <div className="em-lookup">
+              <div className="em-lookup-head">
+                <span className="em-lookup-title">📍 현장 주소로 관할 기관 찾기</span>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={runLookup}
+                  disabled={!draft.siteAddress.trim()}
+                >
+                  관할 정보 자동 채우기
+                </button>
+              </div>
+              <p className="em-lookup-desc">
+                위 주소를 읽어 소방서·경찰서·고용노동청·지자체·상수도사업소의 <b>관할 명칭</b>을
+                채웁니다. 전국 공통번호(119·112·1339 등)만 자동 확정되고, <b>지역별 대표번호는
+                담당자가 확인</b>해야 합니다.
+              </p>
+              {region.ok ? (
+                <p className="em-lookup-region">
+                  인식된 지역: <strong>{region.label}</strong>
+                  {region.base && ` (기관명 기준: ${region.base})`}
+                </p>
+              ) : (
+                <p className="em-lookup-region">
+                  주소에 <strong>시·군·구</strong>까지 입력하면 관할을 인식합니다.
+                </p>
+              )}
+              {lookupNote.length > 0 && (
+                <>
+                  <ul className="em-lookup-result">
+                    {lookupNote.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                  <div className="em-add-row">
+                    <button type="button" className="em-add-btn" onClick={clearLookupNote}>
+                      확인
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="em-edit-rows">
               {draft.agencies.map(a => (
-                <div key={a.id} className="em-edit-row">
+                <div key={a.id} className="em-edit-row em-row-agency">
                   <input
                     className="em-in-group"
                     type="text"
@@ -604,6 +720,26 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
                     onChange={e => patchAgency(a.id, { note: e.target.value })}
                     placeholder="관할 / 비고"
                   />
+                  <label
+                    className={`em-verify ${a.verified ? 'is-on' : ''}`}
+                    title="번호를 직접 확인했으면 체크하세요"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(a.verified)}
+                      onChange={e => patchAgency(a.id, { verified: e.target.checked })}
+                    />
+                    확인
+                  </label>
+                  <a
+                    className="em-row-link"
+                    href={agencySearchUrl(a, region)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="이 기관 번호 검색해서 확인"
+                  >
+                    ↗
+                  </a>
                   <button
                     type="button"
                     className="em-row-del"
@@ -625,9 +761,33 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
           {/* 4. 지정병원 */}
           <div className="em-edit-block">
             <h3 className="em-edit-title">4. 지정병원</h3>
+
+            {/* 병원 찾기 링크 */}
+            <div className="em-lookup">
+              <span className="em-lookup-title">🏥 지정병원 후보 찾기</span>
+              <p className="em-lookup-desc">
+                이 앱은 서버가 없어 병원 정보를 자동으로 가져오지 않습니다. 아래 링크에서{' '}
+                <b>실제 응급실 직통번호와 거리</b>를 확인한 뒤 입력하세요.
+              </p>
+              <div className="em-lookup-links">
+                {hospitalLinks.map(link => (
+                  <a
+                    key={link.label}
+                    className="em-link-card"
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <strong>{link.label} ↗</strong>
+                    <span>{link.desc}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
             <div className="em-edit-rows">
               {draft.hospitals.map(h => (
-                <div key={h.id} className="em-edit-row">
+                <div key={h.id} className="em-edit-row em-row-hospital">
                   <input
                     className="em-in-group"
                     type="text"
@@ -663,6 +823,26 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
                     onChange={e => patchHospital(h.id, { distance: e.target.value })}
                     placeholder="거리/시간"
                   />
+                  <label
+                    className={`em-verify ${h.verified ? 'is-on' : ''}`}
+                    title="응급실 직통번호를 직접 확인했으면 체크하세요"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(h.verified)}
+                      onChange={e => patchHospital(h.id, { verified: e.target.checked })}
+                    />
+                    확인
+                  </label>
+                  <a
+                    className="em-row-link"
+                    href={searchHospital(h, region)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="이 병원 검색해서 확인"
+                  >
+                    ↗
+                  </a>
                   <button
                     type="button"
                     className="em-row-del"

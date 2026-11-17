@@ -49,6 +49,8 @@ export const createEmptyAgency = (
   name,
   phone,
   note,
+  autoFilled: false,
+  verified: false,
 });
 
 export const createEmptyHospital = (
@@ -61,6 +63,8 @@ export const createEmptyHospital = (
   erPhone: '',
   address: '',
   distance: '',
+  autoFilled: false,
+  verified: false,
 });
 
 /* ------------------------------------------------------------------ */
@@ -104,7 +108,7 @@ const defaultAgencies = (): ExternalAgency[] => [
     '지역 도시가스 긴급출동'
   ),
   createEmptyAgency('유틸리티', '상·하수도 사업소', '', '상수도관 파열·누수 시'),
-  createEmptyAgency('유틸리티', '통신사 (광케이블·관로)', '100 (KT)', '통신선로 파손 시'),
+  createEmptyAgency('유틸리티', '통신사 (광케이블·관로)', '100', 'KT 통신선로 파손 시'),
 ];
 
 const defaultHospitals = (): DesignatedHospital[] => [
