@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { SiteDocument, CategoryMeta } from '../types';
 import { isAuthenticated } from '../utils/auth';
 import { useCategories } from '../hooks/useCategories';
-import { resolveCategoryMeta, getCategoriesWithOrphans, FALLBACK_CATEGORY } from '../utils/categoryStorage';
+import { resolveCategoryMeta, getCategoriesWithOrphans, getSubcategories, FALLBACK_CATEGORY } from '../utils/categoryStorage';
 import CategoryManager from './CategoryManager';
 import {
   getDocuments,
@@ -46,6 +46,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
   const [docs, setDocs] = useState<SiteDocument[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('전체');
+  const [activeSub, setActiveSub] = useState<string>('전체');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
 
@@ -58,6 +59,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
   const [docTitle, setDocTitle] = useState('');
   const [uploadForm, setUploadForm] = useState({
     category: '',
+    subcategory: '',
     period: '',
     version: 'v1.0',
     uploadedBy: '',
@@ -86,21 +88,35 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
   const filtered = useMemo(() => {
     return docs.filter(d => {
       if (activeCategory !== '전체' && d.category !== activeCategory) return false;
+      if (activeSub !== '전체' && d.subcategory !== activeSub) return false;
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         return (
           d.title.toLowerCase().includes(q) ||
           d.fileName.toLowerCase().includes(q) ||
           (d.description || '').toLowerCase().includes(q) ||
-          (d.period || '').toLowerCase().includes(q)
+          (d.period || '').toLowerCase().includes(q) ||
+          (d.subcategory || '').toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [docs, activeCategory, searchTerm]);
+  }, [docs, activeCategory, activeSub, searchTerm]);
 
   const countByCategory = (key: string) =>
     docs.filter(d => d.category === key).length;
+
+  /** 현재 선택된 분류의 소분류 목록 */
+  const currentSubs = useMemo(
+    () => (activeCategory === '전체' ? [] : getSubcategories(activeCategory)),
+    [activeCategory, categories]
+  );
+
+  /** 분류 변경 시 소분류 필터 초기화 */
+  const selectCategory = (key: string) => {
+    setActiveCategory(key);
+    setActiveSub('전체');
+  };
 
   /** 목록 + 기존 문서에만 남아있는 분류까지 합쳐서 표시 */
   const visibleCategories: CategoryMeta[] = useMemo(
@@ -137,9 +153,12 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
 
   /* ---------------- 업로드 ---------------- */
   const openUpload = (category?: string) => {
+    const nextCategory = category || (activeCategory !== '전체' ? activeCategory : defaultCategory);
+    const subs = getSubcategories(nextCategory);
     setUploadForm(f => ({
       ...f,
-      category: category || (activeCategory !== '전체' ? activeCategory : defaultCategory),
+      category: nextCategory,
+      subcategory: activeSub !== '전체' && subs.includes(activeSub) ? activeSub : '',
     }));
     setShowUpload(true);
   };
@@ -149,6 +168,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
     setDocTitle('');
     setUploadForm({
       category: defaultCategory,
+      subcategory: '',
       period: '',
       version: 'v1.0',
       uploadedBy: '',
@@ -178,6 +198,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
         siteName,
         title: docTitle.trim(),
         category: uploadForm.category,
+        subcategory: uploadForm.subcategory || undefined,
         period: uploadForm.period.trim() || undefined,
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
@@ -193,7 +214,14 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
       setShowUpload(false);
       setSelectedFile(null);
       setDocTitle('');
-      setUploadForm({ category: '안전보건관리대장', period: '', version: 'v1.0', uploadedBy: '', description: '' });
+      setUploadForm({
+        category: defaultCategory,
+        subcategory: '',
+        period: '',
+        version: 'v1.0',
+        uploadedBy: '',
+        description: '',
+      });
     } catch (error) {
       console.error('업로드 실패:', error);
       alert('업로드에 실패했습니다. 저장 공간을 확인해주세요.');
@@ -268,7 +296,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
           <button
             key={meta.key}
             className={`da-category-card ${activeCategory === meta.key ? 'active' : ''}`}
-            onClick={() => setActiveCategory(meta.key)}
+            onClick={() => selectCategory(meta.key)}
           >
             <span className="da-cat-icon" style={{ background: `${meta.color}1a`, color: meta.color }}>
               {meta.icon}
@@ -278,7 +306,11 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
                 {meta.key}
                 <span className="da-cat-count">{countByCategory(meta.key)}</span>
               </div>
-              <div className="da-cat-desc">{meta.desc}</div>
+              <div className="da-cat-desc">
+                {meta.subs && meta.subs.length > 0
+                  ? `${meta.subs.length}개 소분류`
+                  : meta.desc}
+              </div>
             </div>
           </button>
         ))}
@@ -316,6 +348,41 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
           ＋ 문서 등록
         </button>
       </div>
+
+      {/* 소분류 필터 (선택한 분류에 소분류가 있을 때만 표시) */}
+      {currentSubs.length > 0 && (
+        <div className="da-subbar">
+          <span className="da-subbar-label">소분류</span>
+          <button
+            className={`da-subchip ${activeSub === '전체' ? 'active' : ''}`}
+            onClick={() => setActiveSub('전체')}
+          >
+            전체
+            <span className="da-subchip-count">
+              {docs.filter(d => d.category === activeCategory).length}
+            </span>
+          </button>
+          {currentSubs.map(sub => (
+            <button
+              key={sub}
+              className={`da-subchip ${activeSub === sub ? 'active' : ''}`}
+              onClick={() => setActiveSub(sub)}
+            >
+              {sub}
+              <span className="da-subchip-count">
+                {docs.filter(d => d.category === activeCategory && d.subcategory === sub).length}
+              </span>
+            </button>
+          ))}
+          <button
+            className="da-subbar-manage"
+            onClick={() => setShowCategoryManager(true)}
+            title="소분류 추가·수정·삭제"
+          >
+            ⚙️ 소분류 관리
+          </button>
+        </div>
+      )}
 
       {/* 목록 */}
       {filtered.length === 0 ? (
@@ -360,6 +427,9 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
                     >
                       {doc.category}
                     </span>
+                    {doc.subcategory && (
+                      <span className="da-badge da-badge-sub">{doc.subcategory}</span>
+                    )}
                     {doc.period && <span className="da-period">{doc.period}</span>}
                     <span className="da-version">{doc.version}</span>
                   </div>
@@ -414,7 +484,15 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
                 <select
                   id="daCategory"
                   value={uploadForm.category}
-                  onChange={e => setUploadForm(f => ({ ...f, category: e.target.value }))}
+                  onChange={e => {
+                    const nextCategory = e.target.value;
+                    const subs = getSubcategories(nextCategory);
+                    setUploadForm(f => ({
+                      ...f,
+                      category: nextCategory,
+                      subcategory: subs.includes(f.subcategory) ? f.subcategory : '',
+                    }));
+                  }}
                 >
                   {visibleCategories.map(m => (
                     <option key={m.key} value={m.key}>
@@ -423,6 +501,24 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
                   ))}
                 </select>
               </div>
+
+              {getSubcategories(uploadForm.category).length > 0 && (
+                <div className="da-field">
+                  <label htmlFor="daSubcategory">소분류</label>
+                  <select
+                    id="daSubcategory"
+                    value={uploadForm.subcategory}
+                    onChange={e => setUploadForm(f => ({ ...f, subcategory: e.target.value }))}
+                  >
+                    <option value="">선택 안 함</option>
+                    {getSubcategories(uploadForm.category).map(sub => (
+                      <option key={sub} value={sub}>
+                        {sub}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="da-field">
                 <label htmlFor="daTitle">문서명 *</label>

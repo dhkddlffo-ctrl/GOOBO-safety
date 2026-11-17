@@ -1,11 +1,18 @@
-import { CategoryMeta } from '../types';
+import { CategoryMeta, CategorySub } from '../types';
 import { CATEGORY_SEED } from '../data/documentCategories';
-import { countDocumentsByCategory, renameDocumentCategory } from './documentStorage';
+import {
+  countDocumentsByCategory,
+  countDocumentsBySubcategory,
+  renameDocumentCategory,
+  renameDocumentSubcategory,
+  reassignDocumentSubcategory,
+} from './documentStorage';
 
 /**
  * 문서 분류 저장소 (동적 분류)
  *
  * - 관리자가 분류를 직접 추가 / 이름·아이콘·색상 수정 / 삭제
+ * - 분류별 소분류(sub)를 추가·수정·삭제 (예: 교육일지 → 신규자교육, 정기안전교육 …)
  * - 분류명은 문서(SiteDocument.category)에 문자열로 저장되므로,
  *   이름 변경 시 기존 문서의 분류명도 함께 이관합니다.
  * - 변경 시 window 커스텀 이벤트로 모든 화면을 즉시 동기화합니다.
@@ -20,6 +27,9 @@ export const FALLBACK_CATEGORY = '기타';
 
 export const MAX_CATEGORY_NAME = 20;
 export const MAX_CATEGORIES = 40;
+
+export const MAX_SUBCATEGORY_NAME = 20;
+export const MAX_SUBCATEGORIES = 30;
 
 export const CATEGORY_COLOR_PRESETS = [
   '#dc2626', '#ea580c', '#f59e0b', '#16a34a', '#0d9488',
@@ -53,6 +63,30 @@ const normalize = (name: string): string => name.trim().replace(/\s+/g, ' ');
 const sameName = (a: string, b: string): boolean =>
   a.trim().toLowerCase() === b.trim().toLowerCase();
 
+/**
+ * 기존 저장 데이터 마이그레이션
+ * - 소분류 기능이 추가되기 전에 저장된 분류에는 subs 필드가 없습니다(undefined).
+ * - 시드에 소분류가 정의된 분류(예: 교육일지)에 한해 최초 1회 채워 넣습니다.
+ * - 사용자가 소분류를 모두 지우면 subs 는 빈 배열([])이 되므로 다시 채워지지 않습니다.
+ */
+const migrateSubs = (categories: CategoryMeta[]): CategoryMeta[] => {
+  const seedSubs = new Map(
+    CATEGORY_SEED.filter(c => c.subs && c.subs.length > 0).map(c => [c.key, c.subs!])
+  );
+
+  let changed = false;
+  const next = categories.map(cat => {
+    if (cat.subs !== undefined) return cat;
+    const defaults = seedSubs.get(cat.key);
+    if (!defaults) return cat;
+    changed = true;
+    return { ...cat, subs: [...defaults] };
+  });
+
+  if (changed) localStorage.setItem(CATEGORIES_KEY, JSON.stringify(next));
+  return next;
+};
+
 /* ------------------------------------------------------------------ */
 /* 조회                                                                */
 /* ------------------------------------------------------------------ */
@@ -71,7 +105,7 @@ export const getCategories = (): CategoryMeta[] => {
       localStorage.setItem(CATEGORIES_KEY, JSON.stringify(initial));
       return initial;
     }
-    return parsed as CategoryMeta[];
+    return migrateSubs(parsed as CategoryMeta[]);
   } catch {
     return seed();
   }
@@ -235,3 +269,155 @@ export const moveCategory = (key: string, direction: 'up' | 'down'): void => {
 export const resetCategories = (): void => {
   persist(seed());
 };
+
+/* ------------------------------------------------------------------ */
+/* 소분류 (sub) 추가 / 수정 / 삭제                                      */
+/* ------------------------------------------------------------------ */
+
+/** 특정 분류의 소분류 목록 */
+export const getSubcategories = (category: string): CategorySub[] => {
+  const found = findCategory(category);
+  return Array.isArray(found?.subs) ? found!.subs! : [];
+};
+
+/** 소분류가 있는 분류인지 */
+export const hasSubcategories = (category: string): boolean =>
+  getSubcategories(category).length > 0;
+
+/** 소분류 추가 */
+export const addSubcategory = (category: string, name: string): CategoryResult => {
+  const categories = getCategories();
+  const index = categories.findIndex(c => c.key === category);
+  if (index === -1) return { ok: false, error: '분류를 찾을 수 없습니다.' };
+
+  const target = categories[index];
+  const subs = Array.isArray(target.subs) ? target.subs : [];
+
+  if (subs.length >= MAX_SUBCATEGORIES) {
+    return { ok: false, error: `소분류는 최대 ${MAX_SUBCATEGORIES}개까지 만들 수 있습니다.` };
+  }
+
+  const value = normalize(name);
+  if (!value) return { ok: false, error: '소분류명을 입력해주세요.' };
+  if (value.length > MAX_SUBCATEGORY_NAME) {
+    return {
+      ok: false,
+      error: `소분류명은 ${MAX_SUBCATEGORY_NAME}자 이내로 입력해주세요.`,
+    };
+  }
+  if (subs.some(s => sameName(s, value))) {
+    return { ok: false, error: '같은 이름의 소분류가 이미 있습니다.' };
+  }
+
+  const next = [...categories];
+  next[index] = { ...target, subs: [...subs, value] };
+  persist(next);
+  return { ok: true };
+};
+
+/** 소분류 이름 변경 (기존 문서의 소분류도 함께 이관) */
+export const updateSubcategory = (
+  category: string,
+  originalName: string,
+  nextName: string
+): CategoryResult => {
+  const categories = getCategories();
+  const index = categories.findIndex(c => c.key === category);
+  if (index === -1) return { ok: false, error: '분류를 찾을 수 없습니다.' };
+
+  const target = categories[index];
+  const subs = Array.isArray(target.subs) ? target.subs : [];
+  if (!subs.some(s => s === originalName)) {
+    return { ok: false, error: '소분류를 찾을 수 없습니다.' };
+  }
+
+  const value = normalize(nextName);
+  if (!value) return { ok: false, error: '소분류명을 입력해주세요.' };
+  if (value.length > MAX_SUBCATEGORY_NAME) {
+    return {
+      ok: false,
+      error: `소분류명은 ${MAX_SUBCATEGORY_NAME}자 이내로 입력해주세요.`,
+    };
+  }
+  if (subs.some(s => s !== originalName && sameName(s, value))) {
+    return { ok: false, error: '같은 이름의 소분류가 이미 있습니다.' };
+  }
+  if (value === originalName) return { ok: true };
+
+  const next = [...categories];
+  next[index] = {
+    ...target,
+    subs: subs.map(s => (s === originalName ? value : s)),
+  };
+  persist(next);
+  renameDocumentSubcategory(category, originalName, value);
+  return { ok: true };
+};
+
+/**
+ * 소분류 삭제
+ * - 해당 소분류를 쓰는 문서가 있으면 reassignTo 로 이동하거나(없으면 소분류 해제)
+ * - reassignTo 를 지정하지 않으면 문서의 소분류를 비웁니다.
+ */
+export const deleteSubcategory = (
+  category: string,
+  name: string,
+  reassignTo?: string
+): CategoryResult => {
+  const categories = getCategories();
+  const index = categories.findIndex(c => c.key === category);
+  if (index === -1) return { ok: false, error: '분류를 찾을 수 없습니다.' };
+
+  const target = categories[index];
+  const subs = Array.isArray(target.subs) ? target.subs : [];
+  if (!subs.some(s => s === name)) {
+    return { ok: false, error: '소분류를 찾을 수 없습니다.' };
+  }
+
+  if (reassignTo) {
+    if (sameName(reassignTo, name)) {
+      return { ok: false, error: '다른 소분류를 선택해주세요.' };
+    }
+    if (!subs.some(s => s === reassignTo)) {
+      return { ok: false, error: '이동할 소분류를 찾을 수 없습니다.' };
+    }
+  }
+
+  const docCount = countDocumentsBySubcategory(category, name);
+
+  const next = [...categories];
+  next[index] = { ...target, subs: subs.filter(s => s !== name) };
+  persist(next);
+
+  if (docCount > 0) {
+    reassignDocumentSubcategory(category, name, reassignTo);
+  }
+  return { ok: true, docCount };
+};
+
+/** 소분류 순서 변경 */
+export const moveSubcategory = (
+  category: string,
+  name: string,
+  direction: 'up' | 'down'
+): void => {
+  const categories = getCategories();
+  const index = categories.findIndex(c => c.key === category);
+  if (index === -1) return;
+
+  const target = categories[index];
+  const subs = Array.isArray(target.subs) ? target.subs : [];
+  const i = subs.indexOf(name);
+  if (i === -1) return;
+
+  const j = direction === 'up' ? i - 1 : i + 1;
+  if (j < 0 || j >= subs.length) return;
+
+  const nextSubs = [...subs];
+  [nextSubs[i], nextSubs[j]] = [nextSubs[j], nextSubs[i]];
+
+  const next = [...categories];
+  next[index] = { ...target, subs: nextSubs };
+  persist(next);
+};
+

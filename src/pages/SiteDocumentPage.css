@@ -253,6 +253,11 @@
   white-space: nowrap;
 }
 
+.doc-subcategory-badge {
+  color: #6d28d9;
+  background: #f3e8ff;
+}
+
 .doc-version {
   font-size: 0.6875rem;
   font-weight: 600;

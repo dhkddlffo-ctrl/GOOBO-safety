@@ -7,12 +7,23 @@ import {
   deleteCategory,
   moveCategory,
   resetCategories,
+  addSubcategory,
+  updateSubcategory,
+  deleteSubcategory,
+  moveSubcategory,
+  getSubcategories,
+  findCategory,
   CATEGORY_COLOR_PRESETS,
   CATEGORY_ICON_PRESETS,
   MAX_CATEGORY_NAME,
   MAX_CATEGORIES,
+  MAX_SUBCATEGORY_NAME,
+  MAX_SUBCATEGORIES,
 } from '../utils/categoryStorage';
-import { countDocumentsByCategory } from '../utils/documentStorage';
+import {
+  countDocumentsByCategory,
+  countDocumentsBySubcategory,
+} from '../utils/documentStorage';
 import './CategoryManager.css';
 
 interface CategoryManagerProps {
@@ -21,7 +32,7 @@ interface CategoryManagerProps {
   onClose: () => void;
 }
 
-type Mode = 'list' | 'add' | 'edit';
+type Mode = 'list' | 'add' | 'edit' | 'subs';
 
 const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, onClose }) => {
   const [mode, setMode] = useState<Mode>('list');
@@ -38,7 +49,87 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, onClose }
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [reassignTo, setReassignTo] = useState('');
 
+  /* ---------------- 소분류 상태 ---------------- */
+  const [subsCategoryKey, setSubsCategoryKey] = useState<string | null>(null);
+  const [subDraft, setSubDraft] = useState('');
+  const [editingSub, setEditingSub] = useState<string | null>(null);
+  const [subError, setSubError] = useState('');
+  const [deletingSub, setDeletingSub] = useState<string | null>(null);
+  const [subReassignTo, setSubReassignTo] = useState('');
+
   const canManage = isAuthenticated();
+
+  const subsCategory = subsCategoryKey
+    ? categories.find(c => c.key === subsCategoryKey)
+    : undefined;
+  const subList = subsCategory?.subs ?? [];
+
+  /* ---------------- 소분류 처리 ---------------- */
+  const openSubs = (cat: CategoryMeta) => {
+    setSubsCategoryKey(cat.key);
+    setSubDraft('');
+    setEditingSub(null);
+    setSubError('');
+    setDeletingSub(null);
+    setMode('subs');
+  };
+
+  const closeSubs = () => {
+    setMode('list');
+    setEditingSub(null);
+    setSubDraft('');
+    setSubError('');
+    setDeletingSub(null);
+  };
+
+  const submitSub = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subsCategoryKey) return;
+    setSubError('');
+
+    const result = editingSub
+      ? updateSubcategory(subsCategoryKey, editingSub, subDraft)
+      : addSubcategory(subsCategoryKey, subDraft);
+
+    if (!result.ok) {
+      setSubError(result.error || '저장에 실패했습니다.');
+      return;
+    }
+    setSubDraft('');
+    setEditingSub(null);
+  };
+
+  const startSubEdit = (name: string) => {
+    setSubDraft(name);
+    setEditingSub(name);
+    setSubError('');
+  };
+
+  const cancelSubEdit = () => {
+    setSubDraft('');
+    setEditingSub(null);
+    setSubError('');
+  };
+
+  const startSubDelete = (name: string) => {
+    setDeletingSub(name);
+    setSubError('');
+    setSubReassignTo(subList.find(s => s !== name) || '');
+  };
+
+  const confirmSubDelete = () => {
+    if (!subsCategoryKey || !deletingSub) return;
+    const result = deleteSubcategory(
+      subsCategoryKey,
+      deletingSub,
+      subReassignTo || undefined
+    );
+    if (!result.ok) {
+      setSubError(result.error || '삭제에 실패했습니다.');
+      return;
+    }
+    setDeletingSub(null);
+  };
 
   /* ---------------- 폼 ---------------- */
   const startAdd = () => {
@@ -155,6 +246,9 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, onClose }
                         <div className="cm-item-name">
                           {cat.key}
                           <span className="cm-item-count">{count}건</span>
+                          {cat.subs && cat.subs.length > 0 && (
+                            <span className="cm-item-subcount">소분류 {cat.subs.length}</span>
+                          )}
                         </div>
                         {cat.desc && <div className="cm-item-desc">{cat.desc}</div>}
                       </div>
@@ -175,6 +269,13 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, onClose }
                           disabled={index === categories.length - 1}
                         >
                           ↓
+                        </button>
+                        <button
+                          className="cm-icon-btn cm-icon-sub"
+                          title="소분류 관리"
+                          onClick={() => openSubs(cat)}
+                        >
+                          ☰
                         </button>
                         <button className="cm-icon-btn" title="수정" onClick={() => startEdit(cat)}>
                           ✏️
@@ -209,6 +310,184 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, onClose }
                 </button>
               </div>
             </div>
+          </>
+        ) : mode === 'subs' && subsCategory ? (
+          /* ---------------- 소분류 관리 ---------------- */
+          <>
+            <div className="cm-body">
+              <div className="cm-subs-head">
+                <button className="cm-back-btn" onClick={closeSubs}>
+                  ← 분류 목록
+                </button>
+                <div className="cm-subs-title">
+                  <span
+                    className="cm-item-icon cm-item-icon-sm"
+                    style={{ background: `${subsCategory.color}1a`, color: subsCategory.color }}
+                  >
+                    {subsCategory.icon}
+                  </span>
+                  <strong>{subsCategory.key}</strong>
+                  <span className="cm-item-count">{subList.length}개</span>
+                </div>
+                <p className="cm-subs-hint">
+                  이 분류를 선택하면 아래 소분류로 문서를 구분해 보관할 수 있습니다.
+                </p>
+              </div>
+
+              <form className="cm-sub-add" onSubmit={submitSub}>
+                <input
+                  type="text"
+                  value={subDraft}
+                  onChange={e => setSubDraft(e.target.value)}
+                  placeholder={
+                    editingSub
+                      ? '소분류명 수정'
+                      : '예: 신규자교육, 정기안전교육(근로자), 특별안전교육'
+                  }
+                  maxLength={MAX_SUBCATEGORY_NAME}
+                />
+                {editingSub ? (
+                  <>
+                    <button type="submit" className="btn btn-primary btn-sm">
+                      수정 저장
+                    </button>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={cancelSubEdit}>
+                      취소
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-sm"
+                    disabled={subList.length >= MAX_SUBCATEGORIES}
+                  >
+                    ＋ 소분류 추가
+                  </button>
+                )}
+              </form>
+
+              {subList.length === 0 ? (
+                <p className="cm-subs-empty">
+                  등록된 소분류가 없습니다. 위 입력창에서 첫 소분류를 추가해보세요.
+                </p>
+              ) : (
+                <div className="cm-sub-list">
+                  {subList.map((name, i) => {
+                    const docCount = countDocumentsBySubcategory(subsCategory.key, name);
+                    return (
+                      <div key={name} className="cm-sub-item">
+                        <span className="cm-sub-idx">{i + 1}</span>
+                        <span className="cm-sub-name">{name}</span>
+                        <span className="cm-item-count">{docCount}건</span>
+                        <div className="cm-item-actions">
+                          <button
+                            className="cm-icon-btn"
+                            title="위로"
+                            onClick={() => moveSubcategory(subsCategory.key, name, 'up')}
+                            disabled={i === 0}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            className="cm-icon-btn"
+                            title="아래로"
+                            onClick={() => moveSubcategory(subsCategory.key, name, 'down')}
+                            disabled={i === subList.length - 1}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            className="cm-icon-btn"
+                            title="수정"
+                            onClick={() => startSubEdit(name)}
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="cm-icon-btn cm-icon-danger"
+                            title="삭제"
+                            onClick={() => startSubDelete(name)}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {subError && <div className="cm-error">{subError}</div>}
+
+              {findCategory(subsCategory.key) && getSubcategories(subsCategory.key).length === 0 && (
+                <p className="cm-subs-note">
+                  소분류를 모두 삭제하면 이 분류로 등록하는 문서에 소분류 선택 항목이 표시되지 않습니다.
+                </p>
+              )}
+            </div>
+
+            <div className="cm-foot">
+              <span className="cm-foot-note">소분류는 최대 {MAX_SUBCATEGORIES}개까지 만들 수 있습니다.</span>
+              <div className="cm-foot-right">
+                <button className="btn btn-secondary" onClick={closeSubs}>
+                  완료
+                </button>
+              </div>
+            </div>
+
+            {/* 소분류 삭제 확인 */}
+            {deletingSub && (
+              <div className="cm-confirm-backdrop" onClick={() => setDeletingSub(null)}>
+                <div className="cm-confirm" onClick={e => e.stopPropagation()}>
+                  <h3>소분류 삭제</h3>
+                  <p>
+                    <strong>“{deletingSub}”</strong> 소분류를 삭제하시겠습니까?
+                  </p>
+
+                  {countDocumentsBySubcategory(subsCategory.key, deletingSub) > 0 ? (
+                    <>
+                      <div className="cm-confirm-warn">
+                        이 소분류의 문서{' '}
+                        <strong>
+                          {countDocumentsBySubcategory(subsCategory.key, deletingSub)}건
+                        </strong>
+                        이 있습니다. 아래 소분류로 이동한 뒤 삭제됩니다.
+                      </div>
+                      <div className="cm-field">
+                        <label htmlFor="cmSubReassign">이동할 소분류</label>
+                        <select
+                          id="cmSubReassign"
+                          value={subReassignTo}
+                          onChange={e => setSubReassignTo(e.target.value)}
+                        >
+                          <option value="">소분류 없음 (해제)</option>
+                          {subList
+                            .filter(s => s !== deletingSub)
+                            .map(s => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="cm-confirm-ok">이 소분류를 사용하는 문서가 없습니다.</p>
+                  )}
+
+                  {subError && <div className="cm-error">{subError}</div>}
+
+                  <div className="cm-confirm-actions">
+                    <button className="btn btn-secondary" onClick={() => setDeletingSub(null)}>
+                      취소
+                    </button>
+                    <button className="btn btn-danger" onClick={confirmSubDelete}>
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           /* ---------------- 추가 / 수정 폼 ---------------- */

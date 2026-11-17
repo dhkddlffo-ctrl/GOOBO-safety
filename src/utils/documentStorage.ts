@@ -235,6 +235,61 @@ export const renameDocumentCategory = (from: string, to: string): void => {
   if (changed) persist(next);
 };
 
+/* ---------------- 소분류 연동 헬퍼 ---------------- */
+
+/** 특정 분류·소분류에 속한 문서 건수 */
+export const countDocumentsBySubcategory = (category: string, subcategory: string): number =>
+  getDocuments().filter(d => d.category === category && d.subcategory === subcategory).length;
+
+/** 소분류명 변경 시 해당 문서들의 소분류명을 함께 이관 */
+export const renameDocumentSubcategory = (category: string, from: string, to: string): void => {
+  const docs = getDocuments();
+  let changed = false;
+  const next = docs.map(d => {
+    if (d.category !== category || d.subcategory !== from) return d;
+    changed = true;
+    return { ...d, subcategory: to };
+  });
+  if (changed) persist(next);
+};
+
+/** 소분류 삭제 시 문서의 소분류를 다른 소분류로 이동 (to 미지정 시 소분류 해제) */
+export const reassignDocumentSubcategory = (
+  category: string,
+  from: string,
+  to?: string
+): void => {
+  const docs = getDocuments();
+  let changed = false;
+  const next = docs.map(d => {
+    if (d.category !== category || d.subcategory !== from) return d;
+    changed = true;
+    return to ? { ...d, subcategory: to } : { ...d, subcategory: undefined };
+  });
+  if (changed) persist(next);
+};
+
+/** 분류 이동(분류 삭제 후 재배정) 시 사용. 대상 분류에 없는 소분류는 해제합니다. */
+export const moveDocumentCategory = (
+  from: string,
+  to: string,
+  keepSubs?: string[]
+): void => {
+  const docs = getDocuments();
+  let changed = false;
+  const next = docs.map(d => {
+    if (d.category !== from) return d;
+    changed = true;
+    const keepSub = d.subcategory && keepSubs?.includes(d.subcategory);
+    return {
+      ...d,
+      category: to,
+      subcategory: keepSub ? d.subcategory : undefined,
+    };
+  });
+  if (changed) persist(next);
+};
+
 /** 브라우저 저장소 여유 확인 (StorageManager 지원 시) */
 export const getStorageQuota = async (): Promise<{ usage: number; quota: number } | null> => {
   if (!navigator.storage || !navigator.storage.estimate) return null;

@@ -21,7 +21,7 @@ import {
   MAX_FILE_SIZE,
 } from '../utils/documentStorage';
 import { useCategories } from '../hooks/useCategories';
-import { getCategoriesWithOrphans, FALLBACK_CATEGORY } from '../utils/categoryStorage';
+import { getCategoriesWithOrphans, getSubcategories, FALLBACK_CATEGORY } from '../utils/categoryStorage';
 import CategoryManager from '../components/CategoryManager';
 import './SiteDocumentPage.css';
 
@@ -55,6 +55,7 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
   const [uploadForm, setUploadForm] = useState({
     siteId: preselectedSiteId || 0,
     category: '',
+    subcategory: '',
     version: 'v1.0',
     uploadedBy: '',
     description: '',
@@ -65,6 +66,7 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
   // 필터 / 검색
   const [filterSiteId, setFilterSiteId] = useState<number>(0);
   const [filterCategory, setFilterCategory] = useState<string>('전체');
+  const [filterSub, setFilterSub] = useState<string>('전체');
   const [searchTerm, setSearchTerm] = useState('');
 
   // 미리보기
@@ -98,18 +100,26 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
     return documents.filter(doc => {
       if (filterSiteId && doc.siteId !== filterSiteId) return false;
       if (filterCategory !== '전체' && doc.category !== filterCategory) return false;
+      if (filterSub !== '전체' && doc.subcategory !== filterSub) return false;
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         return (
           doc.title.toLowerCase().includes(q) ||
           doc.fileName.toLowerCase().includes(q) ||
           doc.siteName.toLowerCase().includes(q) ||
-          (doc.description || '').toLowerCase().includes(q)
+          (doc.description || '').toLowerCase().includes(q) ||
+          (doc.subcategory || '').toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [documents, filterSiteId, filterCategory, searchTerm]);
+  }, [documents, filterSiteId, filterCategory, filterSub, searchTerm]);
+
+  /** 현재 선택된 분류의 소분류 목록 */
+  const filterSubs = useMemo(
+    () => (filterCategory === '전체' ? [] : getSubcategories(filterCategory)),
+    [filterCategory, categories]
+  );
 
   const totalSize = getTotalUsage(documents);
 
@@ -167,6 +177,7 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
     setUploadForm({
       siteId: preselectedSiteId || 0,
       category: defaultCategory,
+      subcategory: '',
       version: 'v1.0',
       uploadedBy: '',
       description: '',
@@ -203,6 +214,7 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
         siteName: site.name,
         title: docTitle.trim(),
         category: uploadForm.category,
+        subcategory: uploadForm.subcategory || undefined,
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
         fileType: selectedFile.type || getExtension(selectedFile.name),
@@ -371,12 +383,30 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
             <select
               className="doc-select"
               value={filterCategory}
-              onChange={e => setFilterCategory(e.target.value)}
+              onChange={e => {
+                setFilterCategory(e.target.value);
+                setFilterSub('전체');
+              }}
             >
               <option value="전체">전체 분류</option>
               {getCategoriesWithOrphans(documents.map(d => d.category)).map(c => (
                 <option key={c.key} value={c.key}>
                   {c.icon} {c.key}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="doc-select"
+              value={filterSub}
+              onChange={e => setFilterSub(e.target.value)}
+              disabled={filterSubs.length === 0}
+              title={filterSubs.length === 0 ? '선택한 분류에 소분류가 없습니다' : '소분류 필터'}
+            >
+              <option value="전체">전체 소분류</option>
+              {filterSubs.map(sub => (
+                <option key={sub} value={sub}>
+                  {sub}
                 </option>
               ))}
             </select>
@@ -439,6 +469,11 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
                     <div className="doc-title-row">
                       <h3 className="doc-title">{doc.title}</h3>
                       <span className="doc-category-badge">{doc.category}</span>
+                      {doc.subcategory && (
+                        <span className="doc-category-badge doc-subcategory-badge">
+                          {doc.subcategory}
+                        </span>
+                      )}
                       <span className="doc-version">{doc.version}</span>
                     </div>
 
@@ -532,7 +567,15 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
                   <select
                     id="docCategory"
                     value={uploadForm.category}
-                    onChange={e => setUploadForm(f => ({ ...f, category: e.target.value }))}
+                    onChange={e => {
+                      const nextCategory = e.target.value;
+                      const subs = getSubcategories(nextCategory);
+                      setUploadForm(f => ({
+                        ...f,
+                        category: nextCategory,
+                        subcategory: subs.includes(f.subcategory) ? f.subcategory : '',
+                      }));
+                    }}
                   >
                     {getCategoriesWithOrphans(documents.map(d => d.category)).map(c => (
                       <option key={c.key} value={c.key}>
@@ -553,6 +596,24 @@ const SiteDocumentPage: React.FC<SiteDocumentPageProps> = ({ onNavigate, presele
                   />
                 </div>
               </div>
+
+              {getSubcategories(uploadForm.category).length > 0 && (
+                <div className="form-group">
+                  <label htmlFor="docSubcategory">소분류</label>
+                  <select
+                    id="docSubcategory"
+                    value={uploadForm.subcategory}
+                    onChange={e => setUploadForm(f => ({ ...f, subcategory: e.target.value }))}
+                  >
+                    <option value="">선택 안 함</option>
+                    {getSubcategories(uploadForm.category).map(sub => (
+                      <option key={sub} value={sub}>
+                        {sub}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="form-group">
                 <label htmlFor="docTitleInput">문서명 *</label>

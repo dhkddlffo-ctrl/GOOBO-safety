@@ -50,12 +50,17 @@ export interface WorkStopRequest {
 // (기본 분류 목록은 src/data/documentCategories.ts 의 시드 참고)
 export type DocumentCategory = string;
 
+// 문서 분류의 소분류 (예: 교육일지 → 신규자교육 / 정기안전교육(근로자) …)
+export type CategorySub = string;
+
 // 문서 분류 정의
 export interface CategoryMeta {
   key: string; // 분류명 (문서에 저장되는 값)
   icon: string; // 아이콘 (이모지)
   color: string; // 대표 색상
   desc: string; // 설명
+  /** 소분류 목록 (없으면 undefined, 소분류를 모두 지우면 빈 배열) */
+  subs?: CategorySub[];
   createdAt?: string;
 }
 
@@ -65,6 +70,8 @@ export interface SiteDocument {
   siteName: string;
   title: string;
   category: DocumentCategory;
+  /** 소분류 (해당 분류에 소분류가 없으면 undefined) */
+  subcategory?: CategorySub;
   period?: string; // 해당 연월/기간 (예: 2026-11, 2026년 1분기)
   fileName: string;
   fileSize: number; // bytes

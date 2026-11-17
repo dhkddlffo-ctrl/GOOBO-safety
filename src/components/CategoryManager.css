@@ -458,6 +458,164 @@
   font-size: 0.875rem;
 }
 
+/* ---------------- 소분류 관리 ---------------- */
+.cm-item-subcount {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #f3e8ff;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+}
+
+.cm-icon-sub:hover:not(:disabled) {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+}
+
+.cm-subs-head {
+  margin-bottom: 1rem;
+}
+
+.cm-back-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+  font-family: inherit;
+}
+
+.cm-back-btn:hover {
+  color: #2563eb;
+}
+
+.cm-subs-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.9375rem;
+  color: #1f2937;
+}
+
+.cm-item-icon-sm {
+  width: 1.625rem;
+  height: 1.625rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+}
+
+.cm-subs-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.375rem;
+  line-height: 1.5;
+}
+
+.cm-sub-add {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  margin-bottom: 0.875rem;
+}
+
+.cm-sub-add input {
+  flex: 1;
+  min-width: 160px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+}
+
+.cm-sub-add input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.cm-sub-add .btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 0.375rem;
+  white-space: nowrap;
+}
+
+.cm-sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.cm-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5625rem 0.75rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.cm-sub-idx {
+  width: 1.375rem;
+  height: 1.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #7c3aed;
+  background: #f3e8ff;
+  border-radius: 999px;
+}
+
+.cm-sub-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-subs-empty {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+  text-align: center;
+  padding: 1.5rem 1rem;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 0.5rem;
+}
+
+.cm-subs-note {
+  font-size: 0.75rem;
+  color: #92400e;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.cm-foot-note {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
 /* ---------------- 반응형 ---------------- */
 @media (max-width: 600px) {
   .cm-head {
