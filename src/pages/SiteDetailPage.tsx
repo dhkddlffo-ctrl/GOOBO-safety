@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Site, SiteInfo, SiteDocument } from '../types';
+import { Site, SiteInfo, SiteDocument, SiteStaff, STAFF_ROLES, StaffRole } from '../types';
 import { getSites, getSuggestions, getWorkStops, getAccidentCases, formatDate } from '../utils/storage';
-import { getSiteInfo, saveSiteInfo, createEmptySiteInfo } from '../utils/siteInfoStorage';
+import {
+  getSiteInfo,
+  saveSiteInfo,
+  createEmptySiteInfo,
+  createEmptyStaff,
+  generateStaffId,
+} from '../utils/siteInfoStorage';
 import { getDocuments, formatFileSize, getTotalUsage } from '../utils/documentStorage';
 import { isAuthenticated } from '../utils/auth';
 import { useCategories } from '../hooks/useCategories';
@@ -27,6 +33,13 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<SiteInfo | null>(null);
+
+  /* ---------------- 관리자(안전인력) 관리 상태 ----------------
+   *  Rules of Hooks: 조기 return(현장 없음) 이전에 선언되어야 함 */
+  const [staffEditorOpen, setStaffEditorOpen] = useState(false);
+  const [staffDraft, setStaffDraft] = useState<SiteStaff | null>(null);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [staffError, setStaffError] = useState('');
 
   const [activity, setActivity] = useState({
     suggestions: 0,
@@ -105,6 +118,82 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
     setDraft(d => (d ? { ...d, [key]: value } : d));
   };
 
+  /* ---------------- 관리자(안전인력) 관리 ---------------- */
+  const staffList: SiteStaff[] = siteInfo?.staff ?? [];
+
+  const openStaffAddFor = (role: StaffRole) => {
+    if (!canManage) {
+      alert('관리자 정보 수정은 관리자 로그인 후 가능합니다.');
+      return;
+    }
+    setStaffDraft(createEmptyStaff(role));
+    setEditingStaffId(null);
+    setStaffError('');
+    setStaffEditorOpen(true);
+  };
+
+  const persistStaff = (nextStaff: SiteStaff[]) => {
+    if (!site) return;
+    const nextInfo: SiteInfo = {
+      ...(siteInfo ?? createEmptySiteInfo(site.id, site.name)),
+      staff: nextStaff,
+    };
+    saveSiteInfo(nextInfo);
+    const updated = getSiteInfo(site.id, site.name);
+    setSiteInfo(updated);
+    setDraft(updated);
+  };
+
+  const openStaffEdit = (staff: SiteStaff) => {
+    if (!canManage) {
+      alert('관리자 정보 수정은 관리자 로그인 후 가능합니다.');
+      return;
+    }
+    setStaffDraft({ ...staff });
+    setEditingStaffId(staff.id);
+    setStaffError('');
+    setStaffEditorOpen(true);
+  };
+
+  const cancelStaffEdit = () => {
+    setStaffEditorOpen(false);
+    setStaffDraft(null);
+    setEditingStaffId(null);
+    setStaffError('');
+  };
+
+  const setStaffField = <K extends keyof SiteStaff>(key: K, value: SiteStaff[K]) => {
+    setStaffDraft(s => (s ? { ...s, [key]: value } : s));
+  };
+
+  const saveStaff = () => {
+    if (!staffDraft) return;
+    if (!staffDraft.name.trim()) {
+      setStaffError('성명을 입력해주세요.');
+      return;
+    }
+
+    const entry: SiteStaff = {
+      ...staffDraft,
+      id: staffDraft.id || generateStaffId(),
+      name: staffDraft.name.trim(),
+    };
+
+    const exists = staffList.some(s => s.id === entry.id);
+    const nextStaff = exists
+      ? staffList.map(s => (s.id === entry.id ? entry : s))
+      : [...staffList, entry];
+
+    persistStaff(nextStaff);
+    cancelStaffEdit();
+  };
+
+  const deleteStaff = (staff: SiteStaff) => {
+    if (!canManage) return alert('관리자 로그인 후 삭제할 수 있습니다.');
+    if (!confirm(`"${staff.name}(${staff.role})" 정보를 삭제하시겠습니까?`)) return;
+    persistStaff(staffList.filter(s => s.id !== staff.id));
+  };
+
   const docCountByCategory = (key: string) => docs.filter(d => d.category === key).length;
 
   /* ---------------- 렌더 ---------------- */
@@ -131,8 +220,8 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
               <span className="sd-hstat-label">보관 문서</span>
             </div>
             <div className="sd-hstat">
-              <span className="sd-hstat-value">{siteInfo?.progressRate ?? 0}%</span>
-              <span className="sd-hstat-label">공정률</span>
+              <span className="sd-hstat-value">{siteInfo?.staff?.length ?? 0}</span>
+              <span className="sd-hstat-label">안전인력</span>
             </div>
             <div className="sd-hstat">
               <span className="sd-hstat-value">{siteInfo?.workerCount ?? 0}</span>
@@ -188,32 +277,22 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
               <>
                 <div className="sd-info-grid">
                   <InfoRow label="현장명" value={site.name} />
-                  <InfoRow label="소재지" value={siteInfo?.address || site.location} />
-                  <InfoRow label="공사 종류" value={siteInfo?.constructionType} />
+                  <InfoRow label="소재지" value={siteInfo?.address} />
+                  <InfoRow label="공사분류" value={siteInfo?.constructionType} />
                   <InfoRow label="규모" value={siteInfo?.scale} />
-                  <InfoRow label="도급 기간" value={siteInfo?.contractPeriod} />
-                  <InfoRow label="도급 금액" value={siteInfo?.contractAmount} />
+                  <InfoRow label="공사기간" value={siteInfo?.contractPeriod} />
+                  <InfoRow label="계약금액" value={siteInfo?.contractAmount} />
+                  <InfoRow label="착공일" value={siteInfo?.startDate} />
+                  <InfoRow label="실제착공일" value={siteInfo?.actualStartDate} />
                   <InfoRow label="발주처" value={siteInfo?.clientName} />
+                  <InfoRow label="시행사" value={siteInfo?.developerName} />
                   <InfoRow label="시공사" value={siteInfo?.contractorName || '구보공영(주)'} />
                   <InfoRow label="현장소장" value={siteInfo?.siteManager} />
-                  <InfoRow label="안전관리자" value={siteInfo?.safetyManager} />
+                  <InfoRow label="현장공무" value={siteInfo?.siteOfficer} />
+                  <InfoRow label="현장주소" value={siteInfo?.siteAddress} />
+                  <InfoRow label="현장 사무실 연락처" value={siteInfo?.officePhone} />
                   <InfoRow label="안전관리자 연락처" value={siteInfo?.safetyManagerPhone} />
-                  <InfoRow label="현장 사무실" value={siteInfo?.officePhone} />
                   <InfoRow label="현재 인원" value={siteInfo?.workerCount ? `${siteInfo.workerCount}명` : ''} />
-                  <InfoRow label="공정률" value={`${siteInfo?.progressRate ?? 0}%`} />
-                </div>
-
-                <div className="sd-progress-wrap">
-                  <div className="sd-progress-head">
-                    <span>공정률</span>
-                    <strong>{siteInfo?.progressRate ?? 0}%</strong>
-                  </div>
-                  <div className="sd-progress-bar">
-                    <div
-                      className="sd-progress-fill"
-                      style={{ width: `${Math.min(Math.max(siteInfo?.progressRate ?? 0, 0), 100)}%` }}
-                    />
-                  </div>
                 </div>
 
                 {siteInfo?.notes && (
@@ -226,6 +305,101 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
                 {siteInfo?.updatedAt && (
                   <p className="sd-updated">최종 수정: {formatDate(siteInfo.updatedAt)}</p>
                 )}
+
+                {/* ---------- 관리자(안전인력) ---------- */}
+                <div className="sd-staff-section">
+                  <div className="sd-staff-head">
+                    <div>
+                      <h3>👷 관리자 (안전인력)</h3>
+                      <p className="sd-staff-sub">
+                        현장소장 · 안전보건관리책임자 · 안전관리자 · 관리감독자
+                      </p>
+                    </div>
+                    <button className="btn btn-secondary btn-sm" onClick={() => openStaffAddFor('안전관리자')}>
+                      ＋ 관리자 추가
+                    </button>
+                  </div>
+
+                  {staffList.length === 0 ? (
+                    <p className="sd-staff-empty">등록된 관리자 정보가 없습니다.</p>
+                  ) : (
+                    <div className="sd-staff-list">
+                      {STAFF_ROLES.map(role => {
+                        const members = staffList.filter(s => s.role === role);
+                        const isSupervisor = role === '관리감독자';
+                        return (
+                          <div key={role} className="sd-staff-group">
+                            <div className="sd-staff-group-head">
+                              <span className="sd-staff-role">{role}</span>
+                              <span className="sd-staff-count">{members.length}명</span>
+                              <button
+                                className="sd-staff-add-inline"
+                                onClick={() => openStaffAddFor(role)}
+                                title={`${role} 추가`}
+                              >
+                                ＋
+                              </button>
+                            </div>
+
+                            {members.length === 0 ? (
+                              <p className="sd-staff-none">미등록</p>
+                            ) : (
+                              members.map(staff => (
+                                <div key={staff.id} className="sd-staff-row">
+                                  <div className="sd-staff-main">
+                                    <span className="sd-staff-name">{staff.name || '성명 미입력'}</span>
+                                    {staff.phone && (
+                                      <span className="sd-staff-phone">☎ {staff.phone}</span>
+                                    )}
+                                    {isSupervisor && (
+                                      <span
+                                        className={`sd-staff-badge ${
+                                          staff.newTraining8h ? 'on' : 'off'
+                                        }`}
+                                      >
+                                        신규교육 8시간 {staff.newTraining8h ? 'O' : 'X'}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="sd-staff-dates">
+                                    <span className="sd-staff-date">
+                                      {isSupervisor ? '지정일' : '선임일'}{' '}
+                                      <strong>{staff.appointedAt || '-'}</strong>
+                                    </span>
+                                    <span className="sd-staff-date">
+                                      해임일 <strong>{staff.dismissedAt || '-'}</strong>
+                                    </span>
+                                    <span className="sd-staff-date">
+                                      직무교육 <strong>{staff.trainingDate || '-'}</strong>
+                                    </span>
+                                  </div>
+
+                                  {staff.note && <p className="sd-staff-note">{staff.note}</p>}
+
+                                  <div className="sd-staff-actions">
+                                    <button
+                                      className="sd-staff-btn"
+                                      onClick={() => openStaffEdit(staff)}
+                                    >
+                                      수정
+                                    </button>
+                                    <button
+                                      className="sd-staff-btn danger"
+                                      onClick={() => deleteStaff(staff)}
+                                    >
+                                      삭제
+                                    </button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               draft && (
@@ -236,10 +410,10 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
                         type="text"
                         value={draft.address}
                         onChange={e => setField('address', e.target.value)}
-                        placeholder="예: 경기도 용인시 처인구 OO로 123"
+                        placeholder="예: 경기도 용인시 처인구"
                       />
                     </FormField>
-                    <FormField label="공사 종류">
+                    <FormField label="공사분류">
                       <input
                         type="text"
                         value={draft.constructionType}
@@ -258,7 +432,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
                         placeholder="예: 지하 3층~지상 25층, 3개동"
                       />
                     </FormField>
-                    <FormField label="도급 기간">
+                    <FormField label="공사기간">
                       <input
                         type="text"
                         value={draft.contractPeriod}
@@ -269,7 +443,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
                   </div>
 
                   <div className="sd-form-row">
-                    <FormField label="도급 금액">
+                    <FormField label="계약금액">
                       <input
                         type="text"
                         value={draft.contractAmount}
@@ -277,24 +451,40 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
                         placeholder="예: 1,250억원"
                       />
                     </FormField>
-                    <FormField label="공정률 (%)">
+                    <FormField label="착공일">
                       <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={draft.progressRate}
-                        onChange={e => setField('progressRate', Number(e.target.value))}
+                        type="date"
+                        value={draft.startDate}
+                        onChange={e => setField('startDate', e.target.value)}
                       />
                     </FormField>
                   </div>
 
                   <div className="sd-form-row">
+                    <FormField label="실제착공일">
+                      <input
+                        type="date"
+                        value={draft.actualStartDate}
+                        onChange={e => setField('actualStartDate', e.target.value)}
+                      />
+                    </FormField>
                     <FormField label="발주처">
                       <input
                         type="text"
                         value={draft.clientName}
                         onChange={e => setField('clientName', e.target.value)}
                         placeholder="예: OO도시공사"
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="sd-form-row">
+                    <FormField label="시행사">
+                      <input
+                        type="text"
+                        value={draft.developerName}
+                        onChange={e => setField('developerName', e.target.value)}
+                        placeholder="예: OO개발(주)"
                       />
                     </FormField>
                     <FormField label="시공사">
@@ -316,31 +506,40 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
                         placeholder="예: 홍길동"
                       />
                     </FormField>
-                    <FormField label="안전관리자">
+                    <FormField label="현장공무">
                       <input
                         type="text"
-                        value={draft.safetyManager}
-                        onChange={e => setField('safetyManager', e.target.value)}
-                        placeholder="예: 김안전"
+                        value={draft.siteOfficer}
+                        onChange={e => setField('siteOfficer', e.target.value)}
+                        placeholder="예: 이공무"
                       />
                     </FormField>
                   </div>
 
+                  <FormField label="현장주소">
+                    <input
+                      type="text"
+                      value={draft.siteAddress}
+                      onChange={e => setField('siteAddress', e.target.value)}
+                      placeholder="예: 경기도 용인시 처인구 OO로 123 (현장 출입구 기준)"
+                    />
+                  </FormField>
+
                   <div className="sd-form-row">
+                    <FormField label="현장 사무실 연락처">
+                      <input
+                        type="tel"
+                        value={draft.officePhone}
+                        onChange={e => setField('officePhone', e.target.value)}
+                        placeholder="예: 031-123-4567"
+                      />
+                    </FormField>
                     <FormField label="안전관리자 연락처">
                       <input
                         type="tel"
                         value={draft.safetyManagerPhone}
                         onChange={e => setField('safetyManagerPhone', e.target.value)}
                         placeholder="예: 010-1234-5678"
-                      />
-                    </FormField>
-                    <FormField label="현장 사무실">
-                      <input
-                        type="tel"
-                        value={draft.officePhone}
-                        onChange={e => setField('officePhone', e.target.value)}
-                        placeholder="예: 031-123-4567"
                       />
                     </FormField>
                   </div>
@@ -439,6 +638,115 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId }) =
           </div>
         )}
       </div>
+
+      {/* ============ 관리자(안전인력) 추가/수정 모달 ============ */}
+      {staffEditorOpen && staffDraft && (
+        <div className="sd-staff-modal-backdrop" onClick={cancelStaffEdit}>
+          <div className="sd-staff-modal" onClick={e => e.stopPropagation()}>
+            <div className="sd-staff-modal-head">
+              <h3>{editingStaffId ? '관리자 정보 수정' : '관리자 추가'}</h3>
+              <button className="sd-staff-modal-close" onClick={cancelStaffEdit} aria-label="닫기">
+                ✕
+              </button>
+            </div>
+
+            <div className="sd-staff-form">
+              <div className="sd-form-row">
+                <FormField label="구분">
+                  <select
+                    value={staffDraft.role}
+                    onChange={e => setStaffField('role', e.target.value as StaffRole)}
+                  >
+                    {STAFF_ROLES.map(role => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField label="성명">
+                  <input
+                    type="text"
+                    value={staffDraft.name}
+                    onChange={e => setStaffField('name', e.target.value)}
+                    placeholder="예: 홍길동"
+                  />
+                </FormField>
+              </div>
+
+              <FormField label="연락처">
+                <input
+                  type="tel"
+                  value={staffDraft.phone ?? ''}
+                  onChange={e => setStaffField('phone', e.target.value)}
+                  placeholder="예: 010-1234-5678"
+                />
+              </FormField>
+
+              <div className="sd-form-row">
+                <FormField label={staffDraft.role === '관리감독자' ? '관리감독자 지정일' : '선임일'}>
+                  <input
+                    type="date"
+                    value={staffDraft.appointedAt ?? ''}
+                    onChange={e => setStaffField('appointedAt', e.target.value)}
+                  />
+                </FormField>
+                <FormField label="해임일">
+                  <input
+                    type="date"
+                    value={staffDraft.dismissedAt ?? ''}
+                    onChange={e => setStaffField('dismissedAt', e.target.value)}
+                  />
+                </FormField>
+              </div>
+
+              <FormField label="직무교육 이수일">
+                <input
+                  type="date"
+                  value={staffDraft.trainingDate ?? ''}
+                  onChange={e => setStaffField('trainingDate', e.target.value)}
+                />
+              </FormField>
+
+              {staffDraft.role === '관리감독자' && (
+                <label className="sd-staff-check">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(staffDraft.newTraining8h)}
+                    onChange={e => setStaffField('newTraining8h', e.target.checked)}
+                  />
+                  <span>관리감독자 신규교육(8시간) 이수</span>
+                  <span
+                    className={`sd-staff-badge ${staffDraft.newTraining8h ? 'on' : 'off'}`}
+                  >
+                    {staffDraft.newTraining8h ? 'O' : 'X'}
+                  </span>
+                </label>
+              )}
+
+              <FormField label="비고">
+                <textarea
+                  rows={2}
+                  value={staffDraft.note ?? ''}
+                  onChange={e => setStaffField('note', e.target.value)}
+                  placeholder="선임 경위 등 참고사항"
+                />
+              </FormField>
+
+              {staffError && <p className="sd-staff-error">{staffError}</p>}
+            </div>
+
+            <div className="sd-staff-modal-actions">
+              <button className="btn btn-secondary btn-sm" onClick={cancelStaffEdit}>
+                취소
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={saveStaff}>
+                저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

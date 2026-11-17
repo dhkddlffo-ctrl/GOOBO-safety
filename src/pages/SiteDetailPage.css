@@ -319,6 +319,8 @@
 .sd-field input[type="text"],
 .sd-field input[type="tel"],
 .sd-field input[type="number"],
+.sd-field input[type="date"],
+.sd-field select,
 .sd-field textarea {
   width: 100%;
   padding: 0.5625rem 0.75rem;
@@ -326,6 +328,8 @@
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-family: inherit;
+  background: #fff;
+  color: #1f2937;
   transition: all 0.2s;
 }
 
@@ -456,6 +460,310 @@
   border-color: #93c5fd;
   color: #1d4ed8;
   transform: translateX(4px);
+}
+
+/* ---------------- 관리자(안전인력) ---------------- */
+.sd-staff-section {
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.sd-staff-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.sd-staff-head h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sd-staff-sub {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 0.1875rem;
+}
+
+.sd-staff-empty,
+.sd-staff-none {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+  padding: 0.75rem 0.875rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.sd-staff-none {
+  padding: 0.5rem 0.75rem;
+  font-style: italic;
+}
+
+.sd-staff-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.sd-staff-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.sd-staff-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5625rem 0.875rem;
+  background: #f3f4f6;
+}
+
+.sd-staff-role {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sd-staff-count {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+}
+
+.sd-staff-add-inline {
+  margin-left: auto;
+  width: 1.625rem;
+  height: 1.625rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 0.375rem;
+  color: #2563eb;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sd-staff-add-inline:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.sd-staff-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 0.875rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.sd-staff-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  min-width: 180px;
+}
+
+.sd-staff-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sd-staff-phone {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.sd-staff-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.sd-staff-badge.on {
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.sd-staff-badge.off {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.sd-staff-dates {
+  display: flex;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+}
+
+.sd-staff-date {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.sd-staff-date strong {
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.sd-staff-note {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: #6b7280;
+  background: #f9fafb;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.625rem;
+}
+
+.sd-staff-actions {
+  display: flex;
+  gap: 0.375rem;
+  margin-left: auto;
+}
+
+.sd-staff-btn {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 0.375rem;
+  color: #374151;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.sd-staff-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.sd-staff-btn.danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.sd-staff-btn.danger:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+/* ---------------- 관리자 추가/수정 모달 ---------------- */
+.sd-staff-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.sd-staff-modal {
+  background: #fff;
+  border-radius: 0.875rem;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+}
+
+.sd-staff-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sd-staff-modal-head h3 {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sd-staff-modal-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+}
+
+.sd-staff-modal-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.sd-staff-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+.sd-staff-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+}
+
+.sd-staff-check input[type="checkbox"] {
+  width: 1.0625rem;
+  height: 1.0625rem;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.sd-staff-error {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.sd-staff-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 /* ---------------- 현장 없음 ---------------- */

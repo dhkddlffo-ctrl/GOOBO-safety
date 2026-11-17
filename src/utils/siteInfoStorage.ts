@@ -1,4 +1,4 @@
-import { SiteInfo } from '../types';
+import { SiteInfo, SiteStaff } from '../types';
 
 const SITE_INFO_KEY = 'gubo_site_info';
 
@@ -22,22 +22,37 @@ export const createEmptySiteInfo = (siteId: number, siteName: string): SiteInfo 
   scale: '',
   contractPeriod: '',
   contractAmount: '',
-  progressRate: 0,
+  startDate: '',
+  actualStartDate: '',
   clientName: '',
+  developerName: '',
   contractorName: '',
-  safetyManager: '',
-  safetyManagerPhone: '',
   siteManager: '',
+  siteOfficer: '',
+  siteAddress: '',
   officePhone: '',
+  safetyManagerPhone: '',
   workerCount: 0,
+  staff: [],
   notes: '',
   updatedAt: '',
+});
+
+/** 저장된 데이터에 신규 필드가 없어도 안전하도록 보정 */
+const normalize = (info: SiteInfo, siteId: number, siteName: string): SiteInfo => ({
+  ...createEmptySiteInfo(siteId, siteName),
+  ...info,
+  siteId,
+  siteName: info.siteName || siteName,
+  staff: Array.isArray(info.staff) ? info.staff : [],
 });
 
 /** 현장 기본정보 조회 (없으면 빈 서식 반환) */
 export const getSiteInfo = (siteId: number, siteName: string): SiteInfo => {
   const all = readAll();
-  return all[String(siteId)] || createEmptySiteInfo(siteId, siteName);
+  const stored = all[String(siteId)];
+  if (!stored) return createEmptySiteInfo(siteId, siteName);
+  return normalize(stored, siteId, siteName);
 };
 
 /** 현장 기본정보 저장 */
@@ -55,9 +70,35 @@ export const isSiteInfoFilled = (info: SiteInfo): boolean =>
       info.scale ||
       info.contractPeriod ||
       info.contractAmount ||
+      info.startDate ||
+      info.actualStartDate ||
       info.clientName ||
+      info.developerName ||
       info.contractorName ||
       info.siteManager ||
-      info.safetyManager ||
-      info.notes
+      info.siteOfficer ||
+      info.siteAddress ||
+      info.officePhone ||
+      info.safetyManagerPhone ||
+      info.notes ||
+      (info.staff && info.staff.length > 0)
   );
+
+/* ------------------------------------------------------------------ */
+/* 관리자(안전인력) 헬퍼                                                */
+/* ------------------------------------------------------------------ */
+
+export const generateStaffId = (): string =>
+  `staff-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+export const createEmptyStaff = (role: SiteStaff['role'] = '안전관리자'): SiteStaff => ({
+  id: generateStaffId(),
+  role,
+  name: '',
+  phone: '',
+  appointedAt: '',
+  dismissedAt: '',
+  trainingDate: '',
+  newTraining8h: false,
+  note: '',
+});

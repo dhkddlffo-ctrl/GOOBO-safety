@@ -80,21 +80,50 @@ export interface SiteDocument {
 export interface SiteInfo {
   siteId: number;
   siteName: string;
-  address: string; // 현장 주소
-  constructionType: string; // 공사 종류 (예: 공동주택 신축)
+  address: string; // 소재지
+  constructionType: string; // 공사분류 (예: 공동주택 신축)
   scale: string; // 규모 (예: 지하 3층 ~ 지상 25층, 3개동)
-  contractPeriod: string; // 도급 기간 (예: 2024-03 ~ 2027-02)
-  contractAmount: string; // 도급 금액 (예: 1,250억원)
-  progressRate: number; // 공정률 (%)
+  contractPeriod: string; // 공사기간 (예: 2024-03 ~ 2027-02)
+  contractAmount: string; // 계약금액 (예: 1,250억원)
+  startDate: string; // 착공일 (계약상)
+  actualStartDate: string; // 실제착공일
   clientName: string; // 발주처
+  developerName: string; // 시행사
   contractorName: string; // 시공사
   siteManager: string; // 현장소장
-  safetyManager: string; // 안전관리자
+  siteOfficer: string; // 현장공무
+  siteAddress: string; // 현장주소
+  officePhone: string; // 현장 사무실 연락처
   safetyManagerPhone: string; // 안전관리자 연락처
-  officePhone: string; // 현장 사무실
   workerCount: number; // 현재 인원
+  staff: SiteStaff[]; // 관리자(안전인력) 목록
   notes: string; // 비고
   updatedAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* 관리자(안전인력)                                                     */
+/* ------------------------------------------------------------------ */
+
+export type StaffRole = '현장소장' | '안전보건관리책임자' | '안전관리자' | '관리감독자';
+
+export const STAFF_ROLES: StaffRole[] = [
+  '현장소장',
+  '안전보건관리책임자',
+  '안전관리자',
+  '관리감독자',
+];
+
+export interface SiteStaff {
+  id: string;
+  role: StaffRole;
+  name: string; // 성명
+  phone?: string; // 연락처
+  appointedAt?: string; // 선임일 (관리감독자는 지정일)
+  dismissedAt?: string; // 해임일
+  trainingDate?: string; // 직무교육 이수일
+  newTraining8h?: boolean; // 관리감독자 신규교육(8시간) 이수 여부
+  note?: string; // 비고
 }
 
 // 사고사례 타입
