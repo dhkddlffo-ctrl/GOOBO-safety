@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, saveSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite, getAccidentCases, updateAccidentCase, deleteAccidentCase } from '../utils/storage';
+import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite, getAccidentCases, updateAccidentCase, deleteAccidentCase } from '../utils/storage';
 import { Suggestion, WorkStopRequest, Site, AccidentCase } from '../types';
 import './AdminPage.css';
 

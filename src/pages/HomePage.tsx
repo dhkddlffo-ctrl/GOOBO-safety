@@ -61,6 +61,15 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </button>
 
           <button 
+            className="action-card action-info"
+            onClick={() => onNavigate('documents')}
+          >
+            <div className="action-icon">📁</div>
+            <h3>현장문서</h3>
+            <p>도면·계약서·점검표 조회</p>
+          </button>
+
+          <button 
             className="action-card action-secondary"
             onClick={() => onNavigate('admin')}
           >

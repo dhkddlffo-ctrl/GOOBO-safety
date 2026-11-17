@@ -45,6 +45,31 @@ export interface WorkStopRequest {
   resumeImages?: string[];
 }
 
+// 현장문서 타입
+export type DocumentCategory =
+  | '도면'
+  | '계약서'
+  | '안전점검표'
+  | '시공보고서'
+  | '사진대지'
+  | '기타';
+
+export interface SiteDocument {
+  id: string;
+  siteId: number;
+  siteName: string;
+  title: string;
+  category: DocumentCategory;
+  fileName: string;
+  fileSize: number; // bytes
+  fileType: string; // MIME type
+  version: string; // 예: v1.0
+  uploadedBy: string;
+  description?: string;
+  storageKey: string; // IndexedDB 파일 키 (추후 R2 오브젝트 키로 교체 가능)
+  createdAt: string;
+}
+
 // 사고사례 타입
 export interface AccidentCase {
   id: string;

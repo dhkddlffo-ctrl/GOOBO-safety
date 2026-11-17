@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import HomePage from './pages/HomePage';
 import SuggestionPage from './pages/SuggestionPage';
 import WorkStopPage from './pages/WorkStopPage';
 import AccidentCasePage from './pages/AccidentCasePage';
+import SiteDocumentPage from './pages/SiteDocumentPage';
 import AdminPage from './pages/AdminPage';
 import LoginModal from './components/LoginModal';
 import { isAuthenticated, logout } from './utils/auth';
 import './App.css';
 
-type Page = 'home' | 'suggestion' | 'work-stop' | 'accident-case' | 'admin';
+type Page = 'home' | 'suggestion' | 'work-stop' | 'accident-case' | 'documents' | 'admin';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -77,6 +78,9 @@ function App() {
         )}
         {currentPage === 'accident-case' && (
           <AccidentCasePage onNavigate={navigate} preselectedSiteId={preselectedSiteId} />
+        )}
+        {currentPage === 'documents' && (
+          <SiteDocumentPage onNavigate={navigate} preselectedSiteId={preselectedSiteId} />
         )}
         {currentPage === 'admin' && <AdminPage onNavigate={navigate} isLoggedIn={isLoggedIn} />}
       </main>
