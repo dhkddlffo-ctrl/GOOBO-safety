@@ -130,6 +130,13 @@
   color: var(--text-primary);
 }
 
+.section-subtitle {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  margin-top: -1rem;
+  margin-bottom: 1.5rem;
+}
+
 .sites-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -147,6 +154,31 @@
 .site-card:hover {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   border-color: var(--primary-color);
+}
+
+.site-card-clickable {
+  cursor: pointer;
+}
+
+.site-card-clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.14);
+}
+
+.site-card-clickable:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.4);
+  outline-offset: 2px;
+}
+
+.site-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.site-actions .btn {
+  flex: 1 1 auto;
+  white-space: nowrap;
 }
 
 .site-header {

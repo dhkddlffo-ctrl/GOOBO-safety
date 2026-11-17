@@ -82,27 +82,54 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         {/* Sites Section */}
         <div className="sites-section">
           <h2 className="section-title">진행 중인 현장</h2>
+          <p className="section-subtitle">
+            현장을 선택하면 현장정보와 문서보관함을 확인할 수 있습니다.
+          </p>
           <div className="sites-grid">
             {sites.map((site) => (
-              <div key={site.id} className="site-card">
+              <div
+                key={site.id}
+                className="site-card site-card-clickable"
+                onClick={() => onNavigate('site-detail', site.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onNavigate('site-detail', site.id);
+                  }
+                }}
+              >
                 <div className="site-header">
                   <h3 className="site-name">{site.name}</h3>
                   <span className="badge badge-success">운영중</span>
                 </div>
                 <p className="site-location">📍 {site.location}</p>
                 <div className="site-actions">
-                  <button 
+                  <button
                     className="btn btn-sm btn-primary"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      sessionStorage.setItem('selectedSiteId', site.id.toString());
+                      onNavigate('site-detail', site.id);
+                    }}
+                  >
+                    현장 열기
+                  </button>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       sessionStorage.setItem('selectedSiteId', site.id.toString());
                       onNavigate('suggestion', site.id);
                     }}
                   >
                     건의사항
                   </button>
-                  <button 
+                  <button
                     className="btn btn-sm btn-danger"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       sessionStorage.setItem('selectedSiteId', site.id.toString());
                       onNavigate('work-stop', site.id);
                     }}

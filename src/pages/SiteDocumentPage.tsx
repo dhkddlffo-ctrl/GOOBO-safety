@@ -20,21 +20,13 @@ import {
   ALLOWED_EXTENSIONS,
   MAX_FILE_SIZE,
 } from '../utils/documentStorage';
+import { CATEGORY_KEYS as CATEGORIES } from '../data/documentCategories';
 import './SiteDocumentPage.css';
 
 interface SiteDocumentPageProps {
   onNavigate: (page: string, siteId?: number) => void;
   preselectedSiteId?: number;
 }
-
-const CATEGORIES: DocumentCategory[] = [
-  '도면',
-  '계약서',
-  '안전점검표',
-  '시공보고서',
-  '사진대지',
-  '기타',
-];
 
 const formatDateTime = (iso: string): string =>
   new Date(iso).toLocaleString('ko-KR', {

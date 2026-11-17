@@ -47,9 +47,14 @@ export interface WorkStopRequest {
 
 // 현장문서 타입
 export type DocumentCategory =
+  | '안전보건관리대장'
+  | '안전계획서'
+  | '안전관리비'
+  | '교육일지'
+  | '안전점검표'
+  | '위험성평가'
   | '도면'
   | '계약서'
-  | '안전점검표'
   | '시공보고서'
   | '사진대지'
   | '기타';
@@ -60,6 +65,7 @@ export interface SiteDocument {
   siteName: string;
   title: string;
   category: DocumentCategory;
+  period?: string; // 해당 연월/기간 (예: 2026-11, 2026년 1분기)
   fileName: string;
   fileSize: number; // bytes
   fileType: string; // MIME type
@@ -68,6 +74,27 @@ export interface SiteDocument {
   description?: string;
   storageKey: string; // IndexedDB 파일 키 (추후 R2 오브젝트 키로 교체 가능)
   createdAt: string;
+}
+
+// 현장 기본정보 타입
+export interface SiteInfo {
+  siteId: number;
+  siteName: string;
+  address: string; // 현장 주소
+  constructionType: string; // 공사 종류 (예: 공동주택 신축)
+  scale: string; // 규모 (예: 지하 3층 ~ 지상 25층, 3개동)
+  contractPeriod: string; // 도급 기간 (예: 2024-03 ~ 2027-02)
+  contractAmount: string; // 도급 금액 (예: 1,250억원)
+  progressRate: number; // 공정률 (%)
+  clientName: string; // 발주처
+  contractorName: string; // 시공사
+  siteManager: string; // 현장소장
+  safetyManager: string; // 안전관리자
+  safetyManagerPhone: string; // 안전관리자 연락처
+  officePhone: string; // 현장 사무실
+  workerCount: number; // 현재 인원
+  notes: string; // 비고
+  updatedAt: string;
 }
 
 // 사고사례 타입
