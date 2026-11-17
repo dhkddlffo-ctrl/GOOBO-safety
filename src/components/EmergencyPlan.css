@@ -1,0 +1,800 @@
+/* ================================================================
+   현장별 비상연락망 게시판 (A4 출력 대응)
+   ================================================================ */
+
+.em-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* ---------------- 툴바 (인쇄 시 숨김) ---------------- */
+.em-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.625rem;
+}
+
+.em-toolbar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 200px;
+}
+
+.em-toolbar-info strong {
+  font-size: 0.9375rem;
+  color: #1f2937;
+}
+
+.em-toolbar-sub {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.em-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.em-error {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+/* ================================================================
+   게시판 본문
+   ================================================================ */
+.em-poster {
+  background: #fff;
+  border: 2px solid #111827;
+  border-radius: 0.5rem;
+  padding: 1.25rem 1.375rem 1rem;
+  color: #111827;
+  line-height: 1.45;
+}
+
+/* ---------------- 제목부 ---------------- */
+.em-head {
+  border-bottom: 3px solid #111827;
+  padding-bottom: 0.625rem;
+  margin-bottom: 0.875rem;
+}
+
+.em-head-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.em-head-construction {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #374151;
+  flex: 1 1 auto;
+}
+
+.em-head-title {
+  font-size: 1.875rem;
+  font-weight: 900;
+  letter-spacing: 0.35rem;
+  color: #111827;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.em-head-mark {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-align: right;
+  flex: 1 1 auto;
+}
+
+.em-head-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #374151;
+}
+
+.em-head-meta strong {
+  color: #111827;
+  margin-right: 0.375rem;
+}
+
+/* ---------------- 섹션 ---------------- */
+.em-section {
+  margin-bottom: 0.875rem;
+}
+
+.em-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: #111827;
+  background: #e5e7eb;
+  border-left: 5px solid #111827;
+  padding: 0.375rem 0.625rem;
+  margin-bottom: 0.5rem;
+}
+
+.em-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  background: #111827;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+/* ---------------- 1. 흐름도 ---------------- */
+.em-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.em-flow-row {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.em-flow-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  width: 100%;
+  max-width: 420px;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid #374151;
+  border-radius: 0.375rem;
+  background: #f9fafb;
+  text-align: center;
+}
+
+.em-flow-box strong {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.em-flow-box small {
+  font-size: 0.6875rem;
+  color: #4b5563;
+}
+
+.em-flow-start {
+  background: #fee2e2;
+  border-color: #b91c1c;
+}
+
+.em-flow-start,
+.em-flow-end {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: #111827;
+  padding: 0.4375rem 1.25rem;
+  max-width: 260px;
+}
+
+.em-flow-end {
+  background: #dbeafe;
+  border-color: #1d4ed8;
+}
+
+.em-flow-arrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* ---------------- 표 ---------------- */
+.em-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.6875rem;
+}
+
+.em-table th,
+.em-table td {
+  border: 1px solid #6b7280;
+  padding: 0.3125rem 0.375rem;
+  text-align: left;
+  vertical-align: middle;
+  word-break: break-all;
+}
+
+.em-table thead th {
+  background: #d1d5db;
+  font-weight: 800;
+  color: #111827;
+  text-align: center;
+  font-size: 0.6875rem;
+}
+
+.em-cell-group {
+  background: #f3f4f6;
+  font-weight: 800;
+  text-align: center;
+  color: #111827;
+}
+
+.em-cell-name {
+  font-weight: 700;
+  text-align: center;
+}
+
+.em-cell-phone {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.em-cell-duty,
+.em-cell-note {
+  color: #374151;
+}
+
+.em-empty {
+  color: #9ca3af;
+}
+
+.em-hospital-dist {
+  color: #6b7280;
+  font-size: 0.625rem;
+}
+
+/* ---------------- 4. 약도 ---------------- */
+.em-map {
+  margin-top: 0.5rem;
+  border: 1px dashed #9ca3af;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+}
+
+.em-map-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #4b5563;
+  margin-bottom: 0.375rem;
+}
+
+.em-map-img {
+  width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  display: block;
+}
+
+.em-map-empty {
+  font-size: 0.6875rem;
+  color: #9ca3af;
+  text-align: center;
+  padding: 1.25rem 0.75rem;
+  background: #f9fafb;
+  border-radius: 0.25rem;
+}
+
+/* ---------------- 5. 신고 요령 ---------------- */
+.em-section-last {
+  margin-bottom: 0.5rem;
+}
+
+.em-guide {
+  margin: 0;
+  padding-left: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.em-guide li {
+  font-size: 0.75rem;
+  color: #111827;
+}
+
+.em-guide li strong {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  margin-bottom: 0.0625rem;
+}
+
+.em-guide li p {
+  margin: 0;
+  color: #374151;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  background: #f9fafb;
+  border-left: 2px solid #9ca3af;
+  padding: 0.1875rem 0.5rem;
+}
+
+/* ---------------- 하단 ---------------- */
+.em-foot {
+  margin-top: 0.625rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #d1d5db;
+  font-size: 0.625rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* ================================================================
+   편집 화면
+   ================================================================ */
+.em-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.em-edit-block {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.625rem;
+  padding: 0.875rem 1rem;
+  background: #fff;
+}
+
+.em-edit-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.625rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.em-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.em-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.625rem;
+}
+
+.em-field > span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.em-field input,
+.em-edit-row input,
+.em-edit-row select {
+  width: 100%;
+  padding: 0.4375rem 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1f2937;
+}
+
+.em-field input:focus,
+.em-edit-row input:focus,
+.em-edit-row select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* 행 편집 */
+.em-edit-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.em-edit-row {
+  display: grid;
+  grid-template-columns: 108px 1.4fr 0.8fr 1.1fr 1.6fr 32px;
+  gap: 0.3125rem;
+  align-items: center;
+}
+
+.em-edit-row .em-in-group {
+  min-width: 0;
+}
+
+.em-edit-row .em-in-dist {
+  min-width: 0;
+}
+
+.em-row-del {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fecaca;
+  background: #fff;
+  color: #b91c1c;
+  border-radius: 0.3125rem;
+  cursor: pointer;
+  font-size: 0.6875rem;
+  transition: all 0.2s;
+}
+
+.em-row-del:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.em-add-row {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.em-add-btn {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px dashed #93c5fd;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.em-add-btn:hover {
+  background: #dbeafe;
+  border-style: solid;
+}
+
+/* 약도 편집 */
+.em-map-edit {
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.em-map-edit-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.375rem;
+}
+
+.em-map-edit-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.em-map-edit-hint {
+  margin-top: 0.375rem;
+  font-size: 0.6875rem;
+  color: #9ca3af;
+}
+
+.em-editor-note {
+  font-size: 0.75rem;
+  color: #6b7280;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+/* ================================================================
+   A4 인쇄
+   ================================================================ */
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+  /* 앱 크롬·툴바·편집화면 숨김 */
+  .app-header,
+  .app-footer,
+  .sd-header,
+  .sd-tabs,
+  .sd-panel-head,
+  .em-toolbar,
+  .em-error,
+  .em-editor,
+  .em-editor-note {
+    display: none !important;
+  }
+
+  .app,
+  .app-main,
+  .site-detail-page,
+  .site-detail-page .container {
+    display: block !important;
+    background: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+  }
+
+  .sd-panel {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+
+  .em-wrap {
+    gap: 0 !important;
+  }
+
+  /* 배경색 유지 (표 머리글·흐름도 등) */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ---------------- A4 1장에 담기 위한 인쇄 전용 조밀 레이아웃 ---------------- */
+  .em-poster {
+    border: 1.5pt solid #111827 !important;
+    border-radius: 0 !important;
+    padding: 3mm 3.5mm !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    line-height: 1.3 !important;
+  }
+
+  /* 제목부 */
+  .em-head {
+    border-bottom-width: 2pt !important;
+    padding-bottom: 1.5mm !important;
+    margin-bottom: 2mm !important;
+  }
+
+  .em-head-construction {
+    font-size: 9pt !important;
+  }
+
+  .em-head-title {
+    font-size: 17pt !important;
+    letter-spacing: 0.3rem !important;
+  }
+
+  .em-head-mark {
+    font-size: 7.5pt !important;
+  }
+
+  .em-head-meta {
+    margin-top: 1mm !important;
+    gap: 0 4mm !important;
+    font-size: 7.5pt !important;
+  }
+
+  /* 섹션 */
+  .em-section {
+    margin-bottom: 2mm !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .em-section-title {
+    gap: 1.5mm !important;
+    font-size: 9pt !important;
+    padding: 1mm 2mm !important;
+    margin-bottom: 1.2mm !important;
+    border-left-width: 4pt !important;
+  }
+
+  .em-no {
+    width: 4mm !important;
+    height: 4mm !important;
+    font-size: 7pt !important;
+  }
+
+  /* 1. 흐름도 */
+  .em-flow {
+    gap: 0.8mm !important;
+  }
+
+  .em-flow-box {
+    gap: 0.3mm !important;
+    max-width: 105mm !important;
+    padding: 1.2mm 2.5mm !important;
+  }
+
+  .em-flow-box strong {
+    font-size: 8pt !important;
+  }
+
+  .em-flow-box small {
+    font-size: 6.8pt !important;
+    line-height: 1.25 !important;
+  }
+
+  .em-flow-start,
+  .em-flow-end {
+    max-width: 65mm !important;
+    padding: 1mm 4mm !important;
+    font-size: 8.5pt !important;
+  }
+
+  .em-flow-arrow {
+    font-size: 6.5pt !important;
+  }
+
+  /* 표 */
+  .em-table {
+    font-size: 7pt !important;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .em-table th,
+  .em-table td {
+    padding: 0.8mm 1.2mm !important;
+  }
+
+  .em-table thead th {
+    font-size: 7pt !important;
+  }
+
+  .em-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .em-table thead {
+    display: table-header-group;
+  }
+
+  .em-hospital-dist {
+    font-size: 6.2pt !important;
+  }
+
+  /* 4. 약도 */
+  .em-map {
+    margin-top: 1.2mm !important;
+    padding: 1.2mm !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .em-map-label {
+    font-size: 7pt !important;
+    margin-bottom: 0.8mm !important;
+  }
+
+  .em-map-img {
+    max-height: 42mm !important;
+  }
+
+  .em-map-empty {
+    font-size: 7pt !important;
+    padding: 4mm 2mm !important;
+  }
+
+  /* 5. 신고 요령 */
+  .em-guide {
+    gap: 1mm !important;
+    padding-left: 4mm !important;
+  }
+
+  .em-guide li,
+  .em-guide li strong {
+    font-size: 8pt !important;
+  }
+
+  .em-guide li p {
+    font-size: 7.2pt !important;
+    padding: 0.8mm 2mm !important;
+    line-height: 1.35 !important;
+  }
+
+  /* 하단 */
+  .em-foot {
+    margin-top: 1.2mm !important;
+    padding-top: 1mm !important;
+    font-size: 6.5pt !important;
+  }
+}
+
+/* ================================================================
+   반응형
+   ================================================================ */
+@media (max-width: 900px) {
+  .em-edit-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .em-edit-row .em-row-del {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .em-grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .em-poster {
+    padding: 0.875rem 0.75rem;
+    border-width: 1.5px;
+  }
+
+  .em-head-title {
+    font-size: 1.375rem;
+    letter-spacing: 0.2rem;
+  }
+
+  .em-head-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .em-head-mark {
+    text-align: left;
+  }
+
+  .em-table {
+    font-size: 0.625rem;
+  }
+
+  .em-table th,
+  .em-table td {
+    padding: 0.25rem 0.25rem;
+  }
+
+  .em-edit-row {
+    grid-template-columns: 1fr;
+  }
+
+  .em-toolbar-actions {
+    width: 100%;
+  }
+
+  .em-toolbar-actions .btn {
+    flex: 1;
+  }
+}

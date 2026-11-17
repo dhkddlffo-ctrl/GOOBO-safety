@@ -133,6 +133,57 @@ export interface SiteStaff {
   note?: string; // 비고
 }
 
+// ---------------- 비상연락망 (게시판 부착용) ----------------
+
+/** 현장 내부 비상연락망 구분 */
+export type EmergencyGroup = '원청(현장)' | '본사' | '협력사';
+export const EMERGENCY_GROUPS: EmergencyGroup[] = ['원청(현장)', '본사', '협력사'];
+
+/** 현장 내부 비상연락망 1행 */
+export interface EmergencyContact {
+  id: string;
+  group: EmergencyGroup; // 구분
+  role: string; // 직책 / 담당업무
+  name: string; // 성명
+  phone: string; // 연락처 (휴대전화)
+  duty: string; // 비상시 주요 임무
+}
+
+/** 외부 유관기관 1행 */
+export interface ExternalAgency {
+  id: string;
+  category: string; // 구분 (긴급구조 / 치안·교통 / 노동·안전 …)
+  name: string; // 기관명
+  phone: string; // 전화번호
+  note: string; // 관할 / 비고
+}
+
+/** 지정병원 1행 */
+export interface DesignatedHospital {
+  id: string;
+  category: string; // 구분 (중증·야간 / 경상·주간)
+  name: string; // 병원명
+  erPhone: string; // 응급실 직통번호
+  address: string; // 도로명 주소
+  distance: string; // 거리 / 소요시간
+}
+
+/** 현장별 비상연락망 게시판 */
+export interface EmergencyPlan {
+  siteId: number;
+  siteName: string;
+  constructionName: string; // 공사명
+  siteAddress: string; // 현장 주소 (도로명 + 출입구 위치)
+  author: string; // 작성자 (예: 안전관리자 홍길동)
+  entryPoint: string; // 유도자 배치 출입구 (예: 현장 정문)
+  /** 지정병원 약도 이미지 (IndexedDB 키) */
+  mapImageKey?: string;
+  contacts: EmergencyContact[];
+  agencies: ExternalAgency[];
+  hospitals: DesignatedHospital[];
+  updatedAt: string;
+}
+
 // 사고사례 타입
 export interface AccidentCase {
   id: string;

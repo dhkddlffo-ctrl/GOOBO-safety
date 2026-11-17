@@ -13,6 +13,7 @@ import { isAuthenticated } from '../utils/auth';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoriesWithOrphans } from '../utils/categoryStorage';
 import DocumentArchive from '../components/DocumentArchive';
+import EmergencyPlan from '../components/EmergencyPlan';
 import './SiteDetailPage.css';
 
 interface SiteDetailPageProps {
@@ -22,10 +23,10 @@ interface SiteDetailPageProps {
   initialTab?: string;
 }
 
-type Tab = 'info' | 'documents' | 'activity';
+type Tab = 'info' | 'documents' | 'emergency' | 'activity';
 
 const isTab = (value?: string): value is Tab =>
-  value === 'info' || value === 'documents' || value === 'activity';
+  value === 'info' || value === 'documents' || value === 'emergency' || value === 'activity';
 
 const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, initialTab }) => {
   const [site, setSite] = useState<Site | null>(null);
@@ -254,6 +255,12 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
             onClick={() => changeTab('documents')}
           >
             📁 문서보관함 <span className="sd-tab-count">{docs.length}</span>
+          </button>
+          <button
+            className={`sd-tab ${activeTab === 'emergency' ? 'active' : ''}`}
+            onClick={() => changeTab('emergency')}
+          >
+            🚨 비상연락망
           </button>
           <button
             className={`sd-tab ${activeTab === 'activity' ? 'active' : ''}`}
@@ -605,6 +612,26 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
             </div>
 
             <DocumentArchive siteId={site.id} siteName={site.name} />
+          </div>
+        )}
+
+        {/* ============ 비상연락망 탭 ============ */}
+        {activeTab === 'emergency' && (
+          <div className="sd-panel sd-panel-emergency">
+            <div className="sd-panel-head">
+              <div>
+                <h2>🚨 비상연락망 게시판</h2>
+                <p className="sd-panel-sub">
+                  입력한 내용을 A4로 출력해 사무실·탈의실 게시판에 부착할 수 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <EmergencyPlan
+              siteId={site.id}
+              siteName={site.name}
+              siteAddress={siteInfo?.siteAddress || siteInfo?.address || site.location}
+            />
           </div>
         )}
 
