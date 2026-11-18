@@ -21,8 +21,8 @@ import { getSiteInfo } from './siteInfoStorage';
 export interface TrainingRule {
   /** 재이수 주기(년) */
   years: number;
-  /** 정기교육 최소 시간 (안내 문구용) */
-  hours: string;
+  /** 정기교육 시간 안내 (없으면 화면에서 생략) */
+  hours?: string;
   /** 신규교육 최소 시간 (안내 문구용) */
   newHours?: string;
 }
@@ -30,11 +30,13 @@ export interface TrainingRule {
 /**
  * 역할별 직무교육 주기.
  * 주기가 바뀌면 이 표만 수정하면 화면 전체에 반영됩니다.
+ * 계산 기준일은 '직무교육 이수일'이며, 이수일 + years 년이 유효기간 만료일입니다.
  */
 export const TRAINING_RULE: Record<StaffRole, TrainingRule> = {
   현장소장: { years: 1, hours: '연간 6시간' },
-  안전보건관리책임자: { years: 1, hours: '연간 6시간' },
-  안전관리자: { years: 1, hours: '연간 24시간' },
+  // 안전보건관리책임자·안전관리자는 직무교육 이수일로부터 2년입니다.
+  안전보건관리책임자: { years: 2 },
+  안전관리자: { years: 2 },
   관리감독자: { years: 1, hours: '연간 8시간', newHours: '신규 8시간' },
 };
 
@@ -93,17 +95,22 @@ export interface StaffCompliance {
   daysLeft: number | null;
   /** 상세 설명 */
   message: string;
-  /** 정기교육 최소 시간 안내 */
+  /** 정기교육 시간 안내 (없으면 '') */
   hours: string;
+  /** 재이수 주기(년) */
+  years: number;
 }
 
 /**
  * 안전인력 1명의 교육 이수 상태를 판정합니다.
  * - 해임된 인력은 점검 대상에서 제외합니다(level 'ok', message 안내).
  * - 직무교육 이수일이 없으면 'missing'.
+ * - 기준일은 '직무교육 이수일'이고, 이수일 + 주기(년)가 유효기간 만료일입니다.
  */
 export const evaluateStaff = (staff: SiteStaff, today: Date = startOfToday()): StaffCompliance => {
-  const rule = TRAINING_RULE[staff.role] ?? { years: 1, hours: '연간 8시간' };
+  const rule: TrainingRule = TRAINING_RULE[staff.role] ?? { years: 1 };
+  const hours = rule.hours ?? '';
+  const cycle = `${rule.years}년`;
 
   // 해임자는 점검 제외
   if (staff.dismissedAt) {
@@ -113,7 +120,8 @@ export const evaluateStaff = (staff: SiteStaff, today: Date = startOfToday()): S
       dueDate: '',
       daysLeft: null,
       message: '해임 처리된 인력입니다. 점검 대상에서 제외됩니다.',
-      hours: rule.hours,
+      hours,
+      years: rule.years,
     };
   }
 
@@ -125,8 +133,9 @@ export const evaluateStaff = (staff: SiteStaff, today: Date = startOfToday()): S
       label: '미입력',
       dueDate: '',
       daysLeft: null,
-      message: `직무교육 이수일이 등록되지 않았습니다. (${rule.hours})`,
-      hours: rule.hours,
+      message: `직무교육 이수일이 등록되지 않았습니다. (이수일로부터 ${cycle})`,
+      hours,
+      years: rule.years,
     };
   }
 
@@ -139,8 +148,9 @@ export const evaluateStaff = (staff: SiteStaff, today: Date = startOfToday()): S
       label: `D+${Math.abs(daysLeft)}`,
       dueDate: toDateOnly(due),
       daysLeft,
-      message: `직무교육 유효기간이 ${Math.abs(daysLeft)}일 지났습니다. 재교육이 필요합니다.`,
-      hours: rule.hours,
+      message: `직무교육 유효기간(${cycle})이 ${Math.abs(daysLeft)}일 지났습니다. 재교육이 필요합니다.`,
+      hours,
+      years: rule.years,
     };
   }
 
@@ -150,8 +160,9 @@ export const evaluateStaff = (staff: SiteStaff, today: Date = startOfToday()): S
       label: `D-${daysLeft}`,
       dueDate: toDateOnly(due),
       daysLeft,
-      message: `${daysLeft}일 후 직무교육 유효기간이 만료됩니다. (${rule.hours})`,
-      hours: rule.hours,
+      message: `${daysLeft}일 후 직무교육 유효기간(${cycle})이 만료됩니다.`,
+      hours,
+      years: rule.years,
     };
   }
 
@@ -161,7 +172,8 @@ export const evaluateStaff = (staff: SiteStaff, today: Date = startOfToday()): S
     dueDate: toDateOnly(due),
     daysLeft,
     message: `정상 이수 상태입니다. 다음 교육 예정일 ${toDateOnly(due)}.`,
-    hours: rule.hours,
+    hours,
+    years: rule.years,
   };
 };
 

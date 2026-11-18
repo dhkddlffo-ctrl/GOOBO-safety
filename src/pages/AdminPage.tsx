@@ -1094,14 +1094,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
           <div className="content-section">
             <div className="staff-check-note">
               <p>
-                <strong>점검 기준</strong> — 선임일·직무교육 이수일을 기준으로 다음 교육 예정일을 계산합니다.
-                만료 {SOON_DAYS}일 전부터 ‘만료임박’으로 표시됩니다.
+                <strong>점검 기준</strong> — 직무교육 <strong>이수일</strong>을 기준으로 유효기간 만료일을
+                계산합니다. 만료 {SOON_DAYS}일 전부터 ‘만료임박’으로 표시됩니다.
               </p>
               <ul className="staff-rule-list">
                 {(Object.keys(TRAINING_RULE) as StaffRole[]).map(role => (
                   <li key={role}>
-                    <strong>{role}</strong> — {TRAINING_RULE[role].years}년마다 재이수 (
-                    {TRAINING_RULE[role].hours})
+                    <strong>{role}</strong> — 이수일로부터 {TRAINING_RULE[role].years}년
+                    {TRAINING_RULE[role].hours ? ` (${TRAINING_RULE[role].hours})` : ''}
                   </li>
                 ))}
               </ul>
