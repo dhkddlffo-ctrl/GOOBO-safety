@@ -213,14 +213,20 @@ export interface OrgMember {
 export interface OrgUnit {
   id: string;
   title: string; // 직책·부서 (예: 대표이사, 분사 PM, 관리감독자)
+  /** 단(段) 안에서의 가로 칸 위치 (0부터). 미지정 시 배열 순서를 사용합니다. */
+  col?: number;
+  /** true 이면 항상 단의 가운데 칸에 고정됩니다 (이동 불가). */
+  pinCenter?: boolean;
   members: OrgMember[];
 }
 
 /** 조직도 세로 단(段) — 위에서 아래로 이어지는 한 줄 */
 export interface OrgTier {
   id: string;
-  /** 가로 정렬: 가운데 / 양끝 / 오른쪽 */
+  /** 가로 정렬: 가운데 / 양끝 / 오른쪽 (구버전 호환용, 현재는 col 로 위치 지정) */
   align: 'center' | 'between' | 'end';
+  /** 단의 가로 칸 수. 미지정 시 상자 개수로 계산합니다. */
+  cols?: number;
   units: OrgUnit[];
 }
 

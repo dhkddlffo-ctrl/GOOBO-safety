@@ -27,11 +27,21 @@ const formatKoreanDate = (iso?: string): string => {
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
 };
 
-const ALIGN_LABEL: Record<OrgTier['align'], string> = {
-  center: '가운데',
-  between: '양끝 정렬',
-  end: '오른쪽',
-};
+/**
+ * 단(段)의 전체 칸 수.
+ * 저장된 cols → 가장 큰 col+1 → 상자 개수 → 1 순으로 결정합니다.
+ */
+const tierCols = (tier: OrgTier): number =>
+  Math.max(
+    tier.cols ?? 0,
+    ...tier.units.map(u => (u.col ?? 0) + 1),
+    tier.units.length,
+    1
+  );
+
+/** 상자의 칸 번호 (0부터). 범위를 벗어나면 보정합니다. */
+const unitCol = (unit: OrgTier['units'][number], cols: number): number =>
+  Math.min(Math.max(unit.col ?? 0, 0), cols - 1);
 
 /** 인쇄 대상 — 조직도만 / 업무분장표만 / 둘 다(각 1장) */
 type PrintTarget = 'both' | 'chart' | 'duty';
@@ -187,8 +197,102 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
     }));
   };
 
-  const setTierAlign = (tierId: string, align: OrgTier['align']) =>
-    patchTier(tierId, tier => ({ ...tier, align }));
+  /* ---------------- 상자 위치 이동 ---------------- */
+
+  /** 단의 칸 수 변경 (늘리면 좌우 여백이 생겨 상자를 가운데로 몰 수 있음) */
+  const setTierCols = (tierId: string, delta: number) =>
+    patchTier(tierId, tier => {
+      const next = Math.min(7, Math.max(tierCols(tier) + delta, 1));
+      return {
+        ...tier,
+        cols: next,
+        units: tier.units.map(u => ({ ...u, col: Math.min(u.col ?? 0, next - 1) })),
+      };
+    });
+
+  /**
+   * 상자를 좌/우 칸으로 이동.
+   * - 대상 칸에 다른 상자가 있으면 서로 자리를 맞바꿉니다.
+   * - 칸 범위를 벗어나면 칸 수를 늘려 이동을 허용합니다.
+   */
+  const moveUnit = (tierId: string, unitId: string, delta: number) =>
+    patchTier(tierId, tier => {
+      const cols = tierCols(tier);
+      const current = tier.units.find(u => u.id === unitId);
+      if (!current) return tier;
+      const from = unitCol(current, cols);
+      const to = from + delta;
+
+      if (to < 0 || to >= cols) {
+        // 칸이 모자라면 한 칸 늘려서 이동
+        const nextCols = Math.min(7, Math.max(cols + 1, to + 1));
+        if (to < 0 || to >= nextCols) return tier;
+        return {
+          ...tier,
+          cols: nextCols,
+          units: tier.units.map(u => (u.id === unitId ? { ...u, col: to } : u)),
+        };
+      }
+
+      const occupant = tier.units.find(u => u.id !== unitId && unitCol(u, cols) === to);
+      return {
+        ...tier,
+        units: tier.units.map(u => {
+          if (u.id === unitId) return { ...u, col: to };
+          if (occupant && u.id === occupant.id) return { ...u, col: from };
+          return u;
+        }),
+      };
+    });
+
+  /** 상자를 특정 칸으로 (가운데 정렬 버튼용) */
+  const moveUnitTo = (tierId: string, unitId: string, target: number) =>
+    patchTier(tierId, tier => {
+      const cols = tierCols(tier);
+      const from = unitCol(tier.units.find(u => u.id === unitId) ?? tier.units[0], cols);
+      const to = Math.min(Math.max(target, 0), cols - 1);
+      if (from === to) return tier;
+      const occupant = tier.units.find(u => u.id !== unitId && unitCol(u, cols) === to);
+      return {
+        ...tier,
+        units: tier.units.map(u => {
+          if (u.id === unitId) return { ...u, col: to };
+          if (occupant && u.id === occupant.id) return { ...u, col: from };
+          return u;
+        }),
+      };
+    });
+
+  /**
+   * 상자를 가운데 칸으로 (홀수 칸 기준 정중앙)
+   * `pin` 을 true 로 주면 가운데 고정 상태가 됩니다.
+   */
+  const centerUnit = (tierId: string, unitId: string, pin = false) =>
+    patchTier(tierId, tier => {
+      const cols = tierCols(tier);
+      // 짝수 칸이면 가운데가 두 칸이라 왼쪽 가운데를 사용
+      const mid = Math.floor((cols - 1) / 2);
+      const from = unitCol(tier.units.find(u => u.id === unitId) ?? tier.units[0], cols);
+      const occupant = tier.units.find(u => u.id !== unitId && unitCol(u, cols) === mid);
+      return {
+        ...tier,
+        // 가운데 고정은 단마다 1개만 유지
+        units: tier.units.map(u => {
+          if (u.id === unitId) return { ...u, col: mid, pinCenter: pin || undefined };
+          const swapped = occupant && u.id === occupant.id ? { ...u, col: from } : u;
+          return swapped.pinCenter ? { ...swapped, pinCenter: undefined } : swapped;
+        }),
+      };
+    });
+
+  /** 가운데 고정 토글 */
+  const pinUnit = (tierId: string, unitId: string, pin: boolean) => {
+    if (pin) {
+      centerUnit(tierId, unitId, true);
+      return;
+    }
+    patchUnit(tierId, unitId, unit => ({ ...unit, pinCenter: undefined }));
+  };
 
   const setUnitTitle = (tierId: string, unitId: string, title: string) =>
     patchUnit(tierId, unitId, unit => ({ ...unit, title }));
@@ -273,22 +377,32 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
   const chartSection = (
     <section className="so-chart">
       {view.tiers.map((tier, tierIndex) => {
-        const multi = tier.units.length > 1;
-        // 셀을 균등 분할하므로 첫/끝 셀의 중심은 50%/n 지점이 됩니다.
-        const inset = `${50 / Math.max(tier.units.length, 1)}%`;
+        const cols = tierCols(tier);
+        // 각 상자의 칸 중심(%) — 그리드 n칸에서 k번 칸의 중심은 (k+0.5)/n
+        const centers = tier.units.map(u => ((unitCol(u, cols) + 0.5) / cols) * 100);
+        // 세로줄은 항상 가운데(50%)에서 내려오고, 가로 연결선은 그 지점을 포함하도록 함
+        const busLeft = Math.min(50, ...centers);
+        const busRight = Math.max(50, ...centers);
+        const branch = tierIndex > 0;
         return (
           <React.Fragment key={tier.id}>
-            {tierIndex > 0 && <div className="so-stem" aria-hidden="true" />}
+            {branch && <div className="so-stem" aria-hidden="true" />}
             <div
-              className={`so-tier so-tier-${tier.align}${multi ? ' so-tier-branch' : ''}${
-                tierIndex === 0 ? ' so-tier-first' : ''
-              }`}
+              className={`so-tier ${branch ? 'so-tier-branch' : 'so-tier-first'}`}
               style={
-                multi ? ({ ['--so-inset' as string]: inset } as React.CSSProperties) : undefined
+                {
+                  '--so-cols': cols,
+                  '--so-bus-left': `${busLeft}%`,
+                  '--so-bus-right': `${100 - busRight}%`,
+                } as React.CSSProperties
               }
             >
               {tier.units.map(unit => (
-                <div className="so-cell" key={unit.id}>
+                <div
+                  className="so-cell"
+                  key={unit.id}
+                  style={{ '--so-col': unitCol(unit, cols) + 1 } as React.CSSProperties}
+                >
                   <div className="so-unit">
                     <div className="so-unit-title">{unit.title || '부서명'}</div>
                     {unit.members.length === 0 && (
@@ -508,19 +622,29 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
       {draft.tiers.map((tier, tierIndex) => (
         <div className="so-editor-block" key={tier.id}>
           <div className="so-editor-head">
-            <h3 className="so-editor-title">{tierIndex + 1}단</h3>
+            <h3 className="so-editor-title">
+              {tierIndex + 1}단
+              <span className="so-editor-cols">가로 {tierCols(tier)}칸</span>
+            </h3>
             <div className="so-editor-head-actions">
-              <select
-                value={tier.align}
-                onChange={e => setTierAlign(tier.id, e.target.value as OrgTier['align'])}
-                title="가로 정렬"
+              <button
+                type="button"
+                className="so-btn so-btn-step"
+                onClick={() => setTierCols(tier.id, -1)}
+                disabled={tierCols(tier) <= 1}
+                title="가로 칸 줄이기"
               >
-                {(Object.keys(ALIGN_LABEL) as OrgTier['align'][]).map(a => (
-                  <option key={a} value={a}>
-                    {ALIGN_LABEL[a]}
-                  </option>
-                ))}
-              </select>
+                칸 －
+              </button>
+              <button
+                type="button"
+                className="so-btn so-btn-step"
+                onClick={() => setTierCols(tier.id, +1)}
+                disabled={tierCols(tier) >= 7}
+                title="가로 칸 늘리기 (좌우 여백이 생겨 상자를 가운데로 몰 수 있습니다)"
+              >
+                칸 ＋
+              </button>
               <button
                 type="button"
                 className="so-btn so-btn-del"
@@ -550,6 +674,61 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
                 >
                   상자 삭제
                 </button>
+              </div>
+
+              {/* 상자 가로 위치 이동 */}
+              <div className="so-emove">
+                <span className="so-emove-label">위치</span>
+                <button
+                  type="button"
+                  className="so-btn so-btn-step"
+                  onClick={() => moveUnit(tier.id, unit.id, -1)}
+                  disabled={!!unit.pinCenter}
+                  title={unit.pinCenter ? '가운데 고정된 상자는 이동할 수 없습니다' : '왼쪽 칸으로 이동'}
+                >
+                  ◀
+                </button>
+                <span className="so-emove-pos">
+                  {unit.pinCenter
+                    ? '가운데 고정'
+                    : `${unitCol(unit, tierCols(tier)) + 1} / ${tierCols(tier)}칸`}
+                </span>
+                <button
+                  type="button"
+                  className="so-btn so-btn-step"
+                  onClick={() => moveUnit(tier.id, unit.id, +1)}
+                  disabled={!!unit.pinCenter}
+                  title={unit.pinCenter ? '가운데 고정된 상자는 이동할 수 없습니다' : '오른쪽 칸으로 이동'}
+                >
+                  ▶
+                </button>
+                <button
+                  type="button"
+                  className="so-btn so-btn-center"
+                  onClick={() => centerUnit(tier.id, unit.id)}
+                  disabled={!!unit.pinCenter}
+                  title="이 상자를 단의 가운데 칸으로"
+                >
+                  가운데로
+                </button>
+                <button
+                  type="button"
+                  className="so-btn so-btn-step"
+                  onClick={() => moveUnitTo(tier.id, unit.id, tierCols(tier) - 1)}
+                >
+                  끝으로
+                </button>
+                <label
+                  className={`so-eping${unit.pinCenter ? ' is-on' : ''}`}
+                  title="체크하면 이 상자는 항상 단의 가운데에 고정됩니다"
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!unit.pinCenter}
+                    onChange={e => pinUnit(tier.id, unit.id, e.target.checked)}
+                  />
+                  가운데 고정
+                </label>
               </div>
 
               {unit.members.map(member => (

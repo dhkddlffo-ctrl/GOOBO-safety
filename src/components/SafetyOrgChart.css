@@ -274,6 +274,97 @@
   cursor: not-allowed;
 }
 
+/* 좌우 이동·가운데 정렬·칸 조절 버튼 */
+.so-btn-step {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: #334155;
+  padding: 0.1875rem 0.4375rem;
+  line-height: 1.2;
+}
+
+.so-btn-step:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.so-btn-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.so-btn-center {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.so-btn-center:hover {
+  background: #dbeafe;
+}
+
+/* 단 제목 옆 칸 수 표시 */
+.so-editor-cols {
+  margin-left: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* 상자 위치 이동 줄 */
+.so-emove {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  padding: 0.375rem 0.5rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+}
+
+.so-emove-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.so-emove-pos {
+  min-width: 3.75rem;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 가운데 고정 체크박스 */
+.so-eping {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  padding: 0.1875rem 0.4375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #475569;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.3125rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.so-eping input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.so-eping.is-on {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+
 /* ================================================================
    출력물 공통
    ================================================================ */
@@ -336,7 +427,9 @@
 }
 
 /* ================================================================
-   조직도 — 셀 균등 분할로 연결선이 상자 중심에 정확히 닿도록 함
+   조직도 — 칸(column) 그리드로 상자 위치를 자유롭게 배치
+   각 상자는 --so-col (1부터) 칸에 놓이고, 단은 --so-cols 칸으로 나뉩니다.
+   칸 중심은 (k+0.5)/n 이므로 연결선을 정확히 상자 중심에 맞출 수 있습니다.
    ================================================================ */
 .so-chart {
   display: flex;
@@ -353,60 +446,41 @@
   margin: 0 auto;
 }
 
+/* 단: --so-cols 개의 동일한 칸으로 나눈 그리드 */
 .so-tier {
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(var(--so-cols, 1), 1fr);
+  align-items: start;
 }
 
-.so-tier-end {
-  justify-content: flex-end;
-}
-
-/* 셀: 상자를 가운데 두는 칸 */
-.so-cell {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-/* 분기 단(2개 이상 상자) — 칸을 균등 분할해 중심 좌표를 예측 가능하게 함 */
+/* 분기 단 — 위에서 내려오는 세로선 + 가로 연결선을 위한 여백 */
 .so-tier-branch {
   padding-top: 14px;
 }
 
-.so-tier-branch .so-cell {
-  flex: 1 1 0;
-}
-
-/* 가로 연결선: 첫 칸 중심(left) ~ 마지막 칸 중심(right) */
+/* 가로 연결선: 첫 상자 중심 ~ 마지막 상자 중심 */
 .so-tier-branch::before {
   content: '';
   position: absolute;
   top: 0;
-  left: var(--so-inset, 25%);
-  right: var(--so-inset, 25%);
+  left: var(--so-bus-left, 50%);
+  right: var(--so-bus-right, 50%);
   height: 1.5px;
   background: #9ca3af;
 }
 
-/* 칸 중심에서 위로 올라가는 세로선 (각 상자 → 가로 연결선) */
-.so-tier-branch .so-cell::before {
-  content: '';
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1.5px;
-  height: 14px;
-  background: #9ca3af;
+/* 셀: --so-col 번째 칸에 배치하고 상자를 가운데 정렬 */
+.so-cell {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  grid-column: var(--so-col, 1);
 }
 
-/* 상자가 1개인 단: 위 단의 세로선(so-stem)과 이어지도록 */
-.so-tier:not(.so-tier-branch) .so-cell::before {
+/* 각 상자 중심에서 가로 연결선까지 올라가는 세로선 */
+.so-tier-branch .so-cell::before {
   content: '';
   position: absolute;
   top: -14px;
