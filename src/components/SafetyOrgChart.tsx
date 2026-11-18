@@ -9,8 +9,11 @@ import {
   createOrgTier,
   countOrgMembers,
   countDutyFilled,
+  centerColOf,
+  resolveTierLayout,
 } from '../utils/orgChartStorage';
 import { isAuthenticated } from '../utils/auth';
+import { downloadOrgChartPng, safeFileName } from '../utils/orgChartExport';
 import './SafetyOrgChart.css';
 
 interface SafetyOrgChartProps {
@@ -60,6 +63,11 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
   const [draft, setDraft] = useState<SiteOrgChartData | null>(null);
   const [error, setError] = useState('');
   const [printTarget, setPrintTarget] = useState<PrintTarget>('both');
+  const [exporting, setExporting] = useState(false);
+  /** 드래그 중인 상자 */
+  const [drag, setDrag] = useState<{ tierId: string; unitId: string } | null>(null);
+  /** 드래그가 올라가 있는 단과 칸 (놓일 위치 미리보기) */
+  const [dragOver, setDragOver] = useState<{ tierId: string; col: number } | null>(null);
 
   const canManage = isAuthenticated();
 
@@ -219,7 +227,7 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
     patchTier(tierId, tier => {
       const cols = tierCols(tier);
       const current = tier.units.find(u => u.id === unitId);
-      if (!current) return tier;
+      if (!current || current.pinCenter) return tier;
       const from = unitCol(current, cols);
       const to = from + delta;
 
@@ -235,6 +243,8 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
       }
 
       const occupant = tier.units.find(u => u.id !== unitId && unitCol(u, cols) === to);
+      // 가운데 고정된 상자는 밀려나지 않습니다.
+      if (occupant?.pinCenter) return tier;
       return {
         ...tier,
         units: tier.units.map(u => {
@@ -249,10 +259,14 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
   const moveUnitTo = (tierId: string, unitId: string, target: number) =>
     patchTier(tierId, tier => {
       const cols = tierCols(tier);
-      const from = unitCol(tier.units.find(u => u.id === unitId) ?? tier.units[0], cols);
+      const self = tier.units.find(u => u.id === unitId);
+      if (!self || self.pinCenter) return tier;
+      const from = unitCol(self, cols);
       const to = Math.min(Math.max(target, 0), cols - 1);
       if (from === to) return tier;
       const occupant = tier.units.find(u => u.id !== unitId && unitCol(u, cols) === to);
+      // 가운데 고정된 상자는 다른 상자 때문에 밀려나지 않습니다.
+      if (occupant?.pinCenter) return tier;
       return {
         ...tier,
         units: tier.units.map(u => {
@@ -294,9 +308,179 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
     patchUnit(tierId, unitId, unit => ({ ...unit, pinCenter: undefined }));
   };
 
+  /* ---------------- 단(段) 간 이동 ---------------- */
+
+  /**
+   * 상자를 다른 단으로 옮깁니다.
+   * - `atCol` 을 주면 그 칸으로, 없으면 빈 칸을 찾아 배치합니다.
+   * - `pinCenter` 상자는 옮겨간 단에서도 가운데 고정을 유지합니다
+   *   (그 단에 이미 고정 상자가 있으면 고정을 넘겨받습니다).
+   * - 원래 단이 비면 해당 단을 제거합니다(최소 1단은 유지).
+   */
+  const moveUnitToTier = (fromTierId: string, unitId: string, toTierId: string, atCol?: number) => {
+    if (fromTierId === toTierId) return;
+    setDraft(d => {
+      if (!d) return d;
+      const fromTier = d.tiers.find(t => t.id === fromTierId);
+      const toTier = d.tiers.find(t => t.id === toTierId);
+      if (!fromTier || !toTier) return d;
+
+      const moving = fromTier.units.find(u => u.id === unitId);
+      if (!moving) return d;
+
+      const pin = !!moving.pinCenter;
+
+      /* 옮겨갈 칸 결정: 지정 칸 → 그 칸이 비었으면 사용, 아니면 빈 칸 탐색 */
+      let toCols = tierCols(toTier);
+      if (pin) toCols = Math.max(toCols, 3); // 가운데 고정은 3칸 이상이어야 정중앙이 생김
+      const used = new Map<number, string>();
+      toTier.units.forEach(u => used.set(unitCol(u, toCols), u.id));
+
+      let targetCol: number;
+      if (pin) {
+        targetCol = centerColOf(toCols);
+      } else if (atCol !== undefined && atCol >= 0 && atCol < toCols && !used.has(atCol)) {
+        targetCol = atCol;
+      } else {
+        let free = -1;
+        for (let c = 0; c < toCols; c++) {
+          if (!used.has(c)) {
+            free = c;
+            break;
+          }
+        }
+        targetCol = free >= 0 ? free : toCols;
+      }
+      const needCols = Math.max(toCols, targetCol + 1);
+
+      const nextTiers = d.tiers.map(t => {
+        if (t.id === fromTierId) {
+          return { ...t, units: t.units.filter(u => u.id !== unitId) };
+        }
+        if (t.id === toTierId) {
+          // 고정 상자를 들여오면 기존 고정은 해제 (단마다 1개만 고정)
+          const inherited = pin
+            ? t.units.map(u => (u.pinCenter ? { ...u, pinCenter: undefined } : u))
+            : t.units;
+          return resolveTierLayout({
+            ...t,
+            cols: needCols,
+            units: [...inherited, { ...moving, col: targetCol, pinCenter: pin || undefined }],
+          });
+        }
+        return t;
+      });
+
+      /* 원래 단이 비었으면 제거 (단이 2개 이상일 때만) */
+      const cleaned = nextTiers.filter(
+        t => t.id !== fromTierId || t.units.length > 0 || nextTiers.length <= 1
+      );
+      return { ...d, tiers: cleaned };
+    });
+  };
+
+  /**
+   * 새 단을 만들어 상자를 그 단으로 옮깁니다.
+   * `where` = before(위) / after(아래)
+   */
+  const moveUnitToNewTier = (tierId: string, unitId: string, where: 'before' | 'after') =>
+    setDraft(d => {
+      if (!d) return d;
+      const idx = d.tiers.findIndex(t => t.id === tierId);
+      if (idx < 0) return d;
+      const tier = d.tiers[idx];
+      const moving = tier.units.find(u => u.id === unitId);
+      if (!moving) return d;
+
+      const pin = !!moving.pinCenter;
+      const newTier = createOrgTier(
+        'center',
+        [{ ...moving, col: pin ? 1 : 0, pinCenter: pin || undefined }],
+        3
+      );
+      const rest = d.tiers.map(t =>
+        t.id === tierId ? { ...t, units: t.units.filter(u => u.id !== unitId) } : t
+      );
+      const keepOld = tier.units.length > 1 || rest.length <= 1;
+      const base = keepOld ? rest : rest.filter(t => t.id !== tierId);
+      const at = base.findIndex(t => t.id === tierId);
+      const insertAt = where === 'before' ? (at >= 0 ? at : idx) : at >= 0 ? at + 1 : base.length;
+
+      return { ...d, tiers: [...base.slice(0, insertAt), newTier, ...base.slice(insertAt)] };
+    });
+
+  /* ---------------- 이미지(PNG) 내보내기 ---------------- */
+  const exportImage = async () => {
+    if (editing) {
+      alert('먼저 저장한 뒤 이미지로 저장해주세요.');
+      return;
+    }
+    if (exporting) return;
+    setExporting(true);
+    setError('');
+    try {
+      await downloadOrgChartPng(view, safeFileName(view.siteName || siteName, '안전조직도'), {
+        title: '안전조직도',
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '이미지 저장에 실패했습니다.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  /* ---------------- 드래그로 상자 옮기기 ---------------- */
+  const dragStart = (tierId: string, unitId: string) => (e: React.DragEvent) => {
+    if (!editing) return;
+    setDrag({ tierId, unitId });
+    e.dataTransfer.effectAllowed = 'move';
+    // 일부 브라우저는 setData 없이는 dragstart 를 취소합니다.
+    e.dataTransfer.setData('text/plain', `${tierId}:${unitId}`);
+  };
+
+  const dragEnd = () => {
+    setDrag(null);
+    setDragOver(null);
+  };
+
+  /** 단 위로 드래그가 들어왔을 때 — 어느 칸에 놓일지 계산 */
+  const dragOverTier =
+    (tierId: string, cols: number) => (e: React.DragEvent<HTMLDivElement>) => {
+      if (!editing || !drag) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const rect = e.currentTarget.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / Math.max(rect.width, 1);
+      const col = Math.min(cols - 1, Math.max(0, Math.floor(ratio * cols)));
+      if (dragOver?.tierId !== tierId || dragOver?.col !== col) setDragOver({ tierId, col });
+    };
+
+  /** 특정 칸 위로 드래그가 들어왔을 때 — 그 칸을 목표로 고정 */
+  const dragOverCell = (tierId: string, col: number) => (e: React.DragEvent<HTMLDivElement>) => {
+    if (!editing || !drag) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOver?.tierId !== tierId || dragOver?.col !== col) setDragOver({ tierId, col });
+  };
+
+  /** 드롭 — 같은 단이면 칸 이동, 다른 단이면 단 간 이동 */
+  const dropOn = (tierId: string) => (e: React.DragEvent<HTMLDivElement>) => {
+    if (!editing || !drag) return;
+    e.preventDefault();
+    const target = dragOver?.tierId === tierId ? dragOver.col : undefined;
+    const { tierId: fromTierId, unitId } = drag;
+    setDrag(null);
+    setDragOver(null);
+
+    if (fromTierId === tierId) {
+      if (target !== undefined) moveUnitTo(tierId, unitId, target);
+      return;
+    }
+    moveUnitToTier(fromTierId, unitId, tierId, target);
+  };
+
   const setUnitTitle = (tierId: string, unitId: string, title: string) =>
     patchUnit(tierId, unitId, unit => ({ ...unit, title }));
-
   const setMemberField = (
     tierId: string,
     unitId: string,
@@ -375,7 +559,7 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
 
   /* ================= 조직도 (인쇄 단위 1) ================= */
   const chartSection = (
-    <section className="so-chart">
+    <section className={`so-chart${editing ? ' is-editing' : ''}`}>
       {view.tiers.map((tier, tierIndex) => {
         const cols = tierCols(tier);
         // 각 상자의 칸 중심(%) — 그리드 n칸에서 k번 칸의 중심은 (k+0.5)/n
@@ -384,11 +568,14 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
         const busLeft = Math.min(50, ...centers);
         const busRight = Math.max(50, ...centers);
         const branch = tierIndex > 0;
+        const isTarget = editing && dragOver?.tierId === tier.id;
         return (
           <React.Fragment key={tier.id}>
             {branch && <div className="so-stem" aria-hidden="true" />}
             <div
-              className={`so-tier ${branch ? 'so-tier-branch' : 'so-tier-first'}`}
+              className={`so-tier ${branch ? 'so-tier-branch' : 'so-tier-first'}${
+                isTarget ? ' is-dragover' : ''
+              }`}
               style={
                 {
                   '--so-cols': cols,
@@ -396,30 +583,57 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
                   '--so-bus-right': `${100 - busRight}%`,
                 } as React.CSSProperties
               }
+              onDragOver={editing ? dragOverTier(tier.id, cols) : undefined}
+              onDrop={editing ? dropOn(tier.id) : undefined}
             >
-              {tier.units.map(unit => (
-                <div
-                  className="so-cell"
-                  key={unit.id}
-                  style={{ '--so-col': unitCol(unit, cols) + 1 } as React.CSSProperties}
-                >
-                  <div className="so-unit">
-                    <div className="so-unit-title">{unit.title || '부서명'}</div>
-                    {unit.members.length === 0 && (
-                      <div className="so-member">
-                        <span className="so-member-label">성명</span>
-                        <span className="so-member-value so-empty">미등록</span>
-                      </div>
+              {tier.units.map(unit => {
+                const col = unitCol(unit, cols);
+                const isDragging = drag?.unitId === unit.id;
+                const isDropCol = isTarget && dragOver?.col === col;
+                const canDrag = editing && !unit.pinCenter;
+                return (
+                  <div
+                    className={`so-cell${isDragging ? ' is-dragging' : ''}${
+                      isDropCol ? ' is-dropcol' : ''
+                    }`}
+                    key={unit.id}
+                    style={{ '--so-col': col + 1 } as React.CSSProperties}
+                    draggable={canDrag}
+                    onDragStart={canDrag ? dragStart(tier.id, unit.id) : undefined}
+                    onDragEnd={canDrag ? dragEnd : undefined}
+                    onDragOver={editing ? dragOverCell(tier.id, col) : undefined}
+                  >
+                    {editing && (
+                      <span
+                        className={`so-drag-handle${unit.pinCenter ? ' is-pinned' : ''}`}
+                        title={
+                          unit.pinCenter
+                            ? '가운데 고정된 상자는 드래그할 수 없습니다'
+                            : '끌어서 다른 칸·다른 단으로 옮길 수 있습니다'
+                        }
+                        aria-hidden="true"
+                      >
+                        {unit.pinCenter ? '📌' : '⠿'}
+                      </span>
                     )}
-                    {unit.members.map(member => (
-                      <div className="so-member" key={member.id}>
-                        <span className="so-member-label">{member.position || '직급'}</span>
-                        <span className="so-member-value">{member.name || '성명 미입력'}</span>
-                      </div>
-                    ))}
+                    <div className="so-unit">
+                      <div className="so-unit-title">{unit.title || '부서명'}</div>
+                      {unit.members.length === 0 && (
+                        <div className="so-member">
+                          <span className="so-member-label">성명</span>
+                          <span className="so-member-value so-empty">미등록</span>
+                        </div>
+                      )}
+                      {unit.members.map(member => (
+                        <div className="so-member" key={member.id}>
+                          <span className="so-member-label">{member.position || '직급'}</span>
+                          <span className="so-member-value">{member.name || '성명 미입력'}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </React.Fragment>
         );
@@ -676,6 +890,55 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
                 </button>
               </div>
 
+              {/* 다른 단으로 이동 */}
+              <div className="so-emove so-emove-tier">
+                <span className="so-emove-label">단 이동</span>
+                <select
+                  className="so-esel"
+                  value=""
+                  disabled={draft.tiers.length <= 1}
+                  onChange={e => {
+                    const to = e.target.value;
+                    if (!to) return;
+                    moveUnitToTier(tier.id, unit.id, to);
+                  }}
+                  title="이 상자를 다른 단으로 옮깁니다"
+                >
+                  <option value="">
+                    {draft.tiers.length <= 1 ? '이동할 단 없음' : '다른 단 선택…'}
+                  </option>
+                  {draft.tiers.map((t, i) =>
+                    t.id === tier.id ? null : (
+                      <option key={t.id} value={t.id}>
+                        {i + 1}단 ({t.units.length}개 상자)
+                      </option>
+                    )
+                  )}
+                </select>
+                {/* 상자가 2개 이상인 단에서만 "새 단"이 의미가 있습니다.
+                    (1개짜리 단은 원래 단이 사라지므로 결과가 같습니다) */}
+                {tier.units.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="so-btn so-btn-step"
+                      onClick={() => moveUnitToNewTier(tier.id, unit.id, 'before')}
+                      title="이 상자만 새 단으로 떼어내어 위에 배치"
+                    >
+                      ↑ 새 단
+                    </button>
+                    <button
+                      type="button"
+                      className="so-btn so-btn-step"
+                      onClick={() => moveUnitToNewTier(tier.id, unit.id, 'after')}
+                      title="이 상자만 새 단으로 떼어내어 아래에 배치"
+                    >
+                      ↓ 새 단
+                    </button>
+                  </>
+                )}
+              </div>
+
               {/* 상자 가로 위치 이동 */}
               <div className="so-emove">
                 <span className="so-emove-label">위치</span>
@@ -864,6 +1127,14 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
                 title="조직도·업무분장표를 각각 1페이지씩 출력"
               >
                 🖨️ 전체(각 1장)
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={exportImage}
+                disabled={exporting}
+                title="조직도를 PNG 이미지 파일로 저장 (문서·메신저 첨부용)"
+              >
+                {exporting ? '저장 중…' : '🖼️ 이미지 저장'}
               </button>
               <button className="btn btn-primary btn-sm" onClick={startEdit}>
                 ✏️ 수정
