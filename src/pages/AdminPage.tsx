@@ -1,10 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite, getAccidentCases, updateAccidentCase, deleteAccidentCase } from '../utils/storage';
-import { Suggestion, WorkStopRequest, Site, AccidentCase } from '../types';
+import { Suggestion, WorkStopRequest, Site, AccidentCase, StaffRole } from '../types';
+import {
+  collectIssues,
+  summarizeAllSites,
+  SOON_DAYS,
+  TRAINING_RULE,
+  type StaffIssue,
+  type SiteComplianceSummary,
+} from '../utils/staffCompliance';
 import './AdminPage.css';
 
+type AdminTab = 'workstops' | 'suggestions' | 'accidents' | 'staff' | 'sites' | 'completed';
+
 interface AdminPageProps {
-  onNavigate: (page: string) => void;
+  /** 현장 상세로 바로 이동할 수 있도록 siteId/tab 까지 받습니다. */
+  onNavigate: (page: string, siteId?: number, tab?: string) => void;
   isLoggedIn: boolean;
 }
 
@@ -16,7 +27,7 @@ interface CompletionModalData {
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
-  const [activeTab, setActiveTab] = useState<'suggestions' | 'workstops' | 'sites' | 'completed' | 'accidents'>('workstops');
+  const [activeTab, setActiveTab] = useState<AdminTab>('workstops');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [workStops, setWorkStops] = useState<WorkStopRequest[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
@@ -38,6 +49,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
   });
   const [uploading, setUploading] = useState(false);
   const [selectedSiteIds, setSelectedSiteIds] = useState<number[]>([]);
+  /* 안전인력 직무교육·선임 점검 */
+  const [staffIssues, setStaffIssues] = useState<StaffIssue[]>([]);
+  const [siteSummaries, setSiteSummaries] = useState<SiteComplianceSummary[]>([]);
 
   useEffect(() => {
     loadData();
@@ -49,6 +63,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     setSites(getSites());
     setCompletedSites(getCompletedSites());
     setAccidentCases(getAccidentCases());
+    setStaffIssues(collectIssues());
+    setSiteSummaries(summarizeAllSites());
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -396,6 +412,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     completedSites: completedSites.length,
     totalAccidents: accidentCases.length,
     pendingAccidents: accidentCases.filter(a => a.status === '접수' || a.status === '조사중').length,
+    staffIssues: staffIssues.length,
+    staffExpired: staffIssues.filter(i => i.compliance.level === 'expired').length,
+    staffSoon: staffIssues.filter(i => i.compliance.level === 'soon').length,
+    staffDocs: staffIssues.filter(i => i.appointmentMissing || i.supervisorTrainingMissing).length,
   };
 
   // 로그인하지 않은 경우
@@ -480,6 +500,25 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               </div>
             </div>
           </div>
+
+          <div
+            className={`stat-card ${stats.staffIssues > 0 ? 'stat-card-alert' : ''}`}
+            onClick={() => setActiveTab('staff')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') setActiveTab('staff');
+            }}
+          >
+            <div className="stat-icon">⏰</div>
+            <div className="stat-content">
+              <h3>안전인력 점검</h3>
+              <div className="stat-value">{stats.staffIssues}</div>
+              <div className="stat-label">
+                만료 <strong>{stats.staffExpired}</strong> · 임박 <strong>{stats.staffSoon}</strong>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -501,6 +540,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
             onClick={() => setActiveTab('accidents')}
           >
             사고사례 ({accidentCases.length})
+          </button>
+          <button
+            className={`tab ${activeTab === 'staff' ? 'active' : ''}`}
+            onClick={() => setActiveTab('staff')}
+          >
+            안전인력 점검 ({staffIssues.length})
           </button>
           <button
             className={`tab ${activeTab === 'sites' ? 'active' : ''}`}
@@ -534,7 +579,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               ℹ️ 준공 현장 안내
             </button>
           )}
-          {activeTab !== 'sites' && activeTab !== 'completed' && (
+          {(activeTab === 'workstops' || activeTab === 'suggestions') && (
             <>
               <button 
                 className="btn-manage btn-clear-current"
@@ -1036,6 +1081,120 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                       >
                         🗑️ 삭제
                       </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Staff Compliance Tab */}
+        {activeTab === 'staff' && (
+          <div className="content-section">
+            <div className="staff-check-note">
+              <p>
+                <strong>점검 기준</strong> — 선임일·직무교육 이수일을 기준으로 다음 교육 예정일을 계산합니다.
+                만료 {SOON_DAYS}일 전부터 ‘만료임박’으로 표시됩니다.
+              </p>
+              <ul className="staff-rule-list">
+                {(Object.keys(TRAINING_RULE) as StaffRole[]).map(role => (
+                  <li key={role}>
+                    <strong>{role}</strong> — {TRAINING_RULE[role].years}년마다 재이수 (
+                    {TRAINING_RULE[role].hours})
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* 현장별 요약 */}
+            {siteSummaries.length > 0 && (
+              <div className="staff-site-summary">
+                <h3>현장별 현황</h3>
+                <div className="staff-site-grid">
+                  {siteSummaries.map(sum => (
+                    <button
+                      key={sum.siteId}
+                      className={`staff-site-card ${sum.issues > 0 ? 'has-issue' : ''}`}
+                      onClick={() => onNavigate('site-detail', sum.siteId, 'info')}
+                      title={`${sum.siteName} 상세로 이동`}
+                    >
+                      <span className="staff-site-name">{sum.siteName}</span>
+                      <span className="staff-site-count">등록 {sum.total}명</span>
+                      <span className="staff-site-badges">
+                        {sum.expired > 0 && (
+                          <span className="sd-dd sd-dd-expired">만료 {sum.expired}</span>
+                        )}
+                        {sum.soon > 0 && <span className="sd-dd sd-dd-soon">임박 {sum.soon}</span>}
+                        {sum.missing > 0 && (
+                          <span className="sd-dd sd-dd-missing">미입력 {sum.missing}</span>
+                        )}
+                        {sum.issues === 0 && <span className="sd-dd sd-dd-ok">정상</span>}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 조치 필요 목록 */}
+            {staffIssues.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">✅</div>
+                <p>조치가 필요한 안전인력이 없습니다.</p>
+                <p className="empty-hint">
+                  현장 상세 &gt; 관리자(안전인력)에서 선임일과 직무교육 이수일을 등록하면
+                  여기에서 자동으로 점검됩니다.
+                </p>
+              </div>
+            ) : (
+              <div className="items-list">
+                {staffIssues.map(issue => (
+                  <div
+                    key={`${issue.siteId}-${issue.staff.id}`}
+                    className={`item-card staff-issue-card is-${issue.compliance.level}`}
+                  >
+                    <div className="item-header">
+                      <div>
+                        <h3>
+                          {issue.staff.name || '성명 미입력'}
+                          <span className="staff-role-tag">{issue.staff.role}</span>
+                        </h3>
+                        <p className="item-meta">
+                          {issue.siteName}
+                          {issue.staff.phone ? ` · ☎ ${issue.staff.phone}` : ''}
+                        </p>
+                      </div>
+                      <span className={`sd-dd sd-dd-${issue.compliance.level}`}>
+                        {issue.compliance.label === '해임'
+                          ? '해임'
+                          : `교육 ${issue.compliance.label}`}
+                      </span>
+                    </div>
+
+                    <div className="item-body">
+                      <p className="staff-issue-message">{issue.compliance.message}</p>
+
+                      <div className="staff-issue-dates">
+                        <span>
+                          선임일 <strong>{issue.staff.appointedAt || '-'}</strong>
+                        </span>
+                        <span>
+                          직무교육 <strong>{issue.staff.trainingDate || '-'}</strong>
+                        </span>
+                        <span>
+                          다음 교육 <strong>{issue.compliance.dueDate || '-'}</strong>
+                        </span>
+                      </div>
+
+                      {issue.appointmentMissing && (
+                        <p className="staff-issue-extra">⚠️ 선임일(지정일)이 입력되지 않았습니다.</p>
+                      )}
+                      {issue.supervisorTrainingMissing && (
+                        <p className="staff-issue-extra">
+                          ⚠️ 관리감독자 신규교육(8시간)을 이수하지 않았습니다.
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -10,6 +10,12 @@ import {
 } from '../utils/siteInfoStorage';
 import { getDocuments, formatFileSize, getTotalUsage } from '../utils/documentStorage';
 import { isAuthenticated } from '../utils/auth';
+import {
+  evaluateStaff,
+  isAppointmentMissing,
+  isSupervisorTrainingMissing,
+  summarizeSite,
+} from '../utils/staffCompliance';
 import { useCategories } from '../hooks/useCategories';
 import { getCategoriesWithOrphans } from '../utils/categoryStorage';
 import DocumentArchive from '../components/DocumentArchive';
@@ -82,6 +88,13 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
   const summaryCategories = useMemo(
     () => getCategoriesWithOrphans(docs.map(d => d.category)),
     [categories, docs]
+  );
+
+  /** 안전인력 직무교육·선임 상태 요약 (조기 return 이전에 훅 호출) */
+  const staffSummary = useMemo(
+    () =>
+      summarizeSite(siteId ?? 0, site?.name ?? '', siteInfo?.staff ?? []),
+    [siteId, site?.name, siteInfo?.staff]
   );
 
   if (!site) {
@@ -349,6 +362,41 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                     </button>
                   </div>
 
+                  {/* 직무교육 유효기간 요약 — 문제가 있을 때만 노출 */}
+                  {staffSummary.issues > 0 && (
+                    <div className="sd-dd-summary">
+                      <span className="sd-dd-summary-icon">⏰</span>
+                      <div className="sd-dd-summary-body">
+                        <strong>직무교육 점검이 필요한 인력 {staffSummary.issues}명</strong>
+                        <span className="sd-dd-summary-detail">
+                          {staffSummary.expired > 0 && `만료 ${staffSummary.expired}명`}
+                          {staffSummary.expired > 0 && (staffSummary.soon > 0 || staffSummary.missing > 0) && ' · '}
+                          {staffSummary.soon > 0 && `만료임박 ${staffSummary.soon}명`}
+                          {staffSummary.soon > 0 && staffSummary.missing > 0 && ' · '}
+                          {staffSummary.missing > 0 && `미입력 ${staffSummary.missing}명`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {(staffSummary.appointmentMissing > 0 || staffSummary.supervisorMissing > 0) && (
+                    <div className="sd-dd-summary is-warn">
+                      <span className="sd-dd-summary-icon">📋</span>
+                      <div className="sd-dd-summary-body">
+                        <strong>서류 보완이 필요합니다</strong>
+                        <span className="sd-dd-summary-detail">
+                          {staffSummary.appointmentMissing > 0 &&
+                            `선임일 미입력 ${staffSummary.appointmentMissing}명`}
+                          {staffSummary.appointmentMissing > 0 &&
+                            staffSummary.supervisorMissing > 0 &&
+                            ' · '}
+                          {staffSummary.supervisorMissing > 0 &&
+                            `관리감독자 신규교육 미이수 ${staffSummary.supervisorMissing}명`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {staffList.length === 0 ? (
                     <p className="sd-staff-empty">등록된 관리자 정보가 없습니다.</p>
                   ) : (
@@ -373,8 +421,15 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                             {members.length === 0 ? (
                               <p className="sd-staff-none">미등록</p>
                             ) : (
-                              members.map(staff => (
-                                <div key={staff.id} className="sd-staff-row">
+                              members.map(staff => {
+                                const dc = evaluateStaff(staff);
+                                const apptMissing = isAppointmentMissing(staff);
+                                const supMissing = isSupervisorTrainingMissing(staff);
+                                return (
+                                <div
+                                  key={staff.id}
+                                  className={`sd-staff-row is-${dc.level}`}
+                                >
                                   <div className="sd-staff-main">
                                     <span className="sd-staff-name">{staff.name || '성명 미입력'}</span>
                                     {staff.phone && (
@@ -387,6 +442,29 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                                         }`}
                                       >
                                         신규교육 8시간 {staff.newTraining8h ? 'O' : 'X'}
+                                      </span>
+                                    )}
+                                    {/* 직무교육 유효기간 D-day */}
+                                    <span
+                                      className={`sd-dd sd-dd-${dc.level}`}
+                                      title={dc.message}
+                                    >
+                                      {dc.label === '해임' ? '해임' : `교육 ${dc.label}`}
+                                    </span>
+                                    {apptMissing && (
+                                      <span
+                                        className="sd-dd sd-dd-missing"
+                                        title="선임일(지정일)이 입력되지 않았습니다."
+                                      >
+                                        선임일 미입력
+                                      </span>
+                                    )}
+                                    {supMissing && (
+                                      <span
+                                        className="sd-dd sd-dd-expired"
+                                        title="관리감독자 신규교육(8시간) 미이수"
+                                      >
+                                        신규교육 미이수
                                       </span>
                                     )}
                                   </div>
@@ -421,7 +499,8 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                                     </button>
                                   </div>
                                 </div>
-                              ))
+                                );
+                              })
                             )}
                           </div>
                         );

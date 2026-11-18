@@ -171,3 +171,40 @@ a {
     padding: 1rem;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* 직무교육 D-day 배지 (현장 상세 · 관리자 대시보드 공용)                */
+/* ------------------------------------------------------------------ */
+.sd-dd {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.sd-dd-ok {
+  color: #065f46;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.sd-dd-soon {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.sd-dd-expired {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.sd-dd-missing {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
