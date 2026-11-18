@@ -26,7 +26,9 @@ import {
   searchHospital,
   isNationalNumber,
   type AuditIssue,
+  type RegionTableHint,
 } from '../utils/emergencyLookup';
+import { loadRegionTable, lookupRegionRow } from '../utils/regionTable';
 import './EmergencyPlan.css';
 
 interface EmergencyPlanProps {
@@ -60,6 +62,7 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
   const [mapUploading, setMapUploading] = useState(false);
   const [mapUrl, setMapUrl] = useState('');
   const [lookupNote, setLookupNote] = useState<string[]>([]);
+  const [looking, setLooking] = useState(false);
   const mapInputRef = useRef<HTMLInputElement>(null);
 
   const canManage = isAuthenticated();
@@ -239,7 +242,7 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
   const activeAddress = draft ? draft.siteAddress : plan.siteAddress;
   const region = useMemo(() => parseRegion(activeAddress), [activeAddress]);
 
-  const runLookup = () => {
+  const runLookup = async () => {
     if (!draft) return;
     const parsed = parseRegion(draft.siteAddress);
     if (!parsed.ok) {
@@ -249,9 +252,36 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
       setLookupNote([]);
       return;
     }
-    const result = applyRegionLookup(draft.agencies, parsed);
+
+    // 정적 관할 테이블(public/data/regions.json) 우선, 없으면 규칙 기반 폴백
+    let hint: RegionTableHint | null = null;
+    let sourceNote = '';
+    setLooking(true);
+    try {
+      const table = await loadRegionTable();
+      const row = table ? lookupRegionRow(parsed) : null;
+      if (row) {
+        let fire = row.fire;
+        let police = row.police;
+        // 구 단위 표기가 없어 시 단위로만 찾은 경우: 같은 시의 형제 구를 모아 정리
+        if (!fire.length && !police.length) {
+          fire = [];
+          police = [];
+        }
+        if (fire.length || police.length) {
+          hint = { fire, police, office: row.office };
+          sourceNote = ` · 관할표 v${table?.version ?? ''}`;
+        }
+      }
+    } finally {
+      setLooking(false);
+    }
+
+    const result = applyRegionLookup(draft.agencies, parsed, hint);
     setDraft({ ...draft, agencies: result.agencies });
-    setLookupNote(result.summary);
+    setLookupNote(
+      sourceNote ? [...result.summary, `관할 정보 출처: 정적 관할표${sourceNote}`] : result.summary
+    );
     setError('');
   };
 
@@ -653,9 +683,9 @@ const EmergencyPlan: React.FC<EmergencyPlanProps> = ({ siteId, siteName, siteAdd
                   type="button"
                   className="btn btn-primary btn-sm"
                   onClick={runLookup}
-                  disabled={!draft.siteAddress.trim()}
+                  disabled={!draft.siteAddress.trim() || looking}
                 >
-                  관할 정보 자동 채우기
+                  {looking ? '조회 중…' : '관할 정보 자동 채우기'}
                 </button>
               </div>
               <p className="em-lookup-desc">

@@ -427,10 +427,24 @@ export interface RegionLookupResult {
   region: ParsedRegion;
 }
 
-/** 주소 기준으로 외부기관 관할 정보를 채운다 */
+/** 정적 테이블에서 가져온 관할 정보 (없으면 규칙 기반 사용) */
+export interface RegionTableHint {
+  fire: string[];
+  police: string[];
+  office: string;
+}
+
+/**
+ * 주소 기준으로 외부기관 관할 정보를 채운다.
+ *
+ * `hint` 가 주어지면 정적 관할 테이블(`public/data/regions.json`)의
+ * 실제 기관명을 쓰고, 없으면 기존 규칙 기반(`orgNames`)으로 폴백합니다.
+ * → 테이블 로드 실패(오프라인)에서도 동작이 유지됩니다.
+ */
 export const applyRegionLookup = (
   agencies: ExternalAgency[],
-  region: ParsedRegion
+  region: ParsedRegion,
+  hint?: RegionTableHint | null
 ): RegionLookupResult => {
   const summary: string[] = [];
   let changed = 0;
@@ -443,7 +457,8 @@ export const applyRegionLookup = (
     const patch: Partial<ExternalAgency> = {};
 
     if (kind === 'fire' && region.base) {
-      const name = orgNames(region, '소방서', FIRE_MULTI[region.base]);
+      const tableName = hint?.fire?.length ? hint.fire.join(' / ') : '';
+      const name = tableName || orgNames(region, '소방서', FIRE_MULTI[region.base]);
       patch.name = `소방서 (화재·구조·구급)`;
       patch.phone = '119';
       patch.note = `${name} 관할 — 119안전센터 확인 필요`;
@@ -452,7 +467,8 @@ export const applyRegionLookup = (
     }
 
     if (kind === 'police' && region.base) {
-      const name = orgNames(region, '경찰서', POLICE_MULTI[region.base]);
+      const tableName = hint?.police?.length ? hint.police.join(' / ') : '';
+      const name = tableName || orgNames(region, '경찰서', POLICE_MULTI[region.base]);
       patch.name = `경찰서 (사고·현장통제)`;
       patch.phone = '112';
       patch.note = `${name} 관할 — 지구대/파출소 확인 필요`;
