@@ -14,6 +14,7 @@ import { useCategories } from '../hooks/useCategories';
 import { getCategoriesWithOrphans } from '../utils/categoryStorage';
 import DocumentArchive from '../components/DocumentArchive';
 import EmergencyPlan from '../components/EmergencyPlan';
+import SafetyOrgChart from '../components/SafetyOrgChart';
 import './SiteDetailPage.css';
 
 interface SiteDetailPageProps {
@@ -23,10 +24,14 @@ interface SiteDetailPageProps {
   initialTab?: string;
 }
 
-type Tab = 'info' | 'documents' | 'emergency' | 'activity';
+type Tab = 'info' | 'documents' | 'emergency' | 'org' | 'activity';
 
 const isTab = (value?: string): value is Tab =>
-  value === 'info' || value === 'documents' || value === 'emergency' || value === 'activity';
+  value === 'info' ||
+  value === 'documents' ||
+  value === 'emergency' ||
+  value === 'org' ||
+  value === 'activity';
 
 const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, initialTab }) => {
   const [site, setSite] = useState<Site | null>(null);
@@ -261,6 +266,12 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
             onClick={() => changeTab('emergency')}
           >
             🚨 비상연락망
+          </button>
+          <button
+            className={`sd-tab ${activeTab === 'org' ? 'active' : ''}`}
+            onClick={() => changeTab('org')}
+          >
+            🏛️ 안전조직도
           </button>
           <button
             className={`sd-tab ${activeTab === 'activity' ? 'active' : ''}`}
@@ -631,6 +642,27 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               siteId={site.id}
               siteName={site.name}
               siteAddress={siteInfo?.siteAddress || siteInfo?.address || site.location}
+            />
+          </div>
+        )}
+
+        {/* ============ 안전조직도 탭 ============ */}
+        {activeTab === 'org' && (
+          <div className="sd-panel sd-panel-org">
+            <div className="sd-panel-head">
+              <div>
+                <h2>🏛️ 안전 조직도 및 업무분장</h2>
+                <p className="sd-panel-sub">
+                  현장별 안전보건 조직 계층과 직책별 담당업무를 작성해 A4 1페이지로 출력할 수
+                  있습니다.
+                </p>
+              </div>
+            </div>
+
+            <SafetyOrgChart
+              siteId={site.id}
+              siteName={site.name}
+              siteManager={siteInfo?.siteManager}
             />
           </div>
         )}

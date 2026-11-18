@@ -192,6 +192,49 @@ export interface EmergencyPlan {
   updatedAt: string;
 }
 
+/* ------------------------------------------------------------------ */
+/* 안전 조직도 (현장별)                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 조직도 구성원 1인.
+ * `position` 은 직급·구분(대표/부사장/소장/차장/공사…)이고,
+ * 소속 부서·직책은 상위 `OrgUnit.title` 에 들어갑니다.
+ */
+export interface OrgMember {
+  id: string;
+  position: string; // 직급·구분 (예: 대표, 부사장, 소장, 차장, 공사)
+  name: string; // 성명
+  phone: string; // 연락처
+  duties: string[]; // 담당업무 항목
+}
+
+/** 조직도 1개 상자 (부서·직책 단위) */
+export interface OrgUnit {
+  id: string;
+  title: string; // 직책·부서 (예: 대표이사, 분사 PM, 관리감독자)
+  members: OrgMember[];
+}
+
+/** 조직도 세로 단(段) — 위에서 아래로 이어지는 한 줄 */
+export interface OrgTier {
+  id: string;
+  /** 가로 정렬: 가운데 / 양끝 / 오른쪽 */
+  align: 'center' | 'between' | 'end';
+  units: OrgUnit[];
+}
+
+/** 현장별 안전 조직도 + 업무분장 */
+export interface SiteOrgChart {
+  siteId: number;
+  siteName: string;
+  constructionName: string; // 공사명
+  author: string; // 작성자
+  tiers: OrgTier[];
+  note: string; // 비고 (개정 이력 등)
+  updatedAt: string;
+}
+
 // 사고사례 타입
 export interface AccidentCase {
   id: string;
