@@ -34,8 +34,8 @@ export interface TrainingRule {
  *    (관리감독자는 신규교육 8시간 이수 여부만 별도로 확인합니다)
  */
 export const TRAINING_RULE: Partial<Record<StaffRole, TrainingRule>> = {
-  현장소장: { years: 1, hours: '연간 6시간' },
-  // 안전보건관리책임자·안전관리자는 직무교육 이수일로부터 2년입니다.
+  // 직무교육 대상 3개 역할 모두 이수일로부터 2년입니다.
+  현장소장: { years: 2 },
   안전보건관리책임자: { years: 2 },
   안전관리자: { years: 2 },
 };
