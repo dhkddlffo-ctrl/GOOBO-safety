@@ -33,18 +33,22 @@ const ALIGN_LABEL: Record<OrgTier['align'], string> = {
   end: '오른쪽',
 };
 
+/** 인쇄 대상 — 조직도만 / 업무분장표만 / 둘 다(각 1장) */
+type PrintTarget = 'both' | 'chart' | 'duty';
+
 /**
  * 현장별 안전 조직도 + 업무분장표
  *
  * - 첨부자료(구보공영 안전조직도)의 계층을 기본 서식으로 제공합니다.
- * - 구성원마다 담당업무 항목을 자유롭게 추가·삭제할 수 있습니다.
- * - A4 1페이지로 인쇄해 게시판에 부착할 수 있습니다.
+ * - 조직도(단·상자·구성원)와 업무분장표를 각각 화면에서 직접 수정할 수 있습니다.
+ * - 조직도와 업무분장표를 **각각 A4 1페이지로** 출력할 수 있습니다.
  */
 const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteManager }) => {
   const [chart, setChart] = useState<SiteOrgChartData>(() => getOrgChart(siteId, siteName));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<SiteOrgChartData | null>(null);
   const [error, setError] = useState('');
+  const [printTarget, setPrintTarget] = useState<PrintTarget>('both');
 
   const canManage = isAuthenticated();
 
@@ -56,6 +60,13 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
     setError('');
   }, [siteId, siteName]);
 
+  /* 인쇄가 끝나면 대상 표시를 기본(둘 다)으로 되돌림 */
+  useEffect(() => {
+    const onAfterPrint = () => setPrintTarget('both');
+    window.addEventListener('afterprint', onAfterPrint);
+    return () => window.removeEventListener('afterprint', onAfterPrint);
+  }, []);
+
   /* 표시용 데이터: 편집 중에는 미리보기가 즉시 반영되도록 draft 우선 */
   const view = draft ?? chart;
 
@@ -64,7 +75,12 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
     () =>
       view.tiers.flatMap(tier =>
         tier.units.flatMap(unit =>
-          unit.members.map(member => ({ tierId: tier.id, unit, member }))
+          unit.members.map(member => ({
+            tierId: tier.id,
+            unitId: unit.id,
+            unit,
+            member,
+          }))
         )
       ),
     [view]
@@ -79,7 +95,16 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
       alert('안전조직도 수정은 관리자 로그인 후 가능합니다.');
       return;
     }
-    const base = { ...chart, tiers: chart.tiers.map(t => ({ ...t, units: t.units.map(u => ({ ...u, members: u.members.map(m => ({ ...m, duties: [...m.duties] })) })) })) };
+    const base: SiteOrgChartData = {
+      ...chart,
+      tiers: chart.tiers.map(t => ({
+        ...t,
+        units: t.units.map(u => ({
+          ...u,
+          members: u.members.map(m => ({ ...m, duties: [...m.duties] })),
+        })),
+      })),
+    };
     // 현장소장 성명이 비어 있으면 현장 기본정보의 소장명으로 보완
     if (siteManager) {
       base.tiers.forEach(tier =>
@@ -117,19 +142,25 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
     setError('');
   };
 
-  const handlePrint = () => {
+  /**
+   * 인쇄 실행.
+   * 대상(chart/duty/both)을 먼저 상태에 반영한 뒤, 페인트가 끝난 다음 print() 를
+   * 호출해야 인쇄 미리보기에 올바른 레이아웃이 반영됩니다.
+   */
+  const printSection = (target: PrintTarget) => {
     if (editing) {
       alert('먼저 저장한 뒤 출력해주세요.');
       return;
     }
-    window.print();
+    setPrintTarget(target);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => window.print());
+    });
   };
 
   /* ---------------- draft 갱신 헬퍼 ---------------- */
   const patchTier = (tierId: string, fn: (tier: OrgTier) => OrgTier) => {
-    setDraft(d =>
-      d ? { ...d, tiers: d.tiers.map(t => (t.id === tierId ? fn(t) : t)) } : d
-    );
+    setDraft(d => (d ? { ...d, tiers: d.tiers.map(t => (t.id === tierId ? fn(t) : t)) } : d));
   };
 
   const patchUnit = (
@@ -172,7 +203,6 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
   const addDuty = (tierId: string, unitId: string, memberId: string) =>
     patchMember(tierId, unitId, memberId, m => ({ ...m, duties: [...m.duties, ''] }));
 
-  /** 빈 업무 항목을 채워 넣음 (인쇄 시 빈 줄 제거) */
   const setDuty = (tierId: string, unitId: string, memberId: string, index: number, value: string) =>
     patchMember(tierId, unitId, memberId, m => ({
       ...m,
@@ -185,8 +215,19 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
       duties: m.duties.filter((_, i) => i !== index),
     }));
 
+  /** 업무분장표의 담당업무 칸(줄바꿈 텍스트) → duties 배열 */
+  const setDutiesFromText = (
+    tierId: string,
+    unitId: string,
+    memberId: string,
+    text: string
+  ) => patchMember(tierId, unitId, memberId, m => ({ ...m, duties: text.split('\n') }));
+
   const addMember = (tierId: string, unitId: string) =>
-    patchUnit(tierId, unitId, unit => ({ ...unit, members: [...unit.members, createOrgMember()] }));
+    patchUnit(tierId, unitId, unit => ({
+      ...unit,
+      members: [...unit.members, createOrgMember()],
+    }));
 
   const removeMember = (tierId: string, unitId: string, memberId: string) =>
     patchUnit(tierId, unitId, unit => ({
@@ -195,19 +236,30 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
     }));
 
   const addUnit = (tierId: string) =>
-    patchTier(tierId, tier => ({ ...tier, units: [...tier.units, createOrgUnit('', [createOrgMember()])] }));
+    patchTier(tierId, tier => ({
+      ...tier,
+      units: [...tier.units, createOrgUnit('', [createOrgMember()])],
+    }));
 
   const removeUnit = (tierId: string, unitId: string) =>
     patchTier(tierId, tier => ({ ...tier, units: tier.units.filter(u => u.id !== unitId) }));
 
   const addTier = () =>
-    setDraft(d => (d ? { ...d, tiers: [...d.tiers, createOrgTier('between', [createOrgUnit('', [createOrgMember()])])] } : d));
+    setDraft(d =>
+      d
+        ? {
+            ...d,
+            tiers: [...d.tiers, createOrgTier('between', [createOrgUnit('', [createOrgMember()])])],
+          }
+        : d
+    );
 
   const removeTier = (tierId: string) =>
     setDraft(d => (d ? { ...d, tiers: d.tiers.filter(t => t.id !== tierId) } : d));
 
   const resetToDefault = () => {
-    if (!confirm('조직도를 기본 서식(첨부자료 기준)으로 되돌리시겠습니까? 입력한 내용은 사라집니다.')) return;
+    if (!confirm('조직도를 기본 서식(첨부자료 기준)으로 되돌리시겠습니까? 입력한 내용은 사라집니다.'))
+      return;
     const base = createEmptyOrgChart(siteId, siteName);
     setDraft(base);
     saveOrgChart(base);
@@ -216,40 +268,27 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
     setEditing(false);
   };
 
-  /* ================= 게시판(출력물) ================= */
-  const poster = (
-    <div className="so-poster">
-      <header className="so-head">
-        <div className="so-head-top">
-          <span className="so-head-construction">공사명: {view.constructionName || siteName}</span>
-          <h1 className="so-head-title">안전조직도</h1>
-          <span className="so-head-mark">구보공영(주)</span>
-        </div>
-        <div className="so-head-meta">
-          <span>
-            <strong>현장명</strong> {view.siteName || siteName}
-          </span>
-          <span>
-            <strong>최종 수정일</strong> {formatKoreanDate(view.updatedAt)}
-            {view.author ? ` (작성자: ${view.author})` : ''}
-          </span>
-        </div>
-      </header>
-
-      {/* 조직도 */}
-      <section className="so-chart">
-        {view.tiers.map((tier, tierIndex) => {
-          const multi = tier.units.length > 1;
-          const inset = `${50 / Math.max(tier.units.length, 1)}%`;
-          return (
-            <React.Fragment key={tier.id}>
-              {tierIndex > 0 && <div className="so-stem" aria-hidden="true" />}
-              <div
-                className={`so-tier so-tier-${tier.align}${multi ? ' so-tier-branch' : ''}`}
-                style={multi ? ({ ['--so-inset' as string]: inset } as React.CSSProperties) : undefined}
-              >
-                {tier.units.map(unit => (
-                  <div className="so-unit" key={unit.id}>
+  /* ================= 조직도 (인쇄 단위 1) ================= */
+  const chartSection = (
+    <section className="so-chart">
+      {view.tiers.map((tier, tierIndex) => {
+        const multi = tier.units.length > 1;
+        // 셀을 균등 분할하므로 첫/끝 셀의 중심은 50%/n 지점이 됩니다.
+        const inset = `${50 / Math.max(tier.units.length, 1)}%`;
+        return (
+          <React.Fragment key={tier.id}>
+            {tierIndex > 0 && <div className="so-stem" aria-hidden="true" />}
+            <div
+              className={`so-tier so-tier-${tier.align}${multi ? ' so-tier-branch' : ''}${
+                tierIndex === 0 ? ' so-tier-first' : ''
+              }`}
+              style={
+                multi ? ({ ['--so-inset' as string]: inset } as React.CSSProperties) : undefined
+              }
+            >
+              {tier.units.map(unit => (
+                <div className="so-cell" key={unit.id}>
+                  <div className="so-unit">
                     <div className="so-unit-title">{unit.title || '부서명'}</div>
                     {unit.members.length === 0 && (
                       <div className="so-member">
@@ -264,59 +303,150 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
                       </div>
                     ))}
                   </div>
-                ))}
-              </div>
-            </React.Fragment>
-          );
-        })}
-      </section>
+                </div>
+              ))}
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </section>
+  );
 
-      {/* 업무분장표 */}
-      <section className="so-duty">
-        <h2 className="so-duty-title">직책별 담당업무</h2>
-        <table className="so-duty-table">
-          <colgroup>
-            <col style={{ width: '26%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '40%' }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>직책 · 부서</th>
-              <th>직급</th>
-              <th>성명</th>
-              <th>연락처</th>
-              <th>담당업무</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dutyRows.map(({ unit, member }) => {
-              const duties = member.duties.filter(d => d.trim());
+  /* ================= 업무분장표 (인쇄 단위 2) ================= */
+  const dutySection = (
+    <section className="so-duty">
+      <h2 className="so-duty-title">직책별 담당업무</h2>
+      <table className="so-duty-table">
+        <colgroup>
+          <col style={{ width: '26%' }} />
+          <col style={{ width: '9%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '14%' }} />
+          <col style={{ width: '40%' }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>직책 · 부서</th>
+            <th>직급</th>
+            <th>성명</th>
+            <th>연락처</th>
+            <th>담당업무</th>
+          </tr>
+        </thead>
+        <tbody>
+          {dutyRows.map(({ tierId, unitId, unit, member }) => {
+            /* --- 수정 모드: 표에서 바로 편집 --- */
+            if (editing) {
               return (
                 <tr key={member.id}>
-                  <td className="so-td-unit">{unit.title || '-'}</td>
-                  <td className="so-td-center">{member.position || '-'}</td>
-                  <td className="so-td-center so-td-name">{member.name || '-'}</td>
-                  <td className="so-td-center">{member.phone || '-'}</td>
-                  <td className="so-td-duty">
-                    {duties.length > 0 ? (
-                      <ul>
-                        {duties.map((d, i) => (
-                          <li key={i}>{d}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="so-empty-cell">미입력</span>
-                    )}
+                  <td>
+                    <input
+                      className="so-tin"
+                      type="text"
+                      value={unit.title}
+                      onChange={e => setUnitTitle(tierId, unitId, e.target.value)}
+                      placeholder="직책·부서"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="so-tin so-tin-c"
+                      type="text"
+                      value={member.position}
+                      onChange={e =>
+                        setMemberField(tierId, unitId, member.id, 'position', e.target.value)
+                      }
+                      placeholder="직급"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="so-tin so-tin-c"
+                      type="text"
+                      value={member.name}
+                      onChange={e =>
+                        setMemberField(tierId, unitId, member.id, 'name', e.target.value)
+                      }
+                      placeholder="성명"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="so-tin so-tin-c"
+                      type="tel"
+                      value={member.phone}
+                      onChange={e =>
+                        setMemberField(tierId, unitId, member.id, 'phone', e.target.value)
+                      }
+                      placeholder="연락처"
+                    />
+                  </td>
+                  <td>
+                    <textarea
+                      className="so-tta"
+                      rows={Math.max(2, member.duties.length)}
+                      value={member.duties.join('\n')}
+                      onChange={e =>
+                        setDutiesFromText(tierId, unitId, member.id, e.target.value)
+                      }
+                      placeholder="담당업무를 한 줄에 하나씩 입력"
+                    />
                   </td>
                 </tr>
               );
-            })}
-          </tbody>
-        </table>
-      </section>
+            }
+
+            /* --- 보기 모드 --- */
+            const duties = member.duties.filter(d => d.trim());
+            return (
+              <tr key={member.id}>
+                <td className="so-td-unit">{unit.title || '-'}</td>
+                <td className="so-td-center">{member.position || '-'}</td>
+                <td className="so-td-center so-td-name">{member.name || '-'}</td>
+                <td className="so-td-center">{member.phone || '-'}</td>
+                <td className="so-td-duty">
+                  {duties.length > 0 ? (
+                    <ul>
+                      {duties.map((d, i) => (
+                        <li key={i}>{d}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="so-empty-cell">미입력</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
+  );
+
+  /* ================= 출력물 (A4) ================= */
+  const posterTitle = printTarget === 'duty' ? '업무분장표' : '안전조직도';
+
+  const poster = (
+    <div className={`so-poster so-print-${printTarget}`}>
+      <header className="so-head">
+        <div className="so-head-top">
+          <span className="so-head-construction">공사명: {view.constructionName || siteName}</span>
+          <h1 className="so-head-title">{posterTitle}</h1>
+          <span className="so-head-mark">구보공영(주)</span>
+        </div>
+        <div className="so-head-meta">
+          <span>
+            <strong>현장명</strong> {view.siteName || siteName}
+          </span>
+          <span>
+            <strong>최종 수정일</strong> {formatKoreanDate(view.updatedAt)}
+            {view.author ? ` (작성자: ${view.author})` : ''}
+          </span>
+        </div>
+      </header>
+
+      {chartSection}
+      {dutySection}
 
       {view.note.trim() && (
         <div className="so-note">
@@ -326,7 +456,7 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
     </div>
   );
 
-  /* ================= 편집 화면 ================= */
+  /* ================= 구조 편집 화면 ================= */
   const editor = draft && (
     <div className="so-editor">
       <div className="so-editor-block">
@@ -359,6 +489,11 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
           />
         </div>
       </div>
+
+      <p className="so-editor-hint">
+        아래에서 <b>조직도 구조</b>(단·상자·구성원)를 편집하고, <b>담당업무</b>는 아래
+        업무분장표에서 바로 입력할 수 있습니다.
+      </p>
 
       {draft.tiers.map((tier, tierIndex) => (
         <div className="so-editor-block" key={tier.id}>
@@ -414,21 +549,27 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
                       type="text"
                       className="so-in-pos"
                       value={member.position}
-                      onChange={e => setMemberField(tier.id, unit.id, member.id, 'position', e.target.value)}
+                      onChange={e =>
+                        setMemberField(tier.id, unit.id, member.id, 'position', e.target.value)
+                      }
                       placeholder="직급"
                     />
                     <input
                       type="text"
                       className="so-in-name"
                       value={member.name}
-                      onChange={e => setMemberField(tier.id, unit.id, member.id, 'name', e.target.value)}
+                      onChange={e =>
+                        setMemberField(tier.id, unit.id, member.id, 'name', e.target.value)
+                      }
                       placeholder="성명"
                     />
                     <input
                       type="tel"
                       className="so-in-phone"
                       value={member.phone}
-                      onChange={e => setMemberField(tier.id, unit.id, member.id, 'phone', e.target.value)}
+                      onChange={e =>
+                        setMemberField(tier.id, unit.id, member.id, 'phone', e.target.value)
+                      }
                       placeholder="연락처"
                     />
                     <button
@@ -449,7 +590,9 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
                         <input
                           type="text"
                           value={duty}
-                          onChange={e => setDuty(tier.id, unit.id, member.id, dutyIndex, e.target.value)}
+                          onChange={e =>
+                            setDuty(tier.id, unit.id, member.id, dutyIndex, e.target.value)
+                          }
                           placeholder="담당업무 항목"
                         />
                         <button
@@ -506,17 +649,35 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
             {memberCount}명 · 담당업무 입력 {dutyFilled}명
           </strong>
           <span className="so-toolbar-sub">
-            A4 1페이지로 인쇄해 사무실·탈의실 게시판에 부착할 수 있습니다.
+            조직도와 업무분장표를 각각 A4 1페이지로 인쇄할 수 있습니다.
           </span>
         </div>
         <div className="so-toolbar-actions">
           {!editing ? (
             <>
-              <button className="btn btn-secondary btn-sm" onClick={handlePrint}>
-                🖨️ 출력 / PDF
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => printSection('chart')}
+                title="안전조직도만 A4 1페이지로 출력"
+              >
+                🖨️ 조직도 A4
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => printSection('duty')}
+                title="업무분장표만 A4 1페이지로 출력"
+              >
+                🖨️ 업무분장표 A4
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => printSection('both')}
+                title="조직도·업무분장표를 각각 1페이지씩 출력"
+              >
+                🖨️ 전체(각 1장)
               </button>
               <button className="btn btn-primary btn-sm" onClick={startEdit}>
-                ✏️ 조직도 수정
+                ✏️ 수정
               </button>
             </>
           ) : (
