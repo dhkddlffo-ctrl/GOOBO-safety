@@ -1020,3 +1020,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+.staff-rule-excluded {
+  color: #9ca3af !important;
+}
+
+.staff-rule-excluded strong {
+  color: #6b7280 !important;
+}
+
+/* 직무교육 대상 아님(none) 상태 */
+.sd-dd-none {
+  color: #6b7280;
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}

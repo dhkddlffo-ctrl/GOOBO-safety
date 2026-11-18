@@ -444,13 +444,15 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                                         신규교육 8시간 {staff.newTraining8h ? 'O' : 'X'}
                                       </span>
                                     )}
-                                    {/* 직무교육 유효기간 D-day */}
-                                    <span
-                                      className={`sd-dd sd-dd-${dc.level}`}
-                                      title={dc.message}
-                                    >
-                                      {dc.label === '해임' ? '해임' : `교육 ${dc.label}`}
-                                    </span>
+                                    {/* 직무교육 유효기간 D-day — 직무교육 대상자에게만 표시 */}
+                                    {dc.level !== 'none' && (
+                                      <span
+                                        className={`sd-dd sd-dd-${dc.level}`}
+                                        title={dc.message}
+                                      >
+                                        {dc.label === '해임' ? '해임' : `교육 ${dc.label}`}
+                                      </span>
+                                    )}
                                     {apptMissing && (
                                       <span
                                         className="sd-dd sd-dd-missing"
@@ -477,9 +479,12 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                                     <span className="sd-staff-date">
                                       해임일 <strong>{staff.dismissedAt || '-'}</strong>
                                     </span>
-                                    <span className="sd-staff-date">
-                                      직무교육 <strong>{staff.trainingDate || '-'}</strong>
-                                    </span>
+                                    {/* 관리감독자는 직무교육 대상이 아니므로 표시하지 않습니다 */}
+                                    {!isSupervisor && (
+                                      <span className="sd-staff-date">
+                                        직무교육 <strong>{staff.trainingDate || '-'}</strong>
+                                      </span>
+                                    )}
                                   </div>
 
                                   {staff.note && <p className="sd-staff-note">{staff.note}</p>}
@@ -849,13 +854,16 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                 </FormField>
               </div>
 
-              <FormField label="직무교육 이수일">
-                <input
-                  type="date"
-                  value={staffDraft.trainingDate ?? ''}
-                  onChange={e => setStaffField('trainingDate', e.target.value)}
-                />
-              </FormField>
+              {/* 관리감독자는 직무교육 대상이 아니므로 입력받지 않습니다 */}
+              {staffDraft.role !== '관리감독자' && (
+                <FormField label="직무교육 이수일">
+                  <input
+                    type="date"
+                    value={staffDraft.trainingDate ?? ''}
+                    onChange={e => setStaffField('trainingDate', e.target.value)}
+                  />
+                </FormField>
+              )}
 
               {staffDraft.role === '관리감독자' && (
                 <label className="sd-staff-check">

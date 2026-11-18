@@ -23,22 +23,28 @@ export interface TrainingRule {
   years: number;
   /** 정기교육 시간 안내 (없으면 화면에서 생략) */
   hours?: string;
-  /** 신규교육 최소 시간 (안내 문구용) */
-  newHours?: string;
 }
 
 /**
  * 역할별 직무교육 주기.
  * 주기가 바뀌면 이 표만 수정하면 화면 전체에 반영됩니다.
  * 계산 기준일은 '직무교육 이수일'이며, 이수일 + years 년이 유효기간 만료일입니다.
+ *
+ * ⚠️ 관리감독자는 직무교육 대상이 아니므로 이 표에 포함하지 않습니다.
+ *    (관리감독자는 신규교육 8시간 이수 여부만 별도로 확인합니다)
  */
-export const TRAINING_RULE: Record<StaffRole, TrainingRule> = {
+export const TRAINING_RULE: Partial<Record<StaffRole, TrainingRule>> = {
   현장소장: { years: 1, hours: '연간 6시간' },
   // 안전보건관리책임자·안전관리자는 직무교육 이수일로부터 2년입니다.
   안전보건관리책임자: { years: 2 },
   안전관리자: { years: 2 },
-  관리감독자: { years: 1, hours: '연간 8시간', newHours: '신규 8시간' },
 };
+
+/** 직무교육 대상 역할 (관리감독자 제외) */
+export const TRAINING_ROLES: StaffRole[] = ['현장소장', '안전보건관리책임자', '안전관리자'];
+
+/** 해당 역할이 직무교육 대상인지 */
+export const hasJobTraining = (role: StaffRole): boolean => Boolean(TRAINING_RULE[role]);
 
 /** D-day 임박 판정 기준 (일) */
 export const SOON_DAYS = 60;
@@ -83,7 +89,16 @@ const diffDays = (a: Date, b: Date): number =>
 /* 판정                                                                */
 /* ------------------------------------------------------------------ */
 
-export type ComplianceLevel = 'ok' | 'soon' | 'expired' | 'missing';
+/**
+ * 판정 결과 구분
+ * - ok      : 정상 이수
+ * - soon    : 만료 임박
+ * - expired : 유효기간 만료
+ * - missing : 직무교육 이수일 미입력
+ * - none    : 직무교육 대상 아님 (관리감독자 등)
+ * - 해임자는 level 'ok' 로 반환하고 message 로 안내합니다.
+ */
+export type ComplianceLevel = 'ok' | 'soon' | 'expired' | 'missing' | 'none';
 
 export interface StaffCompliance {
   level: ComplianceLevel;
@@ -97,21 +112,18 @@ export interface StaffCompliance {
   message: string;
   /** 정기교육 시간 안내 (없으면 '') */
   hours: string;
-  /** 재이수 주기(년) */
+  /** 재이수 주기(년). 직무교육 대상이 아니면 0 */
   years: number;
 }
 
 /**
  * 안전인력 1명의 교육 이수 상태를 판정합니다.
  * - 해임된 인력은 점검 대상에서 제외합니다(level 'ok', message 안내).
+ * - 관리감독자처럼 직무교육 대상이 아닌 역할은 level 'none'.
  * - 직무교육 이수일이 없으면 'missing'.
  * - 기준일은 '직무교육 이수일'이고, 이수일 + 주기(년)가 유효기간 만료일입니다.
  */
 export const evaluateStaff = (staff: SiteStaff, today: Date = startOfToday()): StaffCompliance => {
-  const rule: TrainingRule = TRAINING_RULE[staff.role] ?? { years: 1 };
-  const hours = rule.hours ?? '';
-  const cycle = `${rule.years}년`;
-
   // 해임자는 점검 제외
   if (staff.dismissedAt) {
     return {
@@ -120,10 +132,28 @@ export const evaluateStaff = (staff: SiteStaff, today: Date = startOfToday()): S
       dueDate: '',
       daysLeft: null,
       message: '해임 처리된 인력입니다. 점검 대상에서 제외됩니다.',
-      hours,
-      years: rule.years,
+      hours: '',
+      years: 0,
     };
   }
+
+  const rule = TRAINING_RULE[staff.role];
+
+  // 직무교육 대상이 아닌 역할 (관리감독자 등)
+  if (!rule) {
+    return {
+      level: 'none',
+      label: '대상 아님',
+      dueDate: '',
+      daysLeft: null,
+      message: `${staff.role}은(는) 직무교육 재이수 대상이 아닙니다.`,
+      hours: '',
+      years: 0,
+    };
+  }
+
+  const hours = rule.hours ?? '';
+  const cycle = `${rule.years}년`;
 
   const trained = parseDateOnly(staff.trainingDate);
 
@@ -294,7 +324,8 @@ export const collectIssues = (today: Date = startOfToday()): StaffIssue[] => {
     });
   });
 
-  const rank: Record<ComplianceLevel, number> = { expired: 0, soon: 1, missing: 2, ok: 3 };
+  // 'none'(직무교육 대상 아님)은 조치 대상이 아니므로 항상 맨 뒤로 정렬합니다.
+  const rank: Record<ComplianceLevel, number> = { expired: 0, soon: 1, missing: 2, ok: 3, none: 4 };
   rows.sort((a, b) => {
     const byLevel = rank[a.compliance.level] - rank[b.compliance.level];
     if (byLevel !== 0) return byLevel;

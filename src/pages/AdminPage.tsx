@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite, getAccidentCases, updateAccidentCase, deleteAccidentCase } from '../utils/storage';
-import { Suggestion, WorkStopRequest, Site, AccidentCase, StaffRole } from '../types';
+import { Suggestion, WorkStopRequest, Site, AccidentCase } from '../types';
 import {
   collectIssues,
   summarizeAllSites,
   SOON_DAYS,
   TRAINING_RULE,
+  TRAINING_ROLES,
   type StaffIssue,
   type SiteComplianceSummary,
 } from '../utils/staffCompliance';
@@ -1098,12 +1099,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                 계산합니다. 만료 {SOON_DAYS}일 전부터 ‘만료임박’으로 표시됩니다.
               </p>
               <ul className="staff-rule-list">
-                {(Object.keys(TRAINING_RULE) as StaffRole[]).map(role => (
-                  <li key={role}>
-                    <strong>{role}</strong> — 이수일로부터 {TRAINING_RULE[role].years}년
-                    {TRAINING_RULE[role].hours ? ` (${TRAINING_RULE[role].hours})` : ''}
-                  </li>
-                ))}
+                {TRAINING_ROLES.map(role => {
+                  const rule = TRAINING_RULE[role];
+                  if (!rule) return null;
+                  return (
+                    <li key={role}>
+                      <strong>{role}</strong> — 이수일로부터 {rule.years}년
+                      {rule.hours ? ` (${rule.hours})` : ''}
+                    </li>
+                  );
+                })}
+                <li className="staff-rule-excluded">관리감독자 — 직무교육 대상 아님 (신규교육 8시간만 확인)</li>
               </ul>
             </div>
 
@@ -1165,11 +1171,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                           {issue.staff.phone ? ` · ☎ ${issue.staff.phone}` : ''}
                         </p>
                       </div>
-                      <span className={`sd-dd sd-dd-${issue.compliance.level}`}>
-                        {issue.compliance.label === '해임'
-                          ? '해임'
-                          : `교육 ${issue.compliance.label}`}
-                      </span>
+                      {/* 직무교육 대상자에게만 D-day 배지 표시 */}
+                      {issue.compliance.level !== 'none' && (
+                        <span className={`sd-dd sd-dd-${issue.compliance.level}`}>
+                          {issue.compliance.label === '해임'
+                            ? '해임'
+                            : `교육 ${issue.compliance.label}`}
+                        </span>
+                      )}
                     </div>
 
                     <div className="item-body">
