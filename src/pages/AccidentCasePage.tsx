@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { getSites } from '../utils/storage';
 import { AccidentCase, Site } from '../types';
 import { saveAccidentCase, generateId } from '../utils/storage';
+import AccidentReport from '../components/AccidentReport';
+import { formatTenure } from '../utils/accidentReport';
 import './AccidentCasePage.css';
 
 interface AccidentCasePageProps {
@@ -19,6 +21,7 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
     location: '',
     victimName: '',
     victimAge: '',
+    victimHireDate: '',
     description: '',
     cause: '',
     preventiveMeasures: '',
@@ -31,6 +34,10 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
   const [images, setImages] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [uploading, setUploading] = useState(false);
+  /** 방금 접수한 사고사례 (접수 완료 화면에서 사고보고서 출력용) */
+  const [savedCase, setSavedCase] = useState<AccidentCase | null>(null);
+  /** 사고보고서 미리보기/인쇄 열림 여부 */
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     const savedSites = getSites();
@@ -95,6 +102,12 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    // <select> 의 값은 항상 문자열이므로 현장 ID 는 숫자로 변환해 보관합니다.
+    // (문자열로 두면 handleSubmit 의 `s.id === formData.siteId` 비교가 항상 실패합니다)
+    if (name === 'siteId') {
+      setFormData(prev => ({ ...prev, siteId: Number(value) }));
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -130,6 +143,7 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
       location: formData.location,
       victimName: formData.victimName || '미제공',
       victimAge: formData.victimAge ? parseInt(formData.victimAge) : undefined,
+      victimHireDate: formData.victimHireDate || undefined,
       description: formData.description,
       cause: formData.cause,
       preventiveMeasures: formData.preventiveMeasures,
@@ -143,6 +157,7 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
     };
 
     saveAccidentCase(accidentCase);
+    setSavedCase(accidentCase);
     setSubmitted(true);
   };
 
@@ -154,15 +169,26 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
             <div className="success-icon">✅</div>
             <h2>사고사례가 접수되었습니다</h2>
             <p>제출하신 사고사례는 안전관리팀에서 검토 후 재발 방지 대책을 수립합니다.</p>
-            
+            <p className="success-hint">
+              🖨️ 접수된 내용으로 <strong>사고보고서(A4)</strong>를 바로 출력할 수 있습니다.
+            </p>
+
             <div className="success-actions">
-              <button className="btn btn-primary" onClick={() => onNavigate('home')}>
+              <button
+                className="btn btn-primary"
+                onClick={() => setReportOpen(true)}
+                disabled={!savedCase}
+              >
+                🖨️ 사고보고서 출력
+              </button>
+              <button className="btn btn-secondary" onClick={() => onNavigate('home')}>
                 홈으로 돌아가기
               </button>
               <button 
                 className="btn btn-secondary" 
                 onClick={() => {
                   setSubmitted(false);
+                  setSavedCase(null);
                   setFormData({
                     siteId: preselectedSiteId || 0,
                     accidentDate: '',
@@ -171,6 +197,7 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                     location: '',
                     victimName: '',
                     victimAge: '',
+                    victimHireDate: '',
                     description: '',
                     cause: '',
                     preventiveMeasures: '',
@@ -186,6 +213,10 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
               </button>
             </div>
           </div>
+
+          {reportOpen && savedCase && (
+            <AccidentReport accident={savedCase} onClose={() => setReportOpen(false)} autoPrint />
+          )}
         </div>
       </div>
     );
@@ -348,6 +379,23 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                 min="1"
                 max="100"
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="victimHireDate">피해자 입사일 (선택)</label>
+              <input
+                type="date"
+                id="victimHireDate"
+                name="victimHireDate"
+                value={formData.victimHireDate}
+                onChange={handleInputChange}
+                max={formData.accidentDate ? formData.accidentDate.slice(0, 10) : undefined}
+              />
+              <p className="field-hint">
+                {formData.victimHireDate
+                  ? `근속기간: ${formatTenure(formData.victimHireDate, formData.accidentDate)} (사고 발생일 기준)`
+                  : '사고보고서에 근속기간이 함께 출력됩니다.'}
+              </p>
             </div>
           </div>
 

@@ -24,6 +24,8 @@ import {
   type RestoreMode,
 } from '../utils/backupStorage';
 import './AdminPage.css';
+import AccidentReport from '../components/AccidentReport';
+import { formatDateKo, formatTenure } from '../utils/accidentReport';
 
 type AdminTab = 'workstops' | 'suggestions' | 'accidents' | 'staff' | 'sites' | 'completed' | 'backup';
 
@@ -47,6 +49,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
   const [sites, setSites] = useState<Site[]>([]);
   const [completedSites, setCompletedSites] = useState<Site[]>([]);
   const [accidentCases, setAccidentCases] = useState<AccidentCase[]>([]);
+  /* 사고보고서 출력 대상 */
+  const [reportCase, setReportCase] = useState<AccidentCase | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
@@ -1077,6 +1081,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                           <p>{accident.victimName}{accident.victimAge ? ` (${accident.victimAge}세)` : ''}</p>
                         </div>
                         <div className="info-item">
+                          <strong>입사일:</strong>
+                          <p>
+                            {accident.victimHireDate ? formatDateKo(accident.victimHireDate) : '미입력'}
+                            {accident.victimHireDate && (
+                              <span className="accident-tenure">
+                                근속 {formatTenure(accident.victimHireDate, accident.accidentDate)}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="info-item">
                           <strong>보고자:</strong>
                           <p>{accident.reporterName} ({accident.reporterPhone})</p>
                         </div>
@@ -1156,6 +1171,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                     </div>
 
                     <div className="item-actions">
+                      <button
+                        className="btn btn-sm btn-report"
+                        onClick={() => setReportCase(accident)}
+                        title="A4 사고보고서 출력"
+                      >
+                        🖨️ 사고보고서
+                      </button>
                       {accident.status === '접수' && (
                         <button
                           className="btn btn-sm btn-primary"
@@ -1682,6 +1704,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               </form>
             </div>
           </div>
+        )}
+
+        {/* 사고보고서 출력 (A4) */}
+        {reportCase && (
+          <AccidentReport accident={reportCase} onClose={() => setReportCase(null)} />
         )}
       </div>
     </div>

@@ -254,6 +254,7 @@ export interface AccidentCase {
   location: string; // 사고 발생 장소
   victimName?: string; // 피해자 성명 (선택)
   victimAge?: number; // 피해자 나이
+  victimHireDate?: string; // 피해자 입사일 (yyyy-mm-dd, 선택)
   description: string; // 사고 경위
   cause: string; // 사고 원인
   preventiveMeasures: string; // 재발 방지 대책

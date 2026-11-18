@@ -1338,3 +1338,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* 사고사례 — 입사일/근속기간 + 사고보고서 출력 버튼                     */
+/* ------------------------------------------------------------------ */
+.accident-tenure {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.btn-report {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+
+.btn-report:hover {
+  background: #c7d2fe;
+  transform: translateY(-1px);
+}
