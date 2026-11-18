@@ -212,7 +212,7 @@ export interface OrgMember {
 /** 조직도 1개 상자 (부서·직책 단위) */
 export interface OrgUnit {
   id: string;
-  title: string; // 직책·부서 (예: 대표이사, 분사 PM, 관리감독자)
+  title: string; // 직책·부서 (예: 대표이사, 본사 안전팀, 관리감독자)
   /** 단(段) 안에서의 가로 칸 위치 (0부터). 미지정 시 배열 순서를 사용합니다. */
   col?: number;
   /** true 이면 항상 단의 가운데 칸에 고정됩니다 (이동 불가). */
@@ -239,6 +239,8 @@ export interface SiteOrgChart {
   tiers: OrgTier[];
   note: string; // 비고 (개정 이력 등)
   updatedAt: string;
+  /** 기본 서식 버전. 구버전 데이터는 읽을 때 새 구조로 자동 이전됩니다. */
+  layoutVersion?: number;
 }
 
 // 사고사례 타입

@@ -10,6 +10,7 @@ import {
   countOrgMembers,
   countDutyFilled,
   centerColOf,
+  resolveTierCols,
   resolveTierLayout,
 } from '../utils/orgChartStorage';
 import { isAuthenticated } from '../utils/auth';
@@ -32,15 +33,10 @@ const formatKoreanDate = (iso?: string): string => {
 
 /**
  * 단(段)의 전체 칸 수.
- * 저장된 cols → 가장 큰 col+1 → 상자 개수 → 1 순으로 결정합니다.
+ * 저장소(`resolveTierCols`)와 **같은 함수**를 사용해 화면과 데이터가 어긋나지 않게 합니다.
+ * (따로 계산하면 연결선이 상자 중심과 어긋납니다)
  */
-const tierCols = (tier: OrgTier): number =>
-  Math.max(
-    tier.cols ?? 0,
-    ...tier.units.map(u => (u.col ?? 0) + 1),
-    tier.units.length,
-    1
-  );
+const tierCols = (tier: OrgTier): number => resolveTierCols(tier);
 
 /** 상자의 칸 번호 (0부터). 범위를 벗어나면 보정합니다. */
 const unitCol = (unit: OrgTier['units'][number], cols: number): number =>
@@ -178,8 +174,20 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
   };
 
   /* ---------------- draft 갱신 헬퍼 ---------------- */
+  /**
+   * 단을 갱신하고 **반드시** `resolveTierLayout` 을 통과시킵니다.
+   * 이렇게 하면 어떤 편집(추가·이동·삭제)을 하더라도 같은 칸에 상자가 두 개
+   * 놓이는 일이 없어, 상자가 다음 줄로 밀리거나 연결선이 끊기지 않습니다.
+   */
   const patchTier = (tierId: string, fn: (tier: OrgTier) => OrgTier) => {
-    setDraft(d => (d ? { ...d, tiers: d.tiers.map(t => (t.id === tierId ? fn(t) : t)) } : d));
+    setDraft(d =>
+      d
+        ? {
+            ...d,
+            tiers: d.tiers.map(t => (t.id === tierId ? resolveTierLayout(fn(t)) : t)),
+          }
+        : d
+    );
   };
 
   const patchUnit = (
@@ -207,10 +215,17 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
 
   /* ---------------- 상자 위치 이동 ---------------- */
 
-  /** 단의 칸 수 변경 (늘리면 좌우 여백이 생겨 상자를 가운데로 몰 수 있음) */
+  /**
+   * 단의 칸 수 변경 (늘리면 좌우 여백이 생겨 상자를 가운데로 몰 수 있음)
+   * 가운데 고정 상자가 있는 단은 정중앙 칸이 있어야 하므로 **홀수 칸**만 허용합니다.
+   * (그래서 1칸 대신 2칸씩 늘리고 줄입니다)
+   */
   const setTierCols = (tierId: string, delta: number) =>
     patchTier(tierId, tier => {
-      const next = Math.min(7, Math.max(tierCols(tier) + delta, 1));
+      const hasPin = tier.units.some(u => u.pinCenter);
+      const step = hasPin ? 2 : 1;
+      let next = Math.min(7, Math.max(tierCols(tier) + delta * step, 1));
+      if (hasPin && next % 2 === 0) next = Math.min(7, next + 1);
       return {
         ...tier,
         cols: next,
@@ -393,11 +408,11 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
       if (!moving) return d;
 
       const pin = !!moving.pinCenter;
-      const newTier = createOrgTier(
-        'center',
-        [{ ...moving, col: pin ? 1 : 0, pinCenter: pin || undefined }],
-        3
-      );
+      /* 상자가 1개뿐인 단은 1칸으로 만들어 자동으로 정중앙에 오게 합니다.
+         (3칸으로 만들면 왼쪽 칸에 붙어 연결선과 어긋납니다) */
+      const newTier = pin
+        ? createOrgTier('center', [{ ...moving, col: 1, pinCenter: true }], 3)
+        : createOrgTier('center', [{ ...moving, col: 0 }], 1);
       const rest = d.tiers.map(t =>
         t.id === tierId ? { ...t, units: t.units.filter(u => u.id !== unitId) } : t
       );
@@ -538,7 +553,8 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
       d
         ? {
             ...d,
-            tiers: [...d.tiers, createOrgTier('between', [createOrgUnit('', [createOrgMember()])])],
+            // 상자 1개짜리 단은 1칸으로 만들어 자동으로 정중앙에 오게 합니다.
+            tiers: [...d.tiers, createOrgTier('center', [createOrgUnit('', [createOrgMember()])], 1)],
           }
         : d
     );
