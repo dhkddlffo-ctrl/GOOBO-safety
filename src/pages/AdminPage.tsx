@@ -10,9 +10,22 @@ import {
   type StaffIssue,
   type SiteComplianceSummary,
 } from '../utils/staffCompliance';
+import {
+  downloadBackup,
+  parseBackup,
+  applyBackup,
+  buildBackupFileName,
+  summarizeBackup,
+  formatBytes,
+  formatBackupDate,
+  BACKUP_DATA_KEYS,
+  type BackupPayload,
+  type BackupSummary,
+  type RestoreMode,
+} from '../utils/backupStorage';
 import './AdminPage.css';
 
-type AdminTab = 'workstops' | 'suggestions' | 'accidents' | 'staff' | 'sites' | 'completed';
+type AdminTab = 'workstops' | 'suggestions' | 'accidents' | 'staff' | 'sites' | 'completed' | 'backup';
 
 interface AdminPageProps {
   /** 현장 상세로 바로 이동할 수 있도록 siteId/tab 까지 받습니다. */
@@ -53,6 +66,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
   /* 안전인력 직무교육·선임 점검 */
   const [staffIssues, setStaffIssues] = useState<StaffIssue[]>([]);
   const [siteSummaries, setSiteSummaries] = useState<SiteComplianceSummary[]>([]);
+  /* 전체 데이터 백업 / 복원 */
+  const [backupIncludeFiles, setBackupIncludeFiles] = useState(true);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupMessage, setBackupMessage] = useState('');
+  const [backupError, setBackupError] = useState('');
+  const [restoreMode, setRestoreMode] = useState<RestoreMode>('merge');
+  const [pendingRestore, setPendingRestore] = useState<{
+    fileName: string;
+    payload: BackupPayload;
+    summary: BackupSummary;
+  } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -66,6 +90,70 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     setAccidentCases(getAccidentCases());
     setStaffIssues(collectIssues());
     setSiteSummaries(summarizeAllSites());
+  };
+
+  /* ---------------- 전체 데이터 백업 / 복원 ---------------- */
+  const clearBackupNotice = () => {
+    setBackupMessage('');
+    setBackupError('');
+  };
+
+  const handleBackupDownload = async () => {
+    if (backupBusy) return;
+    clearBackupNotice();
+    setBackupBusy(true);
+    try {
+      const payload = await downloadBackup(backupIncludeFiles);
+      const s = summarizeBackup(payload);
+      setBackupMessage(
+        `${buildBackupFileName()} 파일을 저장했습니다. ` +
+          `(데이터 ${s.counts.length}종` +
+          (payload.includeFiles ? `, 첨부파일 ${s.fileCount}개 ${formatBytes(s.fileBytes)}` : '') +
+          ')'
+      );
+    } catch (err) {
+      setBackupError(err instanceof Error ? err.message : '백업 파일을 만들지 못했습니다.');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleBackupFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // 같은 파일을 다시 선택해도 동작하도록 값을 비웁니다.
+    e.target.value = '';
+    if (!file) return;
+
+    clearBackupNotice();
+    try {
+      const text = await file.text();
+      const { payload, summary } = parseBackup(text);
+      setPendingRestore({ fileName: file.name, payload, summary });
+    } catch (err) {
+      setPendingRestore(null);
+      setBackupError(err instanceof Error ? err.message : '백업 파일을 확인하지 못했습니다.');
+    }
+  };
+
+  const confirmRestore = async () => {
+    if (!pendingRestore || backupBusy) return;
+    clearBackupNotice();
+    setBackupBusy(true);
+    try {
+      const result = await applyBackup(pendingRestore.payload, restoreMode);
+      setPendingRestore(null);
+      loadData();
+      setBackupMessage(
+        `복원을 완료했습니다. 데이터 ${result.appliedKeys}종` +
+          (result.restoredFiles > 0 ? `, 첨부파일 ${result.restoredFiles}개` : '') +
+          (result.skipped > 0 ? ` (중복 ${result.skipped}건 제외)` : '') +
+          '. 화면을 새로고침하면 전체에 반영됩니다.'
+      );
+    } catch (err) {
+      setBackupError(err instanceof Error ? err.message : '복원에 실패했습니다.');
+    } finally {
+      setBackupBusy(false);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -559,6 +647,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
             onClick={() => setActiveTab('completed')}
           >
             준공 현장 ({completedSites.length})
+          </button>
+          <button
+            className={`tab ${activeTab === 'backup' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('backup');
+              clearBackupNotice();
+            }}
+          >
+            💾 백업/복원
           </button>
         </div>
 
@@ -1207,6 +1304,177 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Backup / Restore Tab */}
+        {activeTab === 'backup' && (
+          <div className="content-section">
+            <div className="backup-warning">
+              <span className="backup-warning-icon">⚠️</span>
+              <div>
+                <strong>이 시스템은 서버 없이 브라우저에만 자료를 저장합니다.</strong>
+                <p>
+                  브라우저 캐시 정리 · 시크릿 모드 종료 · PC 교체 시 모든 현장 자료가 사라집니다.
+                  중요한 작업 전에는 반드시 백업 파일을 내려받아 보관하세요.
+                </p>
+              </div>
+            </div>
+
+            {backupMessage && <div className="backup-notice is-ok">✅ {backupMessage}</div>}
+            {backupError && <div className="backup-notice is-error">⚠️ {backupError}</div>}
+
+            <div className="backup-grid">
+              {/* 내보내기 */}
+              <section className="backup-card">
+                <header className="backup-card-head">
+                  <span className="backup-card-icon">⬇️</span>
+                  <div>
+                    <h3>백업 파일 내려받기</h3>
+                    <p>전체 데이터를 JSON 파일 하나로 저장합니다.</p>
+                  </div>
+                </header>
+
+                <ul className="backup-key-list">
+                  {BACKUP_DATA_KEYS.map(({ label }) => (
+                    <li key={label}>{label}</li>
+                  ))}
+                </ul>
+
+                <label className="backup-check">
+                  <input
+                    type="checkbox"
+                    checked={backupIncludeFiles}
+                    onChange={e => setBackupIncludeFiles(e.target.checked)}
+                  />
+                  <span>
+                    첨부파일 본문 포함 <em>(현장문서·약도 이미지, 용량이 커질 수 있음)</em>
+                  </span>
+                </label>
+
+                <button
+                  className="btn btn-primary backup-btn"
+                  onClick={handleBackupDownload}
+                  disabled={backupBusy}
+                >
+                  {backupBusy ? '만드는 중…' : '⬇️ 백업 파일 저장'}
+                </button>
+                <p className="backup-hint">
+                  파일명: {buildBackupFileName()}
+                </p>
+              </section>
+
+              {/* 가져오기 */}
+              <section className="backup-card">
+                <header className="backup-card-head">
+                  <span className="backup-card-icon">⬆️</span>
+                  <div>
+                    <h3>백업 파일로 복원</h3>
+                    <p>이전에 내려받은 JSON 파일을 불러옵니다.</p>
+                  </div>
+                </header>
+
+                <div className="backup-mode">
+                  <label className={`backup-radio ${restoreMode === 'merge' ? 'is-on' : ''}`}>
+                    <input
+                      type="radio"
+                      name="restoreMode"
+                      checked={restoreMode === 'merge'}
+                      onChange={() => setRestoreMode('merge')}
+                    />
+                    <span>
+                      <strong>병합</strong>
+                      <em>기존 자료를 유지하고 백업에만 있는 항목을 추가</em>
+                    </span>
+                  </label>
+                  <label className={`backup-radio ${restoreMode === 'replace' ? 'is-on' : ''}`}>
+                    <input
+                      type="radio"
+                      name="restoreMode"
+                      checked={restoreMode === 'replace'}
+                      onChange={() => setRestoreMode('replace')}
+                    />
+                    <span>
+                      <strong>덮어쓰기</strong>
+                      <em>백업 시점 상태로 완전히 되돌림 (현재 자료 삭제)</em>
+                    </span>
+                  </label>
+                </div>
+
+                <label className="backup-file-pick">
+                  <input type="file" accept="application/json,.json" onChange={handleBackupFilePick} />
+                  <span>📂 백업 파일 선택</span>
+                </label>
+
+                <p className="backup-hint">
+                  파일을 선택하면 복원 전에 내용을 먼저 확인합니다.
+                </p>
+              </section>
+            </div>
+
+            {/* 복원 확인 */}
+            {pendingRestore && (
+              <div className="backup-confirm">
+                <h3>복원할 내용을 확인하세요</h3>
+                <dl className="backup-confirm-meta">
+                  <div>
+                    <dt>파일</dt>
+                    <dd>{pendingRestore.fileName}</dd>
+                  </div>
+                  <div>
+                    <dt>백업 시점</dt>
+                    <dd>{formatBackupDate(pendingRestore.summary.createdAt)}</dd>
+                  </div>
+                  <div>
+                    <dt>첨부파일</dt>
+                    <dd>
+                      {pendingRestore.summary.includeFiles
+                        ? `${pendingRestore.summary.fileCount}개 (${formatBytes(pendingRestore.summary.fileBytes)})`
+                        : '포함되지 않음'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>복원 방식</dt>
+                    <dd>{restoreMode === 'replace' ? '덮어쓰기 (현재 자료 삭제)' : '병합 (기존 자료 유지)'}</dd>
+                  </div>
+                </dl>
+
+                <div className="backup-confirm-counts">
+                  {pendingRestore.summary.counts.length === 0 ? (
+                    <p className="backup-hint">백업 파일에 저장된 항목이 없습니다.</p>
+                  ) : (
+                    pendingRestore.summary.counts.map(c => (
+                      <span key={c.label} className="backup-count-chip">
+                        {c.label} <strong>{c.count}</strong>
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                {restoreMode === 'replace' && (
+                  <p className="backup-confirm-danger">
+                    ⚠️ 덮어쓰기를 선택했습니다. 현재 저장된 자료가 백업 시점으로 대체되며 되돌릴 수 없습니다.
+                  </p>
+                )}
+
+                <div className="backup-confirm-actions">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setPendingRestore(null)}
+                    disabled={backupBusy}
+                  >
+                    취소
+                  </button>
+                  <button
+                    className={`btn btn-sm ${restoreMode === 'replace' ? 'btn-delete' : 'btn-primary'}`}
+                    onClick={confirmRestore}
+                    disabled={backupBusy}
+                  >
+                    {backupBusy ? '복원 중…' : restoreMode === 'replace' ? '덮어쓰기 실행' : '병합 복원 실행'}
+                  </button>
+                </div>
               </div>
             )}
           </div>

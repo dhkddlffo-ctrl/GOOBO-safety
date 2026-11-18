@@ -152,6 +152,44 @@ export const deleteFile = async (key: string): Promise<void> => {
   });
 };
 
+/** 저장된 파일 키 전체 조회 (백업용) */
+export const getAllFileKeys = async (): Promise<string[]> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FILE_STORE, 'readonly');
+    const request = tx.objectStore(FILE_STORE).getAllKeys();
+    request.onsuccess = () => {
+      db.close();
+      resolve((request.result || []) as string[]);
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+  });
+};
+
+/** 저장된 파일 본문 전체 조회 (백업용) */
+export const getAllFiles = async (): Promise<{ key: string; blob: Blob }[]> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FILE_STORE, 'readonly');
+    const store = tx.objectStore(FILE_STORE);
+    const keyReq = store.getAllKeys();
+    const valReq = store.getAll();
+    tx.oncomplete = () => {
+      db.close();
+      const keys = (keyReq.result || []) as string[];
+      const vals = (valReq.result || []) as Blob[];
+      resolve(keys.map((key, i) => ({ key, blob: vals[i] })).filter(f => f.blob instanceof Blob));
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+};
+
 /* ------------------------------------------------------------------ */
 /* 메타데이터 (LocalStorage)                                            */
 /* ------------------------------------------------------------------ */
