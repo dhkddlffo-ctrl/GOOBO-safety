@@ -277,11 +277,12 @@
 /* ================================================================
    출력물 공통
    ================================================================ */
+/* 인쇄 단위(용지) 묶음 — 테두리·여백은 .so-page 가 담당 */
 .so-poster {
-  background: #fff;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 1.25rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: transparent;
 }
 
 .so-head {
@@ -584,15 +585,56 @@
 }
 
 /* ================================================================
-   A4 인쇄 — 조직도 / 업무분장표를 각각 1페이지로
+   인쇄 페이지 단위
+   - 조직도   : A4 가로(landscape) → 가로 폭 1047px 확보, 계층이 넓게 펼쳐짐
+   - 업무분장표: A4 세로(portrait)  → 가로 폭 718px
+   화면에서는 두 장이 세로로 이어져 보입니다.
+   ================================================================ */
+.so-page {
+  display: block;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.so-page + .so-page {
+  margin-top: 1rem;
+}
+
+/* 화면에서 각 장의 용지를 안내하는 라벨 */
+.so-page-chart::before {
+  content: 'A4 가로 (297 × 210 mm)';
+}
+
+.so-page-duty::before {
+  content: 'A4 세로 (210 × 297 mm)';
+}
+
+.so-page::before {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+/* ================================================================
+   A4 인쇄
    ================================================================ */
 @page {
   size: A4 portrait;
   margin: 10mm;
 }
 
+@page so-chart-page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
 @media print {
-  /* 앱 크롬·툴바·편집화면 숨김 */
+  /* 앱 크롬·툴바·편집화면·용지 라벨 숨김 */
   .app-header,
   .app-footer,
   .sd-header,
@@ -635,30 +677,67 @@
     print-color-adjust: exact !important;
   }
 
-  /* ---------- 인쇄 대상별 표시 제어 ---------- */
-  /* 조직도만 */
-  .so-print-chart .so-duty {
-    display: none !important;
+  /* 용지 전체를 흰색으로 (하단 회색 여백 제거) */
+  html,
+  body,
+  #root {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  /* 업무분장표만 */
-  .so-print-duty .so-chart {
-    display: none !important;
-  }
-
-  /* 둘 다 → 각각 1페이지 (업무분장표는 새 페이지에서 시작) */
-  .so-print-both .so-duty {
-    break-before: page;
-    page-break-before: always;
-  }
-
-  /* ---------- 조밀 레이아웃 ---------- */
+  /* ---------- 용지(페이지) 분리 ---------- */
   .so-poster {
     border: none !important;
     border-radius: 0 !important;
     padding: 0 !important;
+    margin: 0 !important;
   }
 
+  .so-page {
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .so-page + .so-page {
+    margin-top: 0 !important;
+  }
+
+  .so-page::before {
+    display: none !important;
+  }
+
+  /* 조직도 = 가로 용지 */
+  .so-page-chart {
+    page: so-chart-page;
+  }
+
+  /* 업무분장표 = 세로 용지 (용지 종류가 달라지며 자동으로 새 장 시작) */
+  .so-page-duty {
+    page: auto;
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* ---------- 인쇄 대상별 표시 제어 ---------- */
+  .so-print-chart .so-page-duty {
+    display: none !important;
+  }
+
+  .so-print-duty .so-page-chart {
+    display: none !important;
+  }
+
+  .so-print-duty .so-page-duty {
+    break-before: auto !important;
+    page-break-before: auto !important;
+  }
+
+  /* ---------- 공통 머리글 ---------- */
   .so-head {
     padding-bottom: 0.3rem !important;
     margin-bottom: 0.5rem !important;
@@ -679,18 +758,27 @@
     gap: 0.75rem !important;
   }
 
-  /* 조직도 */
+  /* ---------- 조직도 (A4 가로: 가용 1047 × 718px) ---------- */
+  .so-page-chart {
+    padding: 0 !important;
+  }
+
+  /* 남는 세로 공간은 연결선(so-stem)만 늘려 계층 간격을 넓힘
+     → 선이 끊기지 않고 조직도가 용지 전체에 자연스럽게 펼쳐짐 */
   .so-chart {
-    margin-bottom: 0.6rem !important;
+    margin-bottom: 0.4rem !important;
+    min-height: 600px !important;
   }
 
   .so-stem {
-    height: 9px !important;
+    flex: 1 1 auto !important;
+    min-height: 15px !important;
+    height: auto !important;
     width: 1px !important;
   }
 
   .so-tier-branch {
-    padding-top: 9px !important;
+    padding-top: 15px !important;
   }
 
   .so-tier-branch::before {
@@ -699,19 +787,19 @@
 
   .so-tier-branch .so-cell::before,
   .so-tier:not(.so-tier-branch) .so-cell::before {
-    top: -9px !important;
-    height: 9px !important;
+    top: -15px !important;
+    height: 15px !important;
     width: 1px !important;
   }
 
   .so-unit {
-    min-width: 5rem !important;
+    min-width: 9rem !important;
     break-inside: avoid;
   }
 
   .so-unit-title {
-    font-size: 6.5pt !important;
-    padding: 0.12rem 0.28rem !important;
+    font-size: 10.5pt !important;
+    padding: 0.2rem 0.5rem !important;
     border-width: 0.5pt !important;
   }
 
@@ -720,21 +808,20 @@
   }
 
   .so-member-label {
-    font-size: 6pt !important;
-    padding: 0.08rem 0.22rem !important;
-    min-width: 1.6rem !important;
+    font-size: 10pt !important;
+    padding: 0.15rem 0.4rem !important;
+    min-width: 2.6rem !important;
     border-right-width: 0.5pt !important;
   }
 
   .so-member-value {
-    font-size: 6.5pt !important;
-    padding: 0.08rem 0.28rem !important;
+    font-size: 10.5pt !important;
+    padding: 0.15rem 0.5rem !important;
   }
 
-  /* 업무분장표 */
+  /* ---------- 업무분장표 (세로: 폭 718px) ---------- */
   .so-duty-title {
-    font-size: 8pt !important;
-    margin-bottom: 0.2rem !important;
+    display: none !important;
   }
 
   .so-duty-table {
@@ -766,5 +853,6 @@
     margin-top: 0.3rem !important;
     font-size: 6.5pt !important;
     padding: 0.15rem 0.3rem !important;
+    break-inside: avoid;
   }
 }

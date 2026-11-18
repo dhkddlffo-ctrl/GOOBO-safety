@@ -41,7 +41,8 @@ type PrintTarget = 'both' | 'chart' | 'duty';
  *
  * - 첨부자료(구보공영 안전조직도)의 계층을 기본 서식으로 제공합니다.
  * - 조직도(단·상자·구성원)와 업무분장표를 각각 화면에서 직접 수정할 수 있습니다.
- * - 조직도와 업무분장표를 **각각 A4 1페이지로** 출력할 수 있습니다.
+ * - 조직도는 **A4 가로(landscape)**, 업무분장표는 **A4 세로(portrait)** 로
+ *   각각 1페이지씩 출력할 수 있습니다.
  */
 const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteManager }) => {
   const [chart, setChart] = useState<SiteOrgChartData>(() => getOrgChart(siteId, siteName));
@@ -424,35 +425,44 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
   );
 
   /* ================= 출력물 (A4) ================= */
-  const posterTitle = printTarget === 'duty' ? '업무분장표' : '안전조직도';
+  /** 페이지 공통 머리글 */
+  const pageHead = (title: string) => (
+    <header className="so-head">
+      <div className="so-head-top">
+        <span className="so-head-construction">공사명: {view.constructionName || siteName}</span>
+        <h1 className="so-head-title">{title}</h1>
+        <span className="so-head-mark">구보공영(주)</span>
+      </div>
+      <div className="so-head-meta">
+        <span>
+          <strong>현장명</strong> {view.siteName || siteName}
+        </span>
+        <span>
+          <strong>최종 수정일</strong> {formatKoreanDate(view.updatedAt)}
+          {view.author ? ` (작성자: ${view.author})` : ''}
+        </span>
+      </div>
+    </header>
+  );
 
   const poster = (
     <div className={`so-poster so-print-${printTarget}`}>
-      <header className="so-head">
-        <div className="so-head-top">
-          <span className="so-head-construction">공사명: {view.constructionName || siteName}</span>
-          <h1 className="so-head-title">{posterTitle}</h1>
-          <span className="so-head-mark">구보공영(주)</span>
-        </div>
-        <div className="so-head-meta">
-          <span>
-            <strong>현장명</strong> {view.siteName || siteName}
-          </span>
-          <span>
-            <strong>최종 수정일</strong> {formatKoreanDate(view.updatedAt)}
-            {view.author ? ` (작성자: ${view.author})` : ''}
-          </span>
-        </div>
-      </header>
+      {/* ── 1장: 조직도 (A4 가로) ── */}
+      <div className="so-page so-page-chart">
+        {pageHead('안전조직도')}
+        {chartSection}
+      </div>
 
-      {chartSection}
-      {dutySection}
-
-      {view.note.trim() && (
-        <div className="so-note">
-          <strong>비고</strong> {view.note}
-        </div>
-      )}
+      {/* ── 2장: 업무분장표 (A4 세로) ── */}
+      <div className="so-page so-page-duty">
+        {pageHead('업무분장표')}
+        {dutySection}
+        {view.note.trim() && (
+          <div className="so-note">
+            <strong>비고</strong> {view.note}
+          </div>
+        )}
+      </div>
     </div>
   );
 
