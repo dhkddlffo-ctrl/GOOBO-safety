@@ -1,7 +1,6 @@
 /* ================================================================
-   사고보고서 (A4 세로 인쇄)
-   - 화면: 어두운 오버레이 위에 A4 용지 미리보기
-   - 인쇄: body 에 ar-printing 클래스가 붙고, #root 는 숨김
+   사고 관련 서류 (A4 세로 · 서류별 1장)
+   ① 사고원인 및 대책 보고서 ② 목격자 진술서 ③ 재해(사고) 상황도
    ================================================================ */
 
 .accident-report-portal {
@@ -19,6 +18,7 @@
   overflow: hidden;
 }
 
+/* ---------------- 툴바 ---------------- */
 .ar-toolbar {
   flex: 0 0 auto;
   display: flex;
@@ -31,9 +31,18 @@
 }
 
 .ar-toolbar-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
   font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+.ar-toolbar-pages {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #9ca3af;
 }
 
 .ar-toolbar-actions {
@@ -74,36 +83,36 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* ---------------- 스크롤 영역 (여러 장 세로 스택) ---------------- */
 .ar-scroll {
   flex: 1 1 auto;
   overflow: auto;
   padding: 1.5rem 1rem 3rem;
   display: flex;
-  /* 여러 매를 세로로 쌓습니다 (가로 배치 금지) */
   flex-direction: column;
   align-items: center;
   gap: 1.75rem;
 }
 
-/* ---------------- A4 용지 (1매 = 1장) ---------------- */
+/* ---------------- A4 용지 (서류 1장 = 1매) ---------------- */
 .ar-sheet {
   width: 210mm;
   min-height: 297mm;
   box-sizing: border-box;
-  padding: 16mm 14mm 12mm;
+  padding: 13mm 13mm 9mm;
   background: #fff;
   color: #111827;
   font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  font-size: 10.5pt;
-  line-height: 1.5;
+  font-size: 9.5pt;
+  line-height: 1.45;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-  /* 하단 러닝 푸터를 용지 바닥에 붙이기 위한 세로 플렉스 */
+  /* 서류 하단 양식 푸터를 용지 바닥에 붙이기 위한 세로 플렉스 */
   display: flex;
   flex-direction: column;
 }
 
-/* 화면에서만 보이는 매수 라벨 (인쇄 시 숨김) */
-.ar-page-tag {
+/* 화면에서만 보이는 서류 라벨 (인쇄 시 숨김) */
+.ar-doc-tag {
   display: inline-block;
   align-self: flex-start;
   margin-bottom: 0.5rem;
@@ -116,176 +125,425 @@
   letter-spacing: 0.02em;
 }
 
-/* 2·3매 상단 러닝 헤더 */
-.ar-page-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-bottom: 0.35rem;
-  margin-bottom: 0.6rem;
-  border-bottom: 1.5px solid #1e3a8a;
-  font-size: 8pt;
-  color: #4b5563;
-}
-
-.ar-page-head-site {
-  max-width: 40%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ar-page-head-title {
-  font-size: 10pt;
-  font-weight: 800;
-  color: #1e3a8a;
-  letter-spacing: 0.06em;
-}
-
-.ar-page-head-no {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  color: #6b7280;
-}
-
-/* 2·3매 본문 제목 */
-.ar-page-title {
-  font-size: 15pt;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: #111827;
-  text-align: center;
-  margin: 0.2rem 0 0.35rem;
-}
-
-.ar-page-lead {
-  font-size: 9pt;
-  color: #4b5563;
-  text-align: center;
-  margin-bottom: 0.7rem;
-  line-height: 1.55;
-}
-
-/* 하단 러닝 푸터 (용지 바닥) */
-.ar-page-foot {
-  margin-top: auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 0.3rem;
-  border-top: 1px solid #e5e7eb;
-  font-size: 7.5pt;
-  color: #9ca3af;
-}
-
-/* 진술서 마지막 확인 문단 */
-.ar-witness-declare {
-  margin-top: 0.9rem;
-  padding-top: 0.6rem;
-  border-top: 1px dashed #cbd5e1;
-  font-size: 9pt;
-  color: #374151;
-  line-height: 1.7;
-}
-
-.ar-witness-declare-date {
-  text-align: right;
-  font-weight: 700;
-  margin-top: 0.2rem;
-}
-
-/* ---------------- 표제부 ---------------- */
-.ar-head {
+/* ---------------- 표제 + 결재란 (①) ---------------- */
+.ar-head-grid {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: end;
-  gap: 0.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2.5px solid #1e3a8a;
+  grid-template-columns: 1fr auto;
+  gap: 0;
+  border: 1.5px solid #111827;
+  border-bottom: none;
 }
 
-.ar-head-left {
+.ar-head-titlebox {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-}
-
-.ar-company {
-  font-size: 11pt;
-  font-weight: 800;
-  color: #1e3a8a;
-  letter-spacing: 0.02em;
-}
-
-.ar-dept {
-  font-size: 8.5pt;
-  color: #4b5563;
-}
-
-.ar-title {
-  font-size: 21pt;
-  font-weight: 800;
-  letter-spacing: 0.32em;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.45rem 0.6rem;
+  border-right: 1.5px solid #111827;
   text-align: center;
-  color: #111827;
-  padding-left: 0.32em;
 }
 
-.ar-head-right {
-  text-align: right;
-  font-size: 8.5pt;
-  color: #374151;
-}
-
-.ar-docno-label {
-  color: #6b7280;
-  font-size: 7.5pt;
-  letter-spacing: 0.08em;
-}
-
-.ar-docno {
+.ar-head-title {
+  font-size: 20pt;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.22em;
+  padding-left: 0.22em;
+  line-height: 1.15;
 }
 
-/* ---------------- 표 ---------------- */
-.ar-table {
-  width: 100%;
+.ar-head-subtitle {
+  font-size: 9pt;
+  color: #374151;
+  font-weight: 600;
+}
+
+/* 결재란 */
+.ar-approval {
   border-collapse: collapse;
-  margin-top: 0.55rem;
   table-layout: fixed;
 }
 
-.ar-table th,
-.ar-table td {
-  border: 1px solid #9ca3af;
-  padding: 0.32rem 0.55rem;
-  font-size: 9.5pt;
-  text-align: left;
+.ar-approval th,
+.ar-approval td {
+  border-left: 1px solid #111827;
+  text-align: center;
+  font-size: 7.5pt;
+  vertical-align: middle;
+}
+
+.ar-approval thead,
+.ar-approval tbody tr:first-child th {
+  background: #f3f4f6;
+}
+
+.ar-approval-role {
+  width: 8mm;
+  background: #f3f4f6;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.1em;
+  padding: 0 0.1rem;
+}
+
+.ar-approval-cell {
+  width: 15mm;
+  height: 6mm;
+  font-weight: 600;
+  color: #111827;
+}
+
+.ar-approval-sign {
+  width: 15mm;
+  height: 13mm;
+  vertical-align: bottom;
+  padding-bottom: 0.5mm;
+}
+
+.ar-approval-name {
+  display: block;
+  font-size: 7pt;
+  color: #374151;
+  line-height: 1.1;
+}
+
+/* ---------------- 공통 격자 표 ---------------- */
+.ar-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 1.5px solid #111827;
+  margin-top: -1.5px;
+}
+
+.ar-grid th,
+.ar-grid td {
+  border: 1px solid #111827;
+  padding: 0.22rem 0.4rem;
+  font-size: 9pt;
   vertical-align: middle;
   word-break: break-word;
 }
 
-.ar-table th {
-  width: 21%;
-  background: #eef2f7;
+.ar-grid th {
+  background: #f3f4f6;
   font-weight: 700;
-  color: #1f2937;
   text-align: center;
-  white-space: nowrap;
+  color: #111827;
+  line-height: 1.25;
 }
 
-.ar-table td {
+.ar-grid td {
+  text-align: left;
   color: #111827;
 }
 
+/* ---------------- 필드 블록 (경위/조치/원인/예방/관련원부) ---------------- */
+.ar-field {
+  display: flex;
+  border: 1.5px solid #111827;
+  margin-top: -1.5px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-field-title {
+  flex: 0 0 22%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.4rem;
+  background: #f3f4f6;
+  border-right: 1px solid #111827;
+  font-size: 9pt;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.ar-field-body {
+  flex: 1 1 auto;
+  padding: 0.4rem 0.6rem;
+  min-height: 14mm;
+}
+
+.ar-field-hint {
+  font-size: 7.5pt;
+  color: #6b7280;
+  font-style: italic;
+  margin-bottom: 0.2rem;
+  line-height: 1.4;
+}
+
+.ar-field-text {
+  font-size: 9pt;
+  color: #111827;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+}
+
+.ar-field-split + .ar-field-split {
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.ar-field-split-label {
+  font-size: 8pt;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 0.15rem;
+}
+
+/* ---------------- 서명란 (①) ---------------- */
+.ar-signers {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-signer {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-size: 9pt;
+}
+
+.ar-signer-label {
+  font-weight: 700;
+  min-width: 34mm;
+  text-align: right;
+}
+
+.ar-signer-colon {
+  color: #6b7280;
+}
+
+.ar-signer-name {
+  min-width: 22mm;
+  border-bottom: 1px solid #9ca3af;
+  padding: 0 0.3rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.ar-signer-stamp {
+  font-size: 7.5pt;
+  color: #9ca3af;
+  letter-spacing: 0.02em;
+}
+
+/* ---------------- 서류 양식 푸터 ---------------- */
+.ar-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #d1d5db;
+  font-size: 8pt;
+  color: #6b7280;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-form-company {
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #374151;
+}
+
+/* 용지 바닥에 붙이기 (본문이 짧아도 푸터가 아래로) */
+.ar-sheet > .ar-form-footer {
+  margin-top: auto;
+}
+
+/* ---------------- 서류 제목 띠 (②③) ---------------- */
+.ar-doc-titlebar {
+  border: 1.5px solid #111827;
+  padding: 0.5rem 0;
+  text-align: center;
+  font-size: 19pt;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  line-height: 1.2;
+  margin-bottom: -1.5px;
+}
+
+/* ---------------- 목격자 진술서 (②) ---------------- */
+.ar-witness-table th {
+  line-height: 1.2;
+}
+
+.ar-witness-group {
+  background: #e5e7eb !important;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.15;
+  padding: 0 0.1rem !important;
+}
+
+.ar-witness-content-title {
+  background: #f3f4f6;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ar-witness-content-cell {
+  vertical-align: top;
+  height: 70mm; /* 서식처럼 빈 칸이어도 높이 확보 */
+}
+
+.ar-witness-confirm {
+  margin-top: 0.7rem;
+  text-align: center;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-witness-confirm-text {
+  font-size: 10pt;
+  font-weight: 600;
+  color: #111827;
+}
+
+.ar-witness-confirm-date {
+  margin-top: 0.35rem;
+  font-size: 10pt;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ar-witness-signrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+  padding-top: 0.5rem;
+  font-size: 10pt;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-witness-signitem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+/* ---------------- 재해(사고) 상황도 (③) ---------------- */
+.ar-layout {
+  margin-top: 0.6rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-layout-caption {
+  font-size: 9pt;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.ar-layout-img {
+  display: block;
+  width: 100%;
+  max-height: 128mm;
+  object-fit: contain;
+  border: 1.5px solid #111827;
+  background: #fff;
+}
+
+.ar-layout-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  height: 96mm;
+  border: 1.5px dashed #9ca3af;
+  background: #fafafa;
+  color: #9ca3af;
+  font-size: 9.5pt;
+}
+
+.ar-layout-empty-sm {
+  height: 34mm;
+}
+
+.ar-layout-empty-hint {
+  font-size: 8pt;
+  color: #cbd5e1;
+}
+
+.ar-layout-note {
+  margin-top: 0.3rem;
+  font-size: 8.5pt;
+  color: #4b5563;
+  white-space: pre-wrap;
+}
+
+.ar-layout-photos {
+  margin-top: 0.7rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-layout-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+}
+
+.ar-layout-photo {
+  margin: 0;
+  border: 1px solid #111827;
+  padding: 0.12rem;
+  background: #fff;
+}
+
+.ar-layout-photo img {
+  display: block;
+  width: 100%;
+  height: 24mm;
+  object-fit: cover;
+}
+
+.ar-layout-photo figcaption {
+  font-size: 7pt;
+  color: #4b5563;
+  text-align: center;
+  padding-top: 0.08rem;
+}
+
+.ar-diagram-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1.2rem;
+  margin-top: 0.6rem;
+  font-size: 8.5pt;
+  color: #374151;
+}
+
+/* ---------------- 심각도 배지 ---------------- */
 .ar-sev {
   display: inline-block;
-  padding: 0.05rem 0.5rem;
-  border-radius: 0.6rem;
-  font-size: 8.5pt;
+  padding: 0.02rem 0.4rem;
+  border-radius: 0.5rem;
+  font-size: 8pt;
   font-weight: 700;
   border: 1px solid transparent;
 }
@@ -314,274 +572,17 @@
   border-color: #fca5a5;
 }
 
-/* ---------------- 소제목 ---------------- */
-.ar-subtitle {
-  margin-top: 1rem;
-  margin-bottom: 0.1rem;
-  font-size: 10.5pt;
-  font-weight: 800;
-  color: #1e3a8a;
-  padding-left: 0.45rem;
-  border-left: 4px solid #1e3a8a;
-  line-height: 1.2;
-}
-
-/* ---------------- 본문 블록 ---------------- */
-.ar-block {
-  margin-top: 0.55rem;
-  border: 1px solid #9ca3af;
-  border-radius: 2px;
-  padding: 0.45rem 0.65rem 0.5rem;
-}
-
-.ar-block h3 {
-  font-size: 9.5pt;
-  font-weight: 800;
-  color: #1f2937;
-  margin-bottom: 0.25rem;
-}
-
-.ar-block p {
-  font-size: 9.5pt;
-  color: #111827;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.ar-block-meta {
-  margin-top: 0.3rem;
-  font-size: 8.5pt;
-  color: #4b5563;
-}
-
-.ar-note {
-  font-size: 8.5pt;
-  color: #6b7280;
-}
-
-/* ---------------- 사진 ---------------- */
-.ar-photos {
-  margin-top: 0.7rem;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.ar-photos h3 {
-  font-size: 9.5pt;
-  font-weight: 800;
-  color: #1f2937;
-  margin-bottom: 0.3rem;
-}
-
-.ar-photo-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.35rem;
-}
-
-.ar-photo {
-  margin: 0;
-  border: 1px solid #9ca3af;
-  padding: 0.15rem;
-  background: #fff;
-}
-
-.ar-photo img {
-  display: block;
-  width: 100%;
-  height: 26mm;
-  object-fit: cover;
-}
-
-.ar-photo figcaption {
-  font-size: 7.5pt;
-  color: #4b5563;
-  text-align: center;
-  padding-top: 0.1rem;
-}
-
-/* ---------------- 재해 상황도 ---------------- */
-.ar-diagram {
-  margin-top: 0.55rem;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.ar-diagram h3 {
-  font-size: 9.5pt;
-  font-weight: 800;
-  color: #1f2937;
-  margin-bottom: 0.3rem;
-}
-
-.ar-diagram img {
-  display: block;
-  width: 100%;
-  max-height: 78mm;
-  object-fit: contain;
-  border: 1px solid #9ca3af;
-  background: #fff;
-}
-
-.ar-diagram-note {
-  margin-top: 0.25rem;
-  font-size: 8.5pt;
-  color: #4b5563;
-  white-space: pre-wrap;
-}
-
-/* ---------------- 목격자 진술서 ---------------- */
-.ar-witness {
-  margin-top: 0.8rem;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.ar-witness > h3 {
-  font-size: 9.5pt;
-  font-weight: 800;
-  color: #1f2937;
-  margin-bottom: 0.35rem;
-}
-
-.ar-witness-item {
-  border: 1px solid #9ca3af;
-  border-radius: 2px;
-  padding: 0.4rem 0.6rem;
-  margin-bottom: 0.4rem;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.ar-witness-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.15rem 0.6rem;
-  padding-bottom: 0.25rem;
-  border-bottom: 1px dashed #cbd5e1;
-  font-size: 9.5pt;
-}
-
-.ar-witness-no {
-  font-size: 7.5pt;
-  font-weight: 800;
-  color: #1d4ed8;
-  background: #dbeafe;
-  border-radius: 2px;
-  padding: 0 0.3rem;
-}
-
-.ar-witness-text {
-  margin-top: 0.3rem;
-  font-size: 9.5pt;
-  color: #111827;
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.5;
-}
-
-.ar-witness-sign {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.4rem;
-  padding-top: 0.25rem;
-  font-size: 8.5pt;
-  color: #374151;
-}
-
-.ar-witness-signer {
-  white-space: nowrap;
-  font-weight: 700;
-}
-
-/* ---------------- 결재란 ---------------- */
-.ar-sign {
-  margin-top: 0.9rem;
-  display: flex;
-  justify-content: flex-end;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.ar-sign-table {
-  border-collapse: collapse;
-  width: 66mm;
-}
-
-.ar-sign-table th,
-.ar-sign-table td {
-  border: 1px solid #6b7280;
-  text-align: center;
-  font-size: 8.5pt;
-}
-
-.ar-sign-table th {
-  background: #eef2f7;
-  font-weight: 700;
-  padding: 0.2rem 0;
-  height: 7mm;
-}
-
-.ar-sign-box {
-  height: 18mm;
-  vertical-align: top;
-  padding-top: 0.3rem;
-}
-
-.ar-sign-name {
-  display: block;
-  font-size: 8.5pt;
-  font-weight: 700;
-  color: #111827;
-  min-height: 1.2em;
-}
-
-.ar-sign-line {
-  display: block;
-  font-size: 7.5pt;
-  color: #9ca3af;
-  letter-spacing: 0.05em;
-}
-
-/* ---------------- 하단 문구 ---------------- */
-.ar-foot {
-  margin-top: 0.85rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 8.5pt;
-  color: #374151;
-  border-top: 1px solid #d1d5db;
-  padding-top: 0.35rem;
-}
-
-.ar-foot-date {
-  color: #6b7280;
-}
-
-.ar-foot-company {
-  margin-top: 0.15rem;
-  text-align: center;
-  font-size: 9.5pt;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  color: #1e3a8a;
-}
-
 /* ================================================================
    인쇄
    ================================================================ */
 @page {
   size: A4 portrait;
-  margin: 12mm;
+  margin: 10mm;
 }
 
 @page accident-report-page {
   size: A4 portrait;
-  margin: 12mm;
+  margin: 10mm;
 }
 
 @media print {
@@ -592,7 +593,7 @@
     padding: 0 !important;
   }
 
-  /* 앱 본체는 인쇄에서 제외 (보고서만 출력) */
+  /* 앱 본체는 인쇄에서 제외 (서류만 출력) */
   #root {
     display: none !important;
   }
@@ -621,53 +622,57 @@
 
   .ar-sheet {
     width: auto !important;
-    min-height: 0 !important;
+    /* 인쇄 용지(A4 297mm − 여백 10mm×2 = 277mm)에 맞춰 서류 1장을 채웁니다.
+       → 내용이 짧아도 양식 푸터가 용지 하단에 오도록 합니다. */
+    min-height: 272mm !important;
     padding: 0 !important;
     margin: 0 !important;
     box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
     page: accident-report-page;
     /* ⚠️ break-inside: avoid 를 쓰면 안 됩니다.
        내용이 1장을 넘을 때 페이지 경계에서 뒷부분이 잘려나갑니다.
-       대신 매(.ar-page)마다 break-before 로 새 장을 시작합니다. */
+       대신 서류(.ar-sheet)마다 break-before 로 새 장을 시작합니다. */
     break-inside: auto;
     page-break-inside: auto;
   }
 
-  /* 매(페이지) 분리 — 2매부터는 반드시 새 장에서 시작 */
-  .ar-page + .ar-page {
+  /* 서류 분리 — 두 번째 서류부터는 반드시 새 장에서 시작 */
+  .ar-sheet + .ar-sheet {
     break-before: page;
     page-break-before: always;
   }
 
-  /* 화면용 매수 라벨은 인쇄에서 제외 */
-  .ar-page-tag {
+  /* 화면용 서류 라벨은 인쇄에서 제외 */
+  .ar-doc-tag {
     display: none !important;
   }
 
-  /* 배경색(표 머리·심각도 배지) 유지 */
+  /* 배경색(표 머리·결재란·심각도 배지) 유지 */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   /* 잘림 방지: 작은 요소만 쪼개지 않도록 */
-  .ar-block,
-  .ar-table tr,
-  .ar-photo,
-  .ar-diagram,
-  .ar-witness-item,
-  .ar-sign,
-  .ar-page-head,
-  .ar-page-foot {
+  .ar-grid tr,
+  .ar-field,
+  .ar-signers,
+  .ar-signer,
+  .ar-layout,
+  .ar-layout-photo,
+  .ar-form-footer,
+  .ar-witness-confirm,
+  .ar-witness-signrow {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   /* 제목이 페이지 끝에 홀로 남지 않도록 */
-  .ar-subtitle,
-  .ar-page-title,
-  .ar-block h3,
-  .ar-witness > h3 {
+  .ar-field-title,
+  .ar-layout-caption,
+  .ar-doc-titlebar {
     break-after: avoid;
     page-break-after: avoid;
   }

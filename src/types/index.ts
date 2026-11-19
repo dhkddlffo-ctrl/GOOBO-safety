@@ -246,7 +246,7 @@ export interface SiteOrgChart {
 // 피해자 결혼여부
 export type MaritalStatus = '미혼' | '기혼' | '기타';
 
-// 목격자 진술서
+// 목격자 진술서 (회사 서식 FWP-006-3.01)
 export interface WitnessStatement {
   id: string;
   /** 목격자 성명 */
@@ -263,6 +263,22 @@ export interface WitnessStatement {
   statementDate?: string;
   /** '사실과 같음' 확인 여부 */
   confirmed?: boolean;
+  /* ---- 서식 FWP-006-3.01 본인사항 ---- */
+  /** 본적 */
+  permanentAddress?: string;
+  /** 주소 */
+  address?: string;
+  /** 주민등록번호 */
+  residentId?: string;
+  /** 소속 (예: 구보공영) */
+  affiliation?: string;
+  /* ---- 서식 FWP-006-3.01 작업사항 ---- */
+  /** 사고자가 하던 일 */
+  victimTask?: string;
+  /** 목격자가 하던 일 */
+  witnessTask?: string;
+  /** 같이 일하던 사람 */
+  coworker?: string;
 }
 
 // 사고사례 타입
@@ -279,9 +295,17 @@ export interface AccidentCase {
   victimHireDate?: string; // 피해자 입사일 (yyyy-mm-dd, 선택)
   /* ---- 피해자 상세 정보 ---- */
   victimJobType?: string; // 직종
+  victimBirthDate?: string; // 생년월일 (yyyy-mm-dd)
+  victimRank?: string; // 직급 (예: 배관공, 반장)
   victimMaritalStatus?: MaritalStatus; // 결혼여부
   victimFamily?: string; // 가족관계
   victimPhone?: string; // 연락처
+  /* ---- 사고원인 및 대책 보고서 (서식 FWP-006) ---- */
+  actionTaken?: string; // 조치 사항
+  relatedNotes?: string; // 관련원부 — 안전관리팀장 현장방문 확인내용
+  relatedEtc?: string; // 관련원부 — 기타
+  safetyManagerName?: string; // 안전관리자
+  siteManagerName?: string; // 현장소장대리인
   /* ---- 재해(사고) 상황 ---- */
   disasterDate?: string; // 재해 발생일 (yyyy-mm-dd)
   disasterPlace?: string; // 재해 발생 장소

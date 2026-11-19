@@ -20,6 +20,15 @@ const emptyDraft = () => ({
   statement: '',
   statementDate: '',
   confirmed: false,
+  /* 서식 FWP-006-3.01 본인사항 */
+  permanentAddress: '',
+  address: '',
+  residentId: '',
+  affiliation: '',
+  /* 서식 FWP-006-3.01 작업사항 */
+  victimTask: '',
+  witnessTask: '',
+  coworker: '',
 });
 
 type Draft = ReturnType<typeof emptyDraft>;
@@ -58,6 +67,15 @@ const WitnessEditor: React.FC<WitnessEditorProps> = ({ value, onChange }) => {
       statement: draft.statement.trim(),
       statementDate: draft.statementDate || undefined,
       confirmed: draft.confirmed,
+      /* 서식 FWP-006-3.01 본인사항 */
+      permanentAddress: draft.permanentAddress.trim() || undefined,
+      address: draft.address.trim() || undefined,
+      residentId: draft.residentId.trim() || undefined,
+      affiliation: draft.affiliation.trim() || undefined,
+      /* 서식 FWP-006-3.01 작업사항 */
+      victimTask: draft.victimTask.trim() || undefined,
+      witnessTask: draft.witnessTask.trim() || undefined,
+      coworker: draft.coworker.trim() || undefined,
     };
 
     onChange([...value, next]);
@@ -157,6 +175,86 @@ const WitnessEditor: React.FC<WitnessEditorProps> = ({ value, onChange }) => {
               id="witnessDate"
               value={draft.statementDate}
               onChange={e => setField('statementDate', e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* 서식 FWP-006-3.01 · 본인사항 */}
+        <div className="witness-section-label">본인사항</div>
+        <div className="witness-grid">
+          <div className="witness-field">
+            <label htmlFor="witnessPermanentAddress">본적</label>
+            <input
+              type="text"
+              id="witnessPermanentAddress"
+              value={draft.permanentAddress}
+              onChange={e => setField('permanentAddress', e.target.value)}
+              placeholder="예: 서울특별시 종로구 청운동"
+            />
+          </div>
+          <div className="witness-field">
+            <label htmlFor="witnessAddress">주소</label>
+            <input
+              type="text"
+              id="witnessAddress"
+              value={draft.address}
+              onChange={e => setField('address', e.target.value)}
+              placeholder="예: 서울시 종로구 새문안로 236"
+            />
+          </div>
+          <div className="witness-field">
+            <label htmlFor="witnessResidentId">주민등록번호</label>
+            <input
+              type="text"
+              id="witnessResidentId"
+              value={draft.residentId}
+              onChange={e => setField('residentId', e.target.value)}
+              placeholder="000000-0000000"
+            />
+          </div>
+          <div className="witness-field">
+            <label htmlFor="witnessAffiliation">소속</label>
+            <input
+              type="text"
+              id="witnessAffiliation"
+              value={draft.affiliation}
+              onChange={e => setField('affiliation', e.target.value)}
+              placeholder="예: 구보공영"
+            />
+          </div>
+        </div>
+
+        {/* 서식 FWP-006-3.01 · 작업사항 */}
+        <div className="witness-section-label">작업사항</div>
+        <div className="witness-grid">
+          <div className="witness-field">
+            <label htmlFor="witnessVictimTask">사고자가 하던 일</label>
+            <input
+              type="text"
+              id="witnessVictimTask"
+              value={draft.victimTask}
+              onChange={e => setField('victimTask', e.target.value)}
+              placeholder="예: 관 교체 반복 타설전 점검중"
+            />
+          </div>
+          <div className="witness-field">
+            <label htmlFor="witnessWitnessTask">목격자가 하던 일</label>
+            <input
+              type="text"
+              id="witnessWitnessTask"
+              value={draft.witnessTask}
+              onChange={e => setField('witnessTask', e.target.value)}
+              placeholder="예: 상층 작업 동향후"
+            />
+          </div>
+          <div className="witness-field">
+            <label htmlFor="witnessCoworker">같이 일하던 사람</label>
+            <input
+              type="text"
+              id="witnessCoworker"
+              value={draft.coworker}
+              onChange={e => setField('coworker', e.target.value)}
+              placeholder="예: 김철수, 이영희"
             />
           </div>
         </div>

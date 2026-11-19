@@ -26,6 +26,8 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
     victimHireDate: '',
     /* 피해자 상세 */
     victimJobType: '',
+    victimBirthDate: '',
+    victimRank: '',
     victimMaritalStatus: '' as '' | '미혼' | '기혼' | '기타',
     victimFamily: '',
     victimPhone: '',
@@ -36,6 +38,12 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
     description: '',
     cause: '',
     preventiveMeasures: '',
+    /* 사고원인 및 대책 보고서 (서식 FWP-006) */
+    actionTaken: '',
+    relatedNotes: '',
+    relatedEtc: '',
+    safetyManagerName: '',
+    siteManagerName: '',
     reporterName: '',
     reporterPhone: '',
     disasterReportSubmitted: '미제출' as '제출' | '미제출',
@@ -161,6 +169,8 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
       victimHireDate: formData.victimHireDate || undefined,
       /* 피해자 상세 */
       victimJobType: formData.victimJobType.trim() || undefined,
+      victimBirthDate: formData.victimBirthDate || undefined,
+      victimRank: formData.victimRank.trim() || undefined,
       victimMaritalStatus: formData.victimMaritalStatus || undefined,
       victimFamily: formData.victimFamily.trim() || undefined,
       victimPhone: formData.victimPhone.trim() || undefined,
@@ -173,6 +183,12 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
       description: formData.description,
       cause: formData.cause,
       preventiveMeasures: formData.preventiveMeasures,
+      /* 사고원인 및 대책 보고서 (서식 FWP-006) */
+      actionTaken: formData.actionTaken.trim() || undefined,
+      relatedNotes: formData.relatedNotes.trim() || undefined,
+      relatedEtc: formData.relatedEtc.trim() || undefined,
+      safetyManagerName: formData.safetyManagerName.trim() || undefined,
+      siteManagerName: formData.siteManagerName.trim() || undefined,
       images: images.length > 0 ? images : undefined,
       status: '접수',
       createdAt: new Date().toISOString(),
@@ -225,6 +241,8 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                     victimAge: '',
                     victimHireDate: '',
                     victimJobType: '',
+                    victimBirthDate: '',
+                    victimRank: '',
                     victimMaritalStatus: '',
                     victimFamily: '',
                     victimPhone: '',
@@ -234,6 +252,11 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                     description: '',
                     cause: '',
                     preventiveMeasures: '',
+                    actionTaken: '',
+                    relatedNotes: '',
+                    relatedEtc: '',
+                    safetyManagerName: '',
+                    siteManagerName: '',
                     reporterName: '',
                     reporterPhone: '',
                     disasterReportSubmitted: '미제출',
@@ -475,6 +498,30 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
             </div>
 
             <div className="form-group">
+              <label htmlFor="victimBirthDate">생년월일 (선택)</label>
+              <input
+                type="date"
+                id="victimBirthDate"
+                name="victimBirthDate"
+                value={formData.victimBirthDate}
+                onChange={handleInputChange}
+              />
+              <p className="field-hint">사고원인 및 대책 보고서의 성명란에 나이와 함께 표시됩니다.</p>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="victimRank">직급 (선택)</label>
+              <input
+                type="text"
+                id="victimRank"
+                name="victimRank"
+                value={formData.victimRank}
+                onChange={handleInputChange}
+                placeholder="예: 배관(배관공), 반장"
+              />
+            </div>
+
+            <div className="form-group">
               <label htmlFor="victimFamily">가족관계 (선택)</label>
               <input
                 type="text"
@@ -593,6 +640,82 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
               placeholder="동일한 사고를 예방하기 위한 대책을 제안해주세요"
               required
             />
+          </div>
+
+          {/* 사고원인 및 대책 보고서 (서식 FWP-006) */}
+          <div className="form-section">
+            <h3 className="form-section-title">📋 사고원인 및 대책 보고서 (서식 FWP-006)</h3>
+            <p className="form-section-desc">
+              회사 서식 ‘사고원인 및 대책 보고서’에 함께 출력되는 항목입니다.
+            </p>
+
+            <div className="form-group">
+              <label htmlFor="actionTaken">조치 사항 (선택)</label>
+              <textarea
+                id="actionTaken"
+                name="actionTaken"
+                value={formData.actionTaken}
+                onChange={handleInputChange}
+                rows={4}
+                placeholder={
+                  '시간 순서대로 조치한 내용을 입력해주세요.\n예)\n- 15시00분 이서진 대리와 함께 자차로 인천메트로경도의원으로 이동\n- 15시30분 삼성 이대훈 프로 보고(원청 TBM시 삼성 구역별 팀장에게 보고)'
+                }
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="relatedNotes">관련원부 — 안전관리팀장 현장방문 확인내용 (선택)</label>
+              <textarea
+                id="relatedNotes"
+                name="relatedNotes"
+                value={formData.relatedNotes}
+                onChange={handleInputChange}
+                rows={3}
+                placeholder={
+                  '예)\n1. 금일 출역인원 현장소장 1명, 관리자 3명, SHOP 1명, 근로자 7명 총 12명 확인\n2. 안전관리자(피해자) 근로자 작업지시 및 현장관리 중임'
+                }
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="relatedEtc">관련원부 — 기타 (선택)</label>
+              <textarea
+                id="relatedEtc"
+                name="relatedEtc"
+                value={formData.relatedEtc}
+                onChange={handleInputChange}
+                rows={3}
+                placeholder={
+                  '예)\n4. 3일 뒤 재방문 후 부상정도 및 치료소견 파악됨\n5. 전 현장에 전도와 관련하여 공유/예방 활동을 진행하겠음'
+                }
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="safetyManagerName">안전관리자 (선택)</label>
+                <input
+                  type="text"
+                  id="safetyManagerName"
+                  name="safetyManagerName"
+                  value={formData.safetyManagerName}
+                  onChange={handleInputChange}
+                  placeholder="예: 이서진"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="siteManagerName">현장소장대리인 (선택)</label>
+                <input
+                  type="text"
+                  id="siteManagerName"
+                  name="siteManagerName"
+                  value={formData.siteManagerName}
+                  onChange={handleInputChange}
+                  placeholder="예: 한구현"
+                />
+              </div>
+            </div>
           </div>
 
           {/* 사진 첨부 */}
