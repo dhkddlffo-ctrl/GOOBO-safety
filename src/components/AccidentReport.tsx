@@ -361,8 +361,8 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
             <table className="ar-grid ar-witness-table">
               <colgroup>
                 <col style={{ width: '8%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '30%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '28%' }} />
                 <col style={{ width: '18%' }} />
                 <col style={{ width: '30%' }} />
               </colgroup>

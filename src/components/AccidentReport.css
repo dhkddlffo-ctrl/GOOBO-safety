@@ -146,11 +146,13 @@
 }
 
 .ar-head-title {
-  font-size: 20pt;
+  font-size: 17pt;
   font-weight: 700;
-  letter-spacing: 0.22em;
-  padding-left: 0.22em;
+  letter-spacing: 0.18em;
+  padding-left: 0.18em;
   line-height: 1.15;
+  /* 결재란과 나란히 놓이므로 제목이 두 줄로 접히지 않도록 고정합니다. */
+  white-space: nowrap;
 }
 
 .ar-head-subtitle {

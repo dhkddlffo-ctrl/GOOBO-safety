@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite, getAccidentCases, updateAccidentCase, deleteAccidentCase } from '../utils/storage';
+import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite, getAccidentCases, updateAccidentCase, deleteAccidentCase, saveAccidentCase } from '../utils/storage';
+import { createSampleAccidentCase, SAMPLE_ACCIDENT_ID } from '../data/sampleAccidentCase';
 import { Suggestion, WorkStopRequest, Site, AccidentCase } from '../types';
 import {
   collectIssues,
@@ -291,6 +292,29 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
       completedAt: status === '완료' ? new Date().toISOString() : undefined
     });
     loadData();
+  };
+
+  /** 테스트용 샘플 사고사례 1건을 현재 브라우저(LocalStorage)에 추가합니다. */
+  const handleAddSampleAccident = () => {
+    if (accidentCases.some(c => c.id === SAMPLE_ACCIDENT_ID)) {
+      alert('테스트 사고사례가 이미 등록되어 있습니다.');
+      return;
+    }
+    if (
+      !window.confirm(
+        '테스트용 사고사례 1건을 등록하시겠습니까?\n\n' +
+          '· 현장: 송도 역세권 2블럭 신축공사\n' +
+          '· 사고 유형: 추락 (중상)\n' +
+          '· 목격자 진술서 2매 · 재해 상황도 포함\n\n' +
+          '사고원인 및 대책 보고서 / 목격자 진술서 / 재해(사고) 상황도 3종 서류를\n' +
+          '바로 출력해 확인할 수 있습니다.'
+      )
+    ) {
+      return;
+    }
+    saveAccidentCase(createSampleAccidentCase());
+    loadData();
+    alert('테스트 사고사례가 등록되었습니다.\n사고사례 탭에서 🖨️ 사고보고서를 눌러 확인해 주세요.');
   };
 
   const handleClearAll = (type: 'suggestion' | 'workstop' | 'all') => {
@@ -679,6 +703,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               onClick={() => alert('준공된 현장은 보관 상태입니다.\n필요시 개별적으로 복원하거나 삭제할 수 있습니다.')}
             >
               ℹ️ 준공 현장 안내
+            </button>
+          )}
+          {activeTab === 'accidents' && (
+            <button
+              className="btn-manage btn-add-sample"
+              onClick={handleAddSampleAccident}
+            >
+              🧪 테스트 사고사례 추가
             </button>
           )}
           {(activeTab === 'workstops' || activeTab === 'suggestions') && (
