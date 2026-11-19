@@ -79,6 +79,16 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
 
   const hasInvestigation = Boolean(accident.investigationResult || accident.completedAt);
   const photos = [...(accident.images ?? []), ...(accident.investigationImages ?? [])].slice(0, 4);
+  /* 재해 발생일·장소는 미입력 시 사고 정보로 대체 */
+  const disasterDate = accident.disasterDate || accident.accidentDate;
+  const disasterPlace = accident.disasterPlace || accident.location;
+  const witnesses = accident.witnesses ?? [];
+  const hasExtraVictim = Boolean(
+    accident.victimJobType ||
+      accident.victimMaritalStatus ||
+      accident.victimFamily ||
+      accident.victimPhone
+  );
 
   const report = (
     <div className="ar-overlay">
@@ -169,8 +179,54 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
                   <span className="ar-note"> (사고 발생일 기준)</span>
                 </td>
               </tr>
+              {hasExtraVictim && (
+                <>
+                  <tr>
+                    <th>직종</th>
+                    <td>{accident.victimJobType || '-'}</td>
+                    <th>결혼여부</th>
+                    <td>{accident.victimMaritalStatus || '-'}</td>
+                  </tr>
+                  <tr>
+                    <th>가족관계</th>
+                    <td>{accident.victimFamily || '-'}</td>
+                    <th>연락처</th>
+                    <td>{accident.victimPhone || '-'}</td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
+
+          {/* ---------- 재해(사고) 상황 ---------- */}
+          <h2 className="ar-subtitle">재해(사고) 상황</h2>
+          <table className="ar-table">
+            <tbody>
+              <tr>
+                <th>재해 발생일</th>
+                <td>{formatDateKo(disasterDate)}</td>
+                <th>재해 발생 장소</th>
+                <td>{disasterPlace || '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {accident.situationDiagram && (
+            <div className="ar-diagram">
+              <h3>재해 상황도</h3>
+              <img src={accident.situationDiagram} alt="재해 상황도" />
+              {accident.situationNote && (
+                <p className="ar-diagram-note">{accident.situationNote}</p>
+              )}
+            </div>
+          )}
+
+          {!accident.situationDiagram && accident.situationNote && (
+            <div className="ar-block">
+              <h3>상황 설명</h3>
+              <p>{accident.situationNote}</p>
+            </div>
+          )}
 
           {/* ---------- 본문 ---------- */}
           <h2 className="ar-subtitle">사고 내용</h2>
@@ -209,6 +265,38 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
                   </figure>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* ---------- 목격자 진술서 ---------- */}
+          {witnesses.length > 0 && (
+            <div className="ar-witness">
+              <h3>목격자 진술서</h3>
+              {witnesses.map((w, idx) => (
+                <div key={w.id} className="ar-witness-item">
+                  <div className="ar-witness-head">
+                    <span className="ar-witness-no">진술 {idx + 1}</span>
+                    <strong>{w.name}</strong>
+                    {w.jobType && <span className="ar-note">직종: {w.jobType}</span>}
+                    {w.relation && <span className="ar-note">관계: {w.relation}</span>}
+                    {w.phone && <span className="ar-note">연락처: {w.phone}</span>}
+                    {w.statementDate && (
+                      <span className="ar-note">작성일: {formatDateKo(w.statementDate)}</span>
+                    )}
+                  </div>
+                  <p className="ar-witness-text">{w.statement}</p>
+                  <div className="ar-witness-sign">
+                    <span>
+                      {w.confirmed
+                        ? '위 진술 내용이 사실과 같음을 확인합니다.'
+                        : '위와 같이 진술합니다.'}
+                    </span>
+                    <span className="ar-witness-signer">
+                      진술자 {w.name} (서명)
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

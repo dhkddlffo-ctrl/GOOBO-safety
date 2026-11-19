@@ -243,6 +243,28 @@ export interface SiteOrgChart {
   layoutVersion?: number;
 }
 
+// 피해자 결혼여부
+export type MaritalStatus = '미혼' | '기혼' | '기타';
+
+// 목격자 진술서
+export interface WitnessStatement {
+  id: string;
+  /** 목격자 성명 */
+  name: string;
+  /** 목격자 연락처 */
+  phone?: string;
+  /** 목격자 직종 */
+  jobType?: string;
+  /** 피해자와의 관계 (동료, 반장 등) */
+  relation?: string;
+  /** 진술 내용 */
+  statement: string;
+  /** 진술 작성일 (yyyy-mm-dd) */
+  statementDate?: string;
+  /** '사실과 같음' 확인 여부 */
+  confirmed?: boolean;
+}
+
 // 사고사례 타입
 export interface AccidentCase {
   id: string;
@@ -255,6 +277,17 @@ export interface AccidentCase {
   victimName?: string; // 피해자 성명 (선택)
   victimAge?: number; // 피해자 나이
   victimHireDate?: string; // 피해자 입사일 (yyyy-mm-dd, 선택)
+  /* ---- 피해자 상세 정보 ---- */
+  victimJobType?: string; // 직종
+  victimMaritalStatus?: MaritalStatus; // 결혼여부
+  victimFamily?: string; // 가족관계
+  victimPhone?: string; // 연락처
+  /* ---- 재해(사고) 상황 ---- */
+  disasterDate?: string; // 재해 발생일 (yyyy-mm-dd)
+  disasterPlace?: string; // 재해 발생 장소
+  situationDiagram?: string; // 재해 상황도 (PNG data URL)
+  situationNote?: string; // 상황도 설명
+  witnesses?: WitnessStatement[]; // 목격자 진술서
   description: string; // 사고 경위
   cause: string; // 사고 원인
   preventiveMeasures: string; // 재발 방지 대책

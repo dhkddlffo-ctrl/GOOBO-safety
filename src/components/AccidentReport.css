@@ -302,6 +302,103 @@
   padding-top: 0.1rem;
 }
 
+/* ---------------- 재해 상황도 ---------------- */
+.ar-diagram {
+  margin-top: 0.55rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-diagram h3 {
+  font-size: 9.5pt;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 0.3rem;
+}
+
+.ar-diagram img {
+  display: block;
+  width: 100%;
+  max-height: 78mm;
+  object-fit: contain;
+  border: 1px solid #9ca3af;
+  background: #fff;
+}
+
+.ar-diagram-note {
+  margin-top: 0.25rem;
+  font-size: 8.5pt;
+  color: #4b5563;
+  white-space: pre-wrap;
+}
+
+/* ---------------- 목격자 진술서 ---------------- */
+.ar-witness {
+  margin-top: 0.8rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-witness > h3 {
+  font-size: 9.5pt;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 0.35rem;
+}
+
+.ar-witness-item {
+  border: 1px solid #9ca3af;
+  border-radius: 2px;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.4rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-witness-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.6rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px dashed #cbd5e1;
+  font-size: 9.5pt;
+}
+
+.ar-witness-no {
+  font-size: 7.5pt;
+  font-weight: 800;
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-radius: 2px;
+  padding: 0 0.3rem;
+}
+
+.ar-witness-text {
+  margin-top: 0.3rem;
+  font-size: 9.5pt;
+  color: #111827;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.ar-witness-sign {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding-top: 0.25rem;
+  font-size: 8.5pt;
+  color: #374151;
+}
+
+.ar-witness-signer {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
 /* ---------------- 결재란 ---------------- */
 .ar-sign {
   margin-top: 0.9rem;

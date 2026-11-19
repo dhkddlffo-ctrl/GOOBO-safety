@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getSites } from '../utils/storage';
-import { AccidentCase, Site } from '../types';
+import { AccidentCase, Site, WitnessStatement } from '../types';
 import { saveAccidentCase, generateId } from '../utils/storage';
 import AccidentReport from '../components/AccidentReport';
+import SituationDiagram from '../components/SituationDiagram';
+import WitnessEditor from '../components/WitnessEditor';
 import { formatTenure } from '../utils/accidentReport';
 import './AccidentCasePage.css';
 
@@ -22,6 +24,15 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
     victimName: '',
     victimAge: '',
     victimHireDate: '',
+    /* 피해자 상세 */
+    victimJobType: '',
+    victimMaritalStatus: '' as '' | '미혼' | '기혼' | '기타',
+    victimFamily: '',
+    victimPhone: '',
+    /* 재해(사고) 상황 */
+    disasterDate: '',
+    disasterPlace: '',
+    situationNote: '',
     description: '',
     cause: '',
     preventiveMeasures: '',
@@ -34,6 +45,10 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
   const [images, setImages] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [uploading, setUploading] = useState(false);
+  /** 재해 상황도 (PNG data URL) */
+  const [situationDiagram, setSituationDiagram] = useState('');
+  /** 목격자 진술서 목록 */
+  const [witnesses, setWitnesses] = useState<WitnessStatement[]>([]);
   /** 방금 접수한 사고사례 (접수 완료 화면에서 사고보고서 출력용) */
   const [savedCase, setSavedCase] = useState<AccidentCase | null>(null);
   /** 사고보고서 미리보기/인쇄 열림 여부 */
@@ -144,6 +159,17 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
       victimName: formData.victimName || '미제공',
       victimAge: formData.victimAge ? parseInt(formData.victimAge) : undefined,
       victimHireDate: formData.victimHireDate || undefined,
+      /* 피해자 상세 */
+      victimJobType: formData.victimJobType.trim() || undefined,
+      victimMaritalStatus: formData.victimMaritalStatus || undefined,
+      victimFamily: formData.victimFamily.trim() || undefined,
+      victimPhone: formData.victimPhone.trim() || undefined,
+      /* 재해(사고) 상황 */
+      disasterDate: formData.disasterDate || undefined,
+      disasterPlace: formData.disasterPlace.trim() || undefined,
+      situationDiagram: situationDiagram || undefined,
+      situationNote: formData.situationNote.trim() || undefined,
+      witnesses: witnesses.length > 0 ? witnesses : undefined,
       description: formData.description,
       cause: formData.cause,
       preventiveMeasures: formData.preventiveMeasures,
@@ -198,6 +224,13 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                     victimName: '',
                     victimAge: '',
                     victimHireDate: '',
+                    victimJobType: '',
+                    victimMaritalStatus: '',
+                    victimFamily: '',
+                    victimPhone: '',
+                    disasterDate: '',
+                    disasterPlace: '',
+                    situationNote: '',
                     description: '',
                     cause: '',
                     preventiveMeasures: '',
@@ -207,6 +240,8 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                     treatmentResult: '미처리',
                   });
                   setImages([]);
+                  setSituationDiagram('');
+                  setWitnesses([]);
                 }}
               >
                 다른 사고사례 제출
@@ -399,6 +434,125 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
             </div>
           </div>
 
+          {/* 피해자 상세 정보 — 직종 / 결혼여부 / 가족관계 / 연락처 */}
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="victimJobType">피해자 직종 (선택)</label>
+              <input
+                type="text"
+                id="victimJobType"
+                name="victimJobType"
+                value={formData.victimJobType}
+                onChange={handleInputChange}
+                placeholder="예: 철근공, 형틀목공, 신호수"
+                list="jobTypeOptions"
+              />
+              <datalist id="jobTypeOptions">
+                <option value="철근공" />
+                <option value="형틀목공" />
+                <option value="비계공" />
+                <option value="신호수" />
+                <option value="장비운전원" />
+                <option value="전기공" />
+                <option value="용접공" />
+                <option value="보통인부" />
+              </datalist>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="victimMaritalStatus">결혼여부 (선택)</label>
+              <select
+                id="victimMaritalStatus"
+                name="victimMaritalStatus"
+                value={formData.victimMaritalStatus}
+                onChange={handleInputChange}
+              >
+                <option value="">선택 안 함</option>
+                <option value="미혼">미혼</option>
+                <option value="기혼">기혼</option>
+                <option value="기타">기타</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="victimFamily">가족관계 (선택)</label>
+              <input
+                type="text"
+                id="victimFamily"
+                name="victimFamily"
+                value={formData.victimFamily}
+                onChange={handleInputChange}
+                placeholder="예: 배우자 1명, 자녀 2명"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="victimPhone">피해자 연락처 (선택)</label>
+              <input
+                type="tel"
+                id="victimPhone"
+                name="victimPhone"
+                value={formData.victimPhone}
+                onChange={handleInputChange}
+                placeholder="010-0000-0000"
+              />
+            </div>
+          </div>
+
+          {/* 재해(사고) 상황 */}
+          <div className="form-section">
+            <h3 className="form-section-title">🏗️ 재해(사고) 상황</h3>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="disasterDate">재해 발생일</label>
+                <input
+                  type="date"
+                  id="disasterDate"
+                  name="disasterDate"
+                  value={formData.disasterDate}
+                  onChange={handleInputChange}
+                  max={formData.accidentDate ? formData.accidentDate.slice(0, 10) : undefined}
+                />
+                <p className="field-hint">
+                  미입력 시 사고 발생 일시의 날짜가 사용됩니다.
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="disasterPlace">재해 발생 장소</label>
+                <input
+                  type="text"
+                  id="disasterPlace"
+                  name="disasterPlace"
+                  value={formData.disasterPlace}
+                  onChange={handleInputChange}
+                  placeholder="예: 지하 2층 타워크레인 설치 구간"
+                />
+                <p className="field-hint">
+                  미입력 시 위의 ‘사고 발생 장소’가 사용됩니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>재해 상황도 (선택)</label>
+              <SituationDiagram value={situationDiagram} onChange={setSituationDiagram} />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="situationNote">상황 설명 (선택)</label>
+              <textarea
+                id="situationNote"
+                name="situationNote"
+                value={formData.situationNote}
+                onChange={handleInputChange}
+                rows={2}
+                placeholder="상황도의 기호·표시에 대한 보충 설명 (예: 붉은 화살표 = 추락 방향)"
+              />
+            </div>
+          </div>
+
           {/* 사고 경위 */}
           <div className="form-group">
             <label htmlFor="description">사고 경위 *</label>
@@ -480,6 +634,15 @@ const AccidentCasePage: React.FC<AccidentCasePageProps> = ({ onNavigate, presele
                 </div>
               )}
             </div>
+          </div>
+
+          {/* 목격자 진술서 */}
+          <div className="form-section">
+            <h3 className="form-section-title">👥 목격자 진술서</h3>
+            <p className="form-section-desc">
+              사고를 목격한 사람이 있다면 진술을 기록해주세요. 등록한 진술서는 사고보고서에 함께 인쇄됩니다.
+            </p>
+            <WitnessEditor value={witnesses} onChange={setWitnesses} />
           </div>
 
           {/* 보고자 정보 */}

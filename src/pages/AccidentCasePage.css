@@ -351,3 +351,43 @@
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* 섹션 구분 (재해 상황 / 목격자 진술서 등)                             */
+/* ------------------------------------------------------------------ */
+.accident-form .form-section {
+  margin: 2rem 0 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fafbfc;
+}
+
+.accident-form .form-section-title {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.accident-form .form-section-desc {
+  margin: 0.4rem 0 0.9rem;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.accident-form .form-section > .form-group:last-child,
+.accident-form .form-section > .form-row:last-child {
+  margin-bottom: 0;
+}
+
+/* 피해자 상세는 4열 그리드 (데스크톱) */
+.accident-form .form-section .form-row,
+.accident-form .form-row-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}

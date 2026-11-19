@@ -1103,7 +1103,69 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                           <strong>처리결과:</strong>
                           <p>{accident.treatmentResult || '미처리'}</p>
                         </div>
+                        <div className="info-item">
+                          <strong>직종/결혼:</strong>
+                          <p>
+                            {accident.victimJobType || '-'} / {accident.victimMaritalStatus || '-'}
+                          </p>
+                        </div>
+                        <div className="info-item">
+                          <strong>가족관계:</strong>
+                          <p>{accident.victimFamily || '-'}</p>
+                        </div>
+                        <div className="info-item">
+                          <strong>피해자 연락처:</strong>
+                          <p>{accident.victimPhone || '미입력'}</p>
+                        </div>
+                        <div className="info-item">
+                          <strong>재해 발생:</strong>
+                          <p>
+                            {accident.disasterDate ? formatDateKo(accident.disasterDate) : '-'}
+                            {' · '}
+                            {accident.disasterPlace || accident.location}
+                          </p>
+                        </div>
+                        <div className="info-item">
+                          <strong>목격자 진술:</strong>
+                          <p>{accident.witnesses?.length ? `${accident.witnesses.length}건` : '미등록'}</p>
+                        </div>
                       </div>
+
+                      {/* 재해 상황도 */}
+                      {accident.situationDiagram && (
+                        <div className="info-item">
+                          <strong>재해 상황도:</strong>
+                          <a
+                            href={accident.situationDiagram}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="accident-diagram-thumb"
+                            title="클릭하면 원본 크기로 확인"
+                          >
+                            <img src={accident.situationDiagram} alt="재해 상황도" />
+                          </a>
+                          {accident.situationNote && (
+                            <p className="accident-diagram-note">{accident.situationNote}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 목격자 진술서 요약 */}
+                      {accident.witnesses && accident.witnesses.length > 0 && (
+                        <div className="info-item">
+                          <strong>목격자 진술서:</strong>
+                          <ul className="accident-witness-list">
+                            {accident.witnesses.map((w, wi) => (
+                              <li key={w.id}>
+                                <span className="accident-witness-no">{wi + 1}</span>
+                                <strong>{w.name}</strong>
+                                {w.relation && <span className="accident-witness-meta"> ({w.relation})</span>}
+                                <p className="accident-witness-text">{w.statement}</p>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
                       <div className="info-item">
                         <strong>사고 경위:</strong>
