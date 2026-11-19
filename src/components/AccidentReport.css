@@ -79,11 +79,13 @@
   overflow: auto;
   padding: 1.5rem 1rem 3rem;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  /* 여러 매를 세로로 쌓습니다 (가로 배치 금지) */
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
 }
 
-/* ---------------- A4 용지 ---------------- */
+/* ---------------- A4 용지 (1매 = 1장) ---------------- */
 .ar-sheet {
   width: 210mm;
   min-height: 297mm;
@@ -95,6 +97,102 @@
   font-size: 10.5pt;
   line-height: 1.5;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  /* 하단 러닝 푸터를 용지 바닥에 붙이기 위한 세로 플렉스 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 화면에서만 보이는 매수 라벨 (인쇄 시 숨김) */
+.ar-page-tag {
+  display: inline-block;
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.75rem;
+  background: #eef2f7;
+  color: #64748b;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* 2·3매 상단 러닝 헤더 */
+.ar-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.6rem;
+  border-bottom: 1.5px solid #1e3a8a;
+  font-size: 8pt;
+  color: #4b5563;
+}
+
+.ar-page-head-site {
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ar-page-head-title {
+  font-size: 10pt;
+  font-weight: 800;
+  color: #1e3a8a;
+  letter-spacing: 0.06em;
+}
+
+.ar-page-head-no {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: #6b7280;
+}
+
+/* 2·3매 본문 제목 */
+.ar-page-title {
+  font-size: 15pt;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #111827;
+  text-align: center;
+  margin: 0.2rem 0 0.35rem;
+}
+
+.ar-page-lead {
+  font-size: 9pt;
+  color: #4b5563;
+  text-align: center;
+  margin-bottom: 0.7rem;
+  line-height: 1.55;
+}
+
+/* 하단 러닝 푸터 (용지 바닥) */
+.ar-page-foot {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.3rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 7.5pt;
+  color: #9ca3af;
+}
+
+/* 진술서 마지막 확인 문단 */
+.ar-witness-declare {
+  margin-top: 0.9rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 9pt;
+  color: #374151;
+  line-height: 1.7;
+}
+
+.ar-witness-declare-date {
+  text-align: right;
+  font-weight: 700;
+  margin-top: 0.2rem;
 }
 
 /* ---------------- 표제부 ---------------- */
@@ -518,6 +616,7 @@
     display: block !important;
     overflow: visible !important;
     padding: 0 !important;
+    gap: 0 !important;
   }
 
   .ar-sheet {
@@ -527,8 +626,22 @@
     margin: 0 !important;
     box-shadow: none !important;
     page: accident-report-page;
-    break-inside: avoid;
-    page-break-inside: avoid;
+    /* ⚠️ break-inside: avoid 를 쓰면 안 됩니다.
+       내용이 1장을 넘을 때 페이지 경계에서 뒷부분이 잘려나갑니다.
+       대신 매(.ar-page)마다 break-before 로 새 장을 시작합니다. */
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  /* 매(페이지) 분리 — 2매부터는 반드시 새 장에서 시작 */
+  .ar-page + .ar-page {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* 화면용 매수 라벨은 인쇄에서 제외 */
+  .ar-page-tag {
+    display: none !important;
   }
 
   /* 배경색(표 머리·심각도 배지) 유지 */
@@ -537,10 +650,25 @@
     print-color-adjust: exact !important;
   }
 
+  /* 잘림 방지: 작은 요소만 쪼개지 않도록 */
   .ar-block,
   .ar-table tr,
-  .ar-photo {
+  .ar-photo,
+  .ar-diagram,
+  .ar-witness-item,
+  .ar-sign,
+  .ar-page-head,
+  .ar-page-foot {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  /* 제목이 페이지 끝에 홀로 남지 않도록 */
+  .ar-subtitle,
+  .ar-page-title,
+  .ar-block h3,
+  .ar-witness > h3 {
+    break-after: avoid;
+    page-break-after: avoid;
   }
 }

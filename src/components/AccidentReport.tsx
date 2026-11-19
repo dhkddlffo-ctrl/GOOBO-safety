@@ -28,10 +28,16 @@ const SEVERITY_CLASS: Record<AccidentCase['severity'], string> = {
 };
 
 /**
- * 사고보고서 (A4 세로 인쇄)
+ * 사고보고서 (A4 세로 · 3매 구성)
  *
- * body 바로 아래로 포털 렌더링해서 인쇄 시 다른 화면 요소를
- * 완전히 배제합니다. (중첩된 모달 안에서도 안전)
+ * 1매 — 사고보고서 (표제부 / 기본정보 / 피해자 / 재해상황 / 상황도 / 결재)
+ * 2매 — 사고경위   (경위·원인·재발방지대책·조사결과 / 현장 사진)
+ * 3매 — 목격자 진술서 (목격자별 진술 + 확인 서명)  ※ 목격자가 있을 때만
+ *
+ * ⚠️ 각 매는 .ar-page 로 분리되며 인쇄 시 break-before: page 로 새 장을 시작합니다.
+ *    (한 덩어리로 두면 내용이 A4 1장을 넘을 때 뒷부분이 잘립니다)
+ *
+ * body 바로 아래로 포털 렌더링해서 인쇄 시 다른 화면 요소를 완전히 배제합니다.
  */
 const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, autoPrint = false }) => {
   const host = useMemo(() => {
@@ -90,11 +96,42 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
       accident.victimPhone
   );
 
+  const docNo = formatReportNo(accident);
+  /** 실제 출력 매수 (목격자가 없으면 2매) */
+  const pageLabels = [
+    '사고보고서',
+    '사고경위',
+    ...(witnesses.length > 0 ? ['목격자 진술서'] : []),
+  ];
+  const totalPages = pageLabels.length;
+
+  /** 각 매 상단 러닝 헤더 (2매부터) */
+  const runningHead = (label: string, pageNo: number) => (
+    <div className="ar-page-head">
+      <span className="ar-page-head-site">{accident.siteName}</span>
+      <span className="ar-page-head-title">{label}</span>
+      <span className="ar-page-head-no">
+        {docNo} · {pageNo}/{totalPages}
+      </span>
+    </div>
+  );
+
+  /** 각 매 하단 러닝 푸터 */
+  const runningFoot = (pageNo: number) => (
+    <div className="ar-page-foot">
+      <span>구보공영(주) 안전보건관리팀</span>
+      <span>
+        {pageNo} / {totalPages}
+      </span>
+    </div>
+  );
+
   const report = (
     <div className="ar-overlay">
       <div className="ar-toolbar">
         <div className="ar-toolbar-label">
-          🖨️ 사고보고서 미리보기 · A4 세로 1매
+          🖨️ 사고보고서 미리보기 · A4 세로 {totalPages}매
+          <span className="ar-toolbar-pages">{pageLabels.join(' · ')}</span>
         </div>
         <div className="ar-toolbar-actions">
           <button type="button" className="ar-btn ar-btn-primary" onClick={handlePrint}>
@@ -107,7 +144,12 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
       </div>
 
       <div className="ar-scroll">
-        <div className="ar-sheet">
+        {/* ============================================================ */}
+        {/* 1매 — 사고보고서                                             */}
+        {/* ============================================================ */}
+        <div className="ar-sheet ar-page" data-page="report">
+          <div className="ar-page-tag">1매 · 사고보고서</div>
+
           {/* ---------- 표제부 ---------- */}
           <div className="ar-head">
             <div className="ar-head-left">
@@ -117,7 +159,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
             <h1 className="ar-title">사고보고서</h1>
             <div className="ar-head-right">
               <div className="ar-docno-label">문서번호</div>
-              <div className="ar-docno">{formatReportNo(accident)}</div>
+              <div className="ar-docno">{docNo}</div>
             </div>
           </div>
 
@@ -211,7 +253,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
             </tbody>
           </table>
 
-          {accident.situationDiagram && (
+          {accident.situationDiagram ? (
             <div className="ar-diagram">
               <h3>재해 상황도</h3>
               <img src={accident.situationDiagram} alt="재해 상황도" />
@@ -219,88 +261,16 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
                 <p className="ar-diagram-note">{accident.situationNote}</p>
               )}
             </div>
-          )}
-
-          {!accident.situationDiagram && accident.situationNote && (
-            <div className="ar-block">
-              <h3>상황 설명</h3>
-              <p>{accident.situationNote}</p>
-            </div>
-          )}
-
-          {/* ---------- 본문 ---------- */}
-          <h2 className="ar-subtitle">사고 내용</h2>
-          <div className="ar-block">
-            <h3>1. 사고 경위</h3>
-            <p>{accident.description || '-'}</p>
-          </div>
-          <div className="ar-block">
-            <h3>2. 사고 원인</h3>
-            <p>{accident.cause || '-'}</p>
-          </div>
-          <div className="ar-block">
-            <h3>3. 재발 방지 대책</h3>
-            <p>{accident.preventiveMeasures || '-'}</p>
-          </div>
-
-          {hasInvestigation && (
-            <div className="ar-block">
-              <h3>4. 조사 결과</h3>
-              <p>{accident.investigationResult || '조사 결과가 입력되지 않았습니다.'}</p>
-              {accident.completedAt && (
-                <p className="ar-block-meta">조사 완료일: {formatDateKo(accident.completedAt)}</p>
-              )}
-            </div>
-          )}
-
-          {/* ---------- 사진 ---------- */}
-          {photos.length > 0 && (
-            <div className="ar-photos">
-              <h3>현장 사진</h3>
-              <div className="ar-photo-grid">
-                {photos.map((src, idx) => (
-                  <figure key={idx} className="ar-photo">
-                    <img src={src} alt={`사고 현장 사진 ${idx + 1}`} />
-                    <figcaption>사진 {idx + 1}</figcaption>
-                  </figure>
-                ))}
+          ) : (
+            accident.situationNote && (
+              <div className="ar-block">
+                <h3>상황 설명</h3>
+                <p>{accident.situationNote}</p>
               </div>
-            </div>
+            )
           )}
 
-          {/* ---------- 목격자 진술서 ---------- */}
-          {witnesses.length > 0 && (
-            <div className="ar-witness">
-              <h3>목격자 진술서</h3>
-              {witnesses.map((w, idx) => (
-                <div key={w.id} className="ar-witness-item">
-                  <div className="ar-witness-head">
-                    <span className="ar-witness-no">진술 {idx + 1}</span>
-                    <strong>{w.name}</strong>
-                    {w.jobType && <span className="ar-note">직종: {w.jobType}</span>}
-                    {w.relation && <span className="ar-note">관계: {w.relation}</span>}
-                    {w.phone && <span className="ar-note">연락처: {w.phone}</span>}
-                    {w.statementDate && (
-                      <span className="ar-note">작성일: {formatDateKo(w.statementDate)}</span>
-                    )}
-                  </div>
-                  <p className="ar-witness-text">{w.statement}</p>
-                  <div className="ar-witness-sign">
-                    <span>
-                      {w.confirmed
-                        ? '위 진술 내용이 사실과 같음을 확인합니다.'
-                        : '위와 같이 진술합니다.'}
-                    </span>
-                    <span className="ar-witness-signer">
-                      진술자 {w.name} (서명)
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ---------- 확인 / 결재 ---------- */}
+          {/* ---------- 결재란 ---------- */}
           <div className="ar-sign">
             <table className="ar-sign-table">
               <tbody>
@@ -329,8 +299,105 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
             <span>위와 같이 사고 발생 사실을 보고합니다.</span>
             <span className="ar-foot-date">{formatPrintedAt()} 출력</span>
           </div>
-          <div className="ar-foot-company">구보공영(주) 안전보건관리팀</div>
+
+          {runningFoot(1)}
         </div>
+
+        {/* ============================================================ */}
+        {/* 2매 — 사고경위                                               */}
+        {/* ============================================================ */}
+        <div className="ar-sheet ar-page" data-page="detail">
+          <div className="ar-page-tag">2매 · 사고경위</div>
+          {runningHead('사고경위', 2)}
+
+          <div className="ar-block">
+            <h3>1. 사고 경위</h3>
+            <p>{accident.description || '-'}</p>
+          </div>
+          <div className="ar-block">
+            <h3>2. 사고 원인</h3>
+            <p>{accident.cause || '-'}</p>
+          </div>
+          <div className="ar-block">
+            <h3>3. 재발 방지 대책</h3>
+            <p>{accident.preventiveMeasures || '-'}</p>
+          </div>
+
+          {hasInvestigation && (
+            <div className="ar-block">
+              <h3>4. 조사 결과</h3>
+              <p>{accident.investigationResult || '조사 결과가 입력되지 않았습니다.'}</p>
+              {accident.completedAt && (
+                <p className="ar-block-meta">조사 완료일: {formatDateKo(accident.completedAt)}</p>
+              )}
+            </div>
+          )}
+
+          {/* ---------- 현장 사진 ---------- */}
+          {photos.length > 0 && (
+            <div className="ar-photos">
+              <h3>현장 사진</h3>
+              <div className="ar-photo-grid">
+                {photos.map((src, idx) => (
+                  <figure key={idx} className="ar-photo">
+                    <img src={src} alt={`사고 현장 사진 ${idx + 1}`} />
+                    <figcaption>사진 {idx + 1}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {runningFoot(2)}
+        </div>
+
+        {/* ============================================================ */}
+        {/* 3매 — 목격자 진술서                                          */}
+        {/* ============================================================ */}
+        {witnesses.length > 0 && (
+          <div className="ar-sheet ar-page" data-page="witness">
+            <div className="ar-page-tag">3매 · 목격자 진술서</div>
+            {runningHead('목격자 진술서', 3)}
+
+            <h2 className="ar-page-title">목격자 진술서</h2>
+            <p className="ar-page-lead">
+              아래 진술인은 사고 발생 당시 현장을 목격한 자로서, 진술 내용이 사실과 같음을 확인합니다.
+            </p>
+
+            {witnesses.map((w, idx) => (
+              <div key={w.id} className="ar-witness-item">
+                <div className="ar-witness-head">
+                  <span className="ar-witness-no">진술 {idx + 1}</span>
+                  <strong>{w.name}</strong>
+                  {w.jobType && <span className="ar-note">직종: {w.jobType}</span>}
+                  {w.relation && <span className="ar-note">관계: {w.relation}</span>}
+                  {w.phone && <span className="ar-note">연락처: {w.phone}</span>}
+                  {w.statementDate && (
+                    <span className="ar-note">작성일: {formatDateKo(w.statementDate)}</span>
+                  )}
+                </div>
+                <p className="ar-witness-text">{w.statement}</p>
+                <div className="ar-witness-sign">
+                  <span>
+                    {w.confirmed
+                      ? '위 진술 내용이 사실과 같음을 확인합니다.'
+                      : '위와 같이 진술합니다.'}
+                  </span>
+                  <span className="ar-witness-signer">
+                    진술자 {w.name} (서명)
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            <div className="ar-witness-declare">
+              <p>본 진술서는 {accident.siteName}에서 발생한 사고와 관련하여 작성되었습니다.</p>
+              <p className="ar-witness-declare-date">{formatPrintedAt()}</p>
+            </div>
+
+            {runningFoot(3)}
+          </div>
+        )}
       </div>
     </div>
   );
