@@ -27,6 +27,12 @@ import './RiskAssessment.css';
 interface RiskAssessmentProps {
   siteId: number;
   siteName: string;
+  /** 게시판에서 넘어올 때 열 평가서 id (없으면 최신) */
+  initialId?: string;
+  /** 처음 열 때 바로 편집 모드로 시작할지 (게시판의 '위험성평가 작성') */
+  startEditInitially?: boolean;
+  /** 게시판으로 돌아가기 (없으면 버튼 숨김) */
+  onBack?: () => void;
 }
 
 const formatDateKo = (ymd?: string): string => {
@@ -36,11 +42,17 @@ const formatDateKo = (ymd?: string): string => {
   return `${y}.${m}.${d}`;
 };
 
-const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => {
+const RiskAssessment: React.FC<RiskAssessmentProps> = ({
+  siteId,
+  siteName,
+  initialId,
+  startEditInitially,
+  onBack,
+}) => {
   const canManage = isAuthenticated();
 
   const [list, setList] = useState<RiskAssessmentData[]>([]);
-  const [currentId, setCurrentId] = useState<string>('');
+  const [currentId, setCurrentId] = useState<string>(initialId ?? '');
   const [doc, setDoc] = useState<RiskAssessmentData | null>(null);
   const [draft, setDraft] = useState<RiskAssessmentData | null>(null);
 
@@ -74,10 +86,20 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
   }, [siteId, currentId]);
 
   useEffect(() => {
-    setDraft(null);
     setError('');
     setSavedAt('');
-    load();
+    const all = getRiskAssessments(siteId);
+    setList(all);
+    setAttachments(getRiskAttachments(siteId));
+    const pick = all.find(a => a.id === (initialId ?? '')) ?? all[0] ?? null;
+    setCurrentId(pick?.id ?? '');
+    setDoc(pick);
+    /* 게시판에서 '위험성평가 작성'으로 들어오면 바로 편집 모드로 시작합니다. */
+    if (pick && startEditInitially) {
+      setDraft({ ...pick, rows: pick.rows.map(r => ({ ...r })) });
+    } else {
+      setDraft(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId]);
 
@@ -604,6 +626,11 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
     <div className="ra">
       {/* ---------- 도구 모음 ---------- */}
       <div className="ra-toolbar">
+        {onBack && (
+          <button className="btn btn-sm ra-btn-back" onClick={onBack} title="게시판 목록으로">
+            ← 목록
+          </button>
+        )}
         {list.length > 0 && (
           <label className="ra-select-wrap">
             <span className="ra-select-label">평가 선택</span>
@@ -626,7 +653,7 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
         <div className="ra-toolbar-actions">
           {canManage && (
             <button className="btn btn-sm ra-btn-add" onClick={addAssessment}>
-              ＋ 새 위험성평가
+              ✍️ 위험성평가 작성
             </button>
           )}
 
@@ -690,7 +717,7 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
           </p>
           {canManage ? (
             <button className="btn btn-primary" onClick={addAssessment}>
-              ＋ 위험성평가표 작성하기
+              ✍️ 위험성평가 작성
             </button>
           ) : (
             <p className="ra-empty-note">관리자 로그인 후 작성할 수 있습니다.</p>

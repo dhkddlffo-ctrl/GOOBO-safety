@@ -1,0 +1,338 @@
+/* ================================================================
+   수시 위험성평가 등록부 — 게시판형 목록
+   (RiskAssessmentBoard.tsx 전용)
+   ================================================================ */
+
+.rb {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* ---------------- 머리글 ---------------- */
+.rb-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+}
+
+.rb-head-text {
+  min-width: 0;
+}
+
+.rb-title {
+  margin: 0 0 0.375rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.rb-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: #475569;
+}
+
+.rb-sub b {
+  color: #1d4ed8;
+}
+
+.rb-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+}
+
+.rb-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 0.3125rem 0.75rem;
+  white-space: nowrap;
+}
+
+.rb-btn-write {
+  white-space: nowrap;
+}
+
+/* ---------------- 주기 안내 ---------------- */
+.rb-status {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.875rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.5rem;
+}
+
+.rb-status-late {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.rb-status-chip {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+
+.rb-status-late .rb-status-chip {
+  color: #b45309;
+}
+
+.rb-status-hint {
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.rb-status-late .rb-status-hint {
+  color: #b45309;
+  font-weight: 600;
+}
+
+/* ---------------- 비어 있음 ---------------- */
+.rb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 0.75rem;
+}
+
+.rb-empty-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.rb-empty-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  line-height: 1.7;
+}
+
+.rb-empty-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #9ca3af;
+}
+
+/* ---------------- 목록 표 ---------------- */
+.rb-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.625rem;
+  background: #fff;
+}
+
+.rb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  table-layout: fixed;
+}
+
+.rb-table thead th {
+  padding: 0.625rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.rb-table thead th:first-child {
+  border-top-left-radius: 0.5625rem;
+}
+
+.rb-table thead th:last-child {
+  border-top-right-radius: 0.5625rem;
+}
+
+.rb-row {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.rb-row:hover {
+  background: #f8fafc;
+}
+
+.rb-row td {
+  padding: 0.625rem 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.rb-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rb-c-no {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.rb-c-date {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-variant-numeric: tabular-nums;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
+.rb-dday {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 0.0625rem 0.375rem;
+}
+
+.rb-dday-late {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.rb-c-author {
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-c-title {
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-c-num {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: #475569;
+}
+
+.rb-zero {
+  color: #cbd5e1;
+}
+
+.rb-badge {
+  display: inline-block;
+  min-width: 1.375rem;
+  padding: 0.0625rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  border-radius: 999px;
+}
+
+.rb-badge-high {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.rb-badge-done {
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.rb-c-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+/* 작은 버튼 (전역 btn 위에 크기만 축소) */
+.rb .btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 0.3125rem;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.rb .btn-xs:hover {
+  background: #f1f5f9;
+}
+
+.rb .rb-btn-del {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.rb .rb-btn-del:hover {
+  background: #fef2f2;
+}
+
+/* ---------------- 안내 문구 ---------------- */
+.rb-note {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.rb-note b {
+  color: #334155;
+}
+
+/* ---------------- 반응형 ---------------- */
+@media (max-width: 900px) {
+  .rb-head {
+    flex-direction: column;
+  }
+
+  .rb-head-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .rb-table {
+    min-width: 720px;
+  }
+}
+
+/* ---------------- 인쇄 시 숨김 ---------------- */
+@media print {
+  .rb {
+    display: none !important;
+  }
+}

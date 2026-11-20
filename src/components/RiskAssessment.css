@@ -202,6 +202,19 @@
   background: #fef3c7;
 }
 
+/* ---------------- 게시판으로 돌아가기 ---------------- */
+.ra-btn-back {
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ra-btn-back:hover {
+  background: #f1f5f9;
+}
+
 /* ---------------- 조치/점검 아래 행 함께 적용 ---------------- */
 .ra-cascade {
   display: flex;
