@@ -1,0 +1,486 @@
+/* ================================================================
+   위험성평가 상등급 관리 (양식 5페이지)
+   A4 가로 · HighGradeControl.tsx 전용
+   ================================================================ */
+
+.hg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* ---------------- 도구 모음 (인쇄 시 숨김) ---------------- */
+.hg-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.625rem;
+}
+
+.hg-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hg-sum-item {
+  font-size: 0.75rem;
+  color: #4b5563;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 0.25rem 0.6875rem;
+}
+
+.hg-sum-item b {
+  margin-left: 0.1875rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.hg-sum-done {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+.hg-sum-done b {
+  color: #047857;
+}
+
+.hg-sum-pending {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
+.hg-sum-pending b {
+  color: #b45309;
+}
+
+.hg-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.hg-row-tools {
+  display: inline-flex;
+  gap: 0.375rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid #d1d5db;
+}
+
+.hg-btn-import {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  font-weight: 600;
+}
+
+.hg-btn-import:hover {
+  background: #dbeafe;
+}
+
+.hg-btn-row-add {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  font-weight: 600;
+}
+
+.hg-btn-row-add:hover {
+  background: #dbeafe;
+}
+
+.hg-btn-print {
+  color: #1f2937;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hg-btn-print:hover {
+  background: #f1f5f9;
+}
+
+/* 도구 모음 버튼 글자가 두 줄로 접히지 않도록 */
+.hg-toolbar-actions .btn {
+  white-space: nowrap;
+}
+
+/* ---------------- 알림 ---------------- */
+.hg-saved {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.hg-notice {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+/* ---------------- 서식 (A4 가로) ---------------- */
+.hg-doc {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.hg-sheet {
+  width: 297mm;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 6mm;
+  margin: 0 auto;
+  background: #fff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
+.hg-sheet-inner {
+  width: 100%;
+}
+
+/* ---------------- 제목 ---------------- */
+.hg-title {
+  padding: 0.375rem 0;
+  margin-bottom: 0.25rem;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: #111827;
+  border: 1px solid #111827;
+  border-bottom: none;
+}
+
+/* ---------------- 현장명 / 작성일 ---------------- */
+.hg-meta-table,
+.hg-table,
+.hg-note-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.6875rem;
+}
+
+.hg-meta-table th,
+.hg-meta-table td {
+  border: 1px solid #111827;
+  padding: 0.25rem 0.375rem;
+}
+
+.hg-meta-label {
+  background: #f3f4f6;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hg-meta-value {
+  font-weight: 600;
+}
+
+.hg-meta-date {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- 본문 표 ---------------- */
+.hg-table th,
+.hg-table td {
+  border: 1px solid #111827;
+  padding: 0.1875rem 0.25rem;
+  vertical-align: middle;
+}
+
+.hg-table thead th {
+  background: #f3f4f6;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.hg-th-sub {
+  font-size: 0.5625rem;
+  font-weight: 400;
+  color: #4b5563;
+}
+
+.hg-table tbody td {
+  height: 1.375rem;
+}
+
+.hg-c-period,
+.hg-c-loc,
+.hg-c-finder,
+.hg-c-confirm {
+  position: relative;
+  text-align: center;
+}
+
+.hg-c-hazard,
+.hg-c-plan,
+.hg-c-result {
+  text-align: left;
+  padding: 0.1875rem 0.25rem;
+}
+
+.hg-cell-text {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 행 개별 삭제 (편집 중에만) */
+.hg-row-x {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.hg-row-x:hover {
+  color: #fff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* ---------------- 비고 ---------------- */
+.hg-note-table th,
+.hg-note-table td {
+  border: 1px solid #111827;
+  padding: 0.25rem 0.375rem;
+}
+
+.hg-note-label {
+  width: 8%;
+  background: #f3f4f6;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hg-note-value {
+  text-align: left;
+}
+
+/* ---------------- 하단 ---------------- */
+.hg-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0.125rem 0;
+  font-size: 0.5625rem;
+  color: #4b5563;
+}
+
+.hg-foot-company {
+  font-weight: 700;
+  color: #374151;
+  letter-spacing: 0.05em;
+}
+
+/* ---------------- 입력 요소 ---------------- */
+.hg-in {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.125rem 0.1875rem;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: #111827;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.1875rem;
+}
+
+.hg-in:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.hg-ta {
+  resize: vertical;
+  min-height: 1.75rem;
+}
+
+/* 작은 버튼 */
+.hg .btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.3125rem;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+/* ================================================================
+   A4 가로 인쇄
+   ================================================================ */
+@page high-grade-page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  /* 앱 크롬 · 화면용 UI 숨김 */
+  .app-header,
+  .app-footer,
+  .sd-header,
+  .sd-tabs,
+  .sd-panel-head,
+  .sd-segment,
+  .hg-toolbar,
+  .hg-saved,
+  .hg-notice,
+  .hg-row-x {
+    display: none !important;
+  }
+
+  .app,
+  .app-main,
+  .site-detail-page,
+  .site-detail-page .container {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    background: none !important;
+  }
+
+  .sd-panel {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  html,
+  body,
+  #root {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* 표 머리글 배경 유지 */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .hg {
+    gap: 0 !important;
+  }
+
+  .hg-doc {
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+  }
+
+  .hg-sheet {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    page: high-grade-page;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .hg-table,
+  .hg-meta-table,
+  .hg-note-table {
+    font-size: 7.5pt;
+  }
+
+  .hg-table th,
+  .hg-table td,
+  .hg-meta-table th,
+  .hg-meta-table td,
+  .hg-note-table th,
+  .hg-note-table td {
+    padding: 1mm 1mm;
+  }
+
+  /* 행이 페이지 경계에서 잘리지 않도록 */
+  .hg-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /*
+   * ⚠️ min-height 는 표 셀(td)에 적용되지 않습니다.
+   * 빈 행이 0 높이로 찌그러지지 않도록 height 로 최소 행 높이를 잡습니다.
+   * (내용이 길면 표 규칙상 자동으로 늘어납니다)
+   */
+  .hg-table tbody td {
+    height: 12mm !important;
+  }
+
+  .hg-title {
+    font-size: 13pt !important;
+  }
+
+  /* 인쇄에서는 입력 테두리를 없애 종이 서식처럼 보이게 */
+  .hg-in {
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  .hg-ta {
+    min-height: 0 !important;
+    resize: none !important;
+  }
+}

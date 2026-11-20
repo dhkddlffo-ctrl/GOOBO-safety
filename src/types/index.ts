@@ -422,3 +422,40 @@ export interface RiskAttachment {
   uploadedBy: string;
   createdAt: string;
 }
+
+/* ------------------------------------------------------------------ */
+/* 위험성평가 상등급 관리 (양식 5페이지 / A4 가로)                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 상등급(중점관리) 위험요인 1행.
+ *
+ * 등록부(SCM-002-1.01)에서 평가등급이 '상'으로 나온 항목을 모아
+ * 실제 개선조치의 이행 여부를 확인·관리하는 표입니다.
+ * 양식 5페이지 구성: 작업기간 / 작업위치 / 위험요인 도출자 /
+ *                   위험요인(Hazard) / 개선조치계획 / 실천·완료 / 확인자
+ */
+export interface HighGradeRow {
+  id: string;
+  workPeriod: string; // 작업 기간
+  workLocation: string; // 작업 위치
+  hazardFinder: string; // 위험요인 도출자
+  hazard: string; // 위험요인(Hazard)
+  improvementPlan: string; // 개선조치계획
+  /** 실천/완료 — 조치 실행 내용과 완료 여부 */
+  actionResult: string;
+  /** 실천/완료 확인자 */
+  confirmer: string;
+}
+
+/** 상등급 관리 시트 1건 (현장별 작성일 단위) */
+export interface HighGradeRecord {
+  id: string;
+  siteId: number;
+  siteName: string;
+  writtenAt: string; // 작성일 (yyyy-mm-dd)
+  rows: HighGradeRow[];
+  note: string; // 비고
+  createdAt: string;
+  updatedAt: string;
+}

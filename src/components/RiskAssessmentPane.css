@@ -1,0 +1,67 @@
+/* ================================================================
+   위험성평가 탭 — 세그먼트 내비게이션
+   (RiskAssessmentPane.tsx 전용)
+   ================================================================ */
+
+.sd-segment {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  margin-bottom: 1rem;
+  background: #eef2f7;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.625rem;
+}
+
+.sd-segment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1.125rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.4375rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #55637a;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+}
+
+.sd-segment-btn:hover {
+  background: rgba(255, 255, 255, 0.72);
+  color: #1e293b;
+}
+
+.sd-segment-btn.active {
+  background: #fff;
+  color: #1d4ed8;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(37, 99, 235, 0.14);
+}
+
+/* 위험성평가 서식 자체가 인쇄 대상이므로 화면용 내비게이션은 숨깁니다. */
+@media print {
+  .sd-segment {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .sd-segment {
+    display: flex;
+    width: 100%;
+  }
+
+  .sd-segment-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem 0.625rem;
+  }
+}
