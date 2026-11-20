@@ -45,7 +45,8 @@ export const createEmptyMeetingAttendee = (): MeetingAttendee => ({
   id: newId(),
   position: '',
   name: '',
-  signature: '',
+  signatureKey: '',
+  signedAt: '',
 });
 
 export const createEmptyAttendeeEntry = (): AttendeeListEntry => ({

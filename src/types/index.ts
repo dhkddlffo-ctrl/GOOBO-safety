@@ -479,7 +479,14 @@ export interface MeetingAttendee {
   id: string;
   position: string; // 직위
   name: string; // 성명
-  signature: string; // 서명
+  /**
+   * 손글씨 서명 이미지(PNG)의 IndexedDB 키.
+   * 빈 문자열이면 아직 서명하지 않은 상태입니다.
+   * (본문은 IndexedDB, 키만 LocalStorage 에 보관합니다)
+   */
+  signatureKey: string;
+  /** 서명을 확정한 시각 (ISO). 누가 언제 서명했는지 확인용 */
+  signedAt: string;
 }
 
 /**

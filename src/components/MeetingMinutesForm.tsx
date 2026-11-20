@@ -1,6 +1,7 @@
 import React from 'react';
 import { MeetingAttendee, MeetingMinutes } from '../types';
 import { MEETING_ATTENDEE_SLOTS } from '../utils/reportBundleStorage';
+import SignaturePad from './SignaturePad';
 
 interface MeetingMinutesFormProps {
   value: MeetingMinutes;
@@ -231,19 +232,14 @@ const MeetingMinutesForm: React.FC<MeetingMinutesFormProps> = ({
                           <span className="rf-cell-text">{person.name}</span>
                         )}
                       </td>
-                      <td>
-                        {editing ? (
-                          <input
-                            className="rf-in rf-c"
-                            value={person.signature}
-                            onChange={e =>
-                              onAttendeeChange(person.id, { signature: e.target.value })
-                            }
-                            placeholder="서명"
-                          />
-                        ) : (
-                          <span className="rf-cell-text">{person.signature}</span>
-                        )}
+                      <td className="rf-c-sign">
+                        <SignaturePad
+                          signatureKey={person.signatureKey}
+                          signedAt={person.signedAt}
+                          onChange={patch => onAttendeeChange(person.id, patch)}
+                          editing={editing}
+                          label={`${person.name || '참석자'} 서명`}
+                        />
                       </td>
                     </React.Fragment>
                   ) : (
