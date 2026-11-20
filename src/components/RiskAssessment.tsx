@@ -33,6 +33,12 @@ interface RiskAssessmentProps {
   startEditInitially?: boolean;
   /** 게시판으로 돌아가기 (없으면 버튼 숨김) */
   onBack?: () => void;
+  /**
+   * 작성 마법사 안에 넣을 때.
+   * 목록 선택·새 작성·A4 인쇄·삭제 버튼은 마법사가 담당하므로 숨깁니다.
+   * (수정/저장/행 추가·삭제는 그대로 남습니다)
+   */
+  embedded?: boolean;
 }
 
 const formatDateKo = (ymd?: string): string => {
@@ -48,6 +54,7 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
   initialId,
   startEditInitially,
   onBack,
+  embedded = false,
 }) => {
   const canManage = isAuthenticated();
 
@@ -626,12 +633,12 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
     <div className="ra">
       {/* ---------- 도구 모음 ---------- */}
       <div className="ra-toolbar">
-        {onBack && (
+        {onBack && !embedded && (
           <button className="btn btn-sm ra-btn-back" onClick={onBack} title="게시판 목록으로">
             ← 목록
           </button>
         )}
-        {list.length > 0 && (
+        {!embedded && list.length > 0 && (
           <label className="ra-select-wrap">
             <span className="ra-select-label">평가 선택</span>
             <select
@@ -651,7 +658,7 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
         )}
 
         <div className="ra-toolbar-actions">
-          {canManage && (
+          {canManage && !embedded && (
             <button className="btn btn-sm ra-btn-add" onClick={addAssessment}>
               ✍️ 위험성평가 작성
             </button>
@@ -690,12 +697,12 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
               </span>
             </>
           )}
-          {doc && !editing && (
+          {doc && !editing && !embedded && (
             <button className="btn btn-sm ra-btn-print" onClick={print}>
               🖨️ A4 인쇄
             </button>
           )}
-          {doc && !editing && canManage && (
+          {doc && !editing && canManage && !embedded && (
             <button className="btn btn-sm ra-btn-del" onClick={remove}>
               🗑️ 삭제
             </button>

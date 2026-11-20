@@ -1,0 +1,724 @@
+/* ================================================================
+   위험성평가 부속 서식 — 공통 (A4 용지 서식)
+   회의록 / 참석자 명단 / 사진대지 / 안전보건 일정
+   ================================================================ */
+
+/* ---------------- 용지 ---------------- */
+.rf-doc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0 1.5rem;
+}
+
+.rf-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 12mm 11mm;
+  background: #fff;
+  border: 1px solid #d7dee8;
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.09);
+  color: #111827;
+  /* 한글 서식은 명조 계열이 종이 느낌이 납니다. */
+  font-family: 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.rf-sheet--landscape {
+  width: 297mm;
+  min-height: 210mm;
+}
+
+/* ---------------- 공통 입력 ---------------- */
+.rf-in {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.1875rem 0.3125rem;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.45;
+  color: #111827;
+  background: #fcfdff;
+  border: 1px solid #b8c4d4;
+  border-radius: 0.1875rem;
+  outline: none;
+}
+
+.rf-in:focus {
+  background: #fff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+.rf-in--ro {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+.rf-ta {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.rf-in::placeholder {
+  color: #a3aec0;
+}
+
+/* ---------------- 제목 ---------------- */
+.rf-title {
+  margin: 0 0 0.5rem;
+  padding: 0.4375rem 0;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  color: #0f172a;
+}
+
+.rf-title--bordered {
+  border: 2px solid #111827;
+  border-bottom: none;
+}
+
+.rf-title--plain {
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  border-bottom: 2px solid #111827;
+  padding-bottom: 0.5rem;
+}
+
+/* ---------------- 표 공통 ---------------- */
+.rf-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.6875rem;
+}
+
+.rf-table th,
+.rf-table td {
+  border: 1px solid #111827;
+  padding: 0.25rem 0.3125rem;
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+.rf-table th {
+  background: #f2f4f7;
+  font-weight: 700;
+  text-align: center;
+  white-space: pre-line;
+  line-height: 1.3;
+}
+
+.rf-table .rf-c {
+  text-align: center;
+}
+
+.rf-table .rf-l {
+  text-align: left;
+}
+
+.rf-cell-text {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 1.1em;
+}
+
+/* ---------------- 서명란 ---------------- */
+.rf-sign-area {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rf-photo-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  color: #64748b;
+  text-align: center;
+}
+
+/* ================================================================
+   안전 회의록 (6페이지 / A4 세로)
+   ================================================================ */
+.rf-mm {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 2px solid #111827;
+  border-top: none;
+}
+
+.rf-mm .rf-table th,
+.rf-mm .rf-table td {
+  border-width: 1px;
+}
+
+/* 결재 칸은 위아래로 나뉩니다. */
+.rf-mm-approval-label {
+  width: 3.2rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  background: #f2f4f7;
+}
+
+.rf-mm-body {
+  display: flex;
+  flex: 1;
+  min-height: 300px;
+  border-top: 1px solid #111827;
+  padding: 0.5rem;
+}
+
+.rf-mm-body textarea {
+  width: 100%;
+  min-height: 280px;
+  padding: 0.25rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  line-height: 1.85;
+  color: #111827;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+}
+
+.rf-mm-body textarea::placeholder {
+  color: #b6c0cf;
+}
+
+/* ================================================================
+   위험성평가 참석자 명단 (7페이지 / A4 세로)
+   ================================================================ */
+.rf-al {
+  display: flex;
+  flex-direction: column;
+}
+
+.rf-al-date {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  padding-right: 0.25rem;
+  font-size: 0.8125rem;
+  color: #111827;
+}
+
+.rf-al-date input {
+  width: 3.25rem;
+  padding: 0.0625rem 0.1875rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: #111827;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #111827;
+  outline: none;
+}
+
+.rf-al-date input:focus {
+  background: #eff6ff;
+}
+
+.rf-al-no {
+  width: 2.25rem;
+  text-align: center;
+  font-weight: 600;
+  background: #fafbfc;
+}
+
+.rf-al-site {
+  margin: 0.5rem 0 0;
+  text-align: right;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #111827;
+}
+
+/* ================================================================
+   사진대지 (3·4페이지)
+   ================================================================ */
+.rf-ps-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.rf-ps-head-label {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.rf-ps-head .rf-in {
+  border: none;
+  border-bottom: 1px solid #111827;
+  background: transparent;
+  border-radius: 0;
+}
+
+/* --- 3페이지: 위아래 2단 --- */
+.rf-ps-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/*
+ * 3페이지는 위아래 2단이라 사진틀을 낮춰야 한 장에 들어갑니다.
+ * (297mm - 여백 20mm = 277mm 안에 제목·머리글·2단 사진틀·메타가 모두 들어가야 함)
+ */
+.rf-ps-stack .rf-ps-frame {
+  height: 84mm;
+  margin: 4mm;
+}
+
+.rf-ps-block {
+  border: 1.5px solid #111827;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.rf-ps-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 118mm;
+  margin: 6mm;
+  background: #f8fafc;
+  border: 1px solid #111827;
+  overflow: hidden;
+}
+
+.rf-ps-frame img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.rf-ps-frame-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.rf-ps-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-top: 1px solid #111827;
+}
+
+.rf-ps-meta th {
+  flex-shrink: 0;
+  min-width: 4.5rem;
+  padding: 0.25rem 0.5rem;
+  text-align: center;
+  font-weight: 700;
+  background: #e5e7eb;
+  border-right: 1px solid #111827;
+}
+
+/* --- 4페이지: 좌우 2단 --- */
+.rf-ps-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 2px solid #111827;
+}
+
+.rf-ps-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rf-ps-col + .rf-ps-col {
+  border-left: 2px solid #111827;
+}
+
+.rf-ps-col-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 118mm;
+  background: #f8fafc;
+  border-bottom: 1px solid #111827;
+  overflow: hidden;
+}
+
+.rf-ps-col-frame img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.rf-ps-col-note {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+  text-align: center;
+  color: #334155;
+  background: #f8fafc;
+  border-bottom: 1px solid #111827;
+}
+
+.rf-ps-col-desc {
+  flex: 1;
+  min-height: 28mm;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+  line-height: 1.7;
+}
+
+.rf-ps-col-desc textarea {
+  width: 100%;
+  min-height: 26mm;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1.7;
+  color: #111827;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+}
+
+/* 사진 선택 버튼 */
+.rf-ps-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #fff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.rf-ps-file:hover {
+  background: #eff6ff;
+}
+
+.rf-ps-file input {
+  display: none;
+}
+
+.rf-ps-remove {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #b91c1c;
+  background: #fff;
+  border: 1px solid #fecaca;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.rf-ps-remove:hover {
+  background: #fef2f2;
+}
+
+/* ================================================================
+   ( ) 월 안전보건 일정 (9페이지 / A4 가로)
+   ================================================================ */
+.rf-sc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rf-sc-head {
+  display: grid;
+  grid-template-columns: 1fr repeat(5, 3.6rem);
+  border: 1.5px solid #111827;
+}
+
+/* 제목은 2줄(결재 라벨줄 + 값줄)에 걸쳐 있습니다. */
+.rf-sc-head-title {
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  border-right: 1px solid #111827;
+}
+
+.rf-sc-head-title input {
+  width: 3.5rem;
+  font-family: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  color: #111827;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid #111827;
+  outline: none;
+}
+
+.rf-sc-head-title input:focus {
+  background: #eff6ff;
+}
+
+.rf-sc-appr-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: #f2f4f7;
+  border-left: 1px solid #111827;
+  border-bottom: 1px solid #111827;
+}
+
+.rf-sc-appr-value {
+  padding: 0.125rem;
+  border-left: 1px solid #111827;
+}
+
+.rf-sc-appr-value input {
+  width: 100%;
+  padding: 0.375rem 0.125rem;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  text-align: center;
+  color: #111827;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.rf-sc-appr-value input:focus {
+  background: #eff6ff;
+}
+
+/* 검토 칸의 사선 (양식과 동일하게) */
+.rf-sc-appr-slash {
+  position: relative;
+  overflow: hidden;
+}
+
+.rf-sc-appr-slash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    to top right,
+    transparent calc(50% - 0.6px),
+    #94a3b8 calc(50% - 0.6px),
+    #94a3b8 calc(50% + 0.6px),
+    transparent calc(50% + 0.6px)
+  );
+  pointer-events: none;
+}
+
+.rf-sc-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 1.5px solid #111827;
+}
+
+.rf-sc-grid th,
+.rf-sc-grid td {
+  border: 1px solid #111827;
+  text-align: center;
+  word-break: break-word;
+}
+
+.rf-sc-grid th {
+  padding: 0.1875rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f2f4f7;
+}
+
+.rf-sc-grid th.rf-sc-sun {
+  color: #dc2626;
+}
+
+.rf-sc-grid th.rf-sc-sat {
+  color: #2563eb;
+}
+
+.rf-sc-day {
+  height: 1.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.rf-sc-day--off {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.rf-sc-day--empty {
+  background: #fafbfc;
+}
+
+.rf-sc-note {
+  height: 14mm;
+  padding: 0.1875rem;
+  vertical-align: top;
+}
+
+.rf-sc-note textarea {
+  width: 100%;
+  height: 13mm;
+  padding: 0.125rem;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  text-align: center;
+  color: #1e293b;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+}
+
+.rf-sc-note textarea::placeholder {
+  color: #cbd5e1;
+}
+
+.rf-sc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  color: #334155;
+}
+
+.rf-sc-foot-center {
+  letter-spacing: 0.3em;
+  font-weight: 600;
+}
+
+/* ================================================================
+   인쇄
+   ================================================================ */
+@page report-portrait-page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@page report-landscape-page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  /* 화면용 UI 숨김 */
+  .app-header,
+  .app-footer,
+  .sd-header,
+  .sd-tabs,
+  .sd-panel-head,
+  .sd-segment,
+  .rw-chrome,
+  .rw-nav,
+  .rw-saved,
+  .rf-ps-file,
+  .rf-ps-remove,
+  .rf-photo-note {
+    display: none !important;
+  }
+
+  .app,
+  .app-main,
+  .site-detail-page,
+  .site-detail-page .container,
+  .sd-panel {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .rf-doc {
+    display: block !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+
+  .rf-sheet {
+    width: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    page: report-portrait-page;
+    break-inside: auto;
+  }
+
+  .rf-sheet--landscape {
+    page: report-landscape-page;
+  }
+
+  /* 여러 서식 연속 인쇄 시 장 나눔 */
+  .rf-sheet + .rf-sheet {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .rf-in,
+  .rf-in--ro {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .rf-ps-frame,
+  .rf-ps-col-frame {
+    border-color: #111827 !important;
+    background: #fff !important;
+  }
+
+  .rf-al-date input {
+    background: transparent !important;
+  }
+
+  /* 표 머리글 회색 배경 유지 */
+  .rf-table th,
+  .rf-sc-grid th,
+  .rf-sc-appr-label,
+  .rf-ps-meta th,
+  .rf-mm-approval-label {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

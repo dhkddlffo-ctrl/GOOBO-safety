@@ -14,6 +14,10 @@ import './HighGradeControl.css';
 interface HighGradeControlProps {
   siteId: number;
   siteName: string;
+  /** 작성 마법사에서 열 때 바로 편집 모드로 시작 */
+  autoEdit?: boolean;
+  /** 마법사 안에 넣을 때 화면 전체 인쇄 버튼을 숨김 */
+  embedded?: boolean;
 }
 
 /** yyyy-mm-dd → yyyy.mm.dd */
@@ -24,13 +28,21 @@ const formatDateKo = (ymd?: string): string => {
   return `${y}.${m}.${d}`;
 };
 
-const HighGradeControl: React.FC<HighGradeControlProps> = ({ siteId, siteName }) => {
+const HighGradeControl: React.FC<HighGradeControlProps> = ({
+  siteId,
+  siteName,
+  autoEdit = false,
+  embedded = false,
+}) => {
   const canManage = isAuthenticated();
 
   const [record, setRecord] = useState<HighGradeRecord>(() =>
     ensureHighGradeRecord(siteId, siteName),
   );
-  const [draft, setDraft] = useState<HighGradeRecord | null>(null);
+  const [draft, setDraft] = useState<HighGradeRecord | null>(() =>
+    /* 마법사에서 열면 바로 편집 모드로 시작합니다. */
+    autoEdit ? ensureHighGradeRecord(siteId, siteName) : null,
+  );
   const [savedAt, setSavedAt] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -151,7 +163,8 @@ const HighGradeControl: React.FC<HighGradeControlProps> = ({ siteId, siteName })
               </span>
             </>
           )}
-          {!editing && (
+          {/* 마법사 안에서는 전체 인쇄 버튼을 숨깁니다 (마법사가 한 번에 출력). */}
+          {!editing && !embedded && (
             <button className="btn btn-sm hg-btn-print" onClick={print}>
               🖨️ A4 인쇄
             </button>

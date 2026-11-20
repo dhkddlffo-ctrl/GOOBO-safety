@@ -459,3 +459,119 @@ export interface HighGradeRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+/* ------------------------------------------------------------------ */
+/* 위험성평가 보고서 묶음 — 등록부 1건에 딸린 부속 서식                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 회의록 결재란 (작성 / 검토 / 승인).
+ * 양식 6페이지 상단 우측 결재 칸에 해당합니다.
+ */
+export interface ApprovalLine {
+  writer: string; // 작성
+  reviewer: string; // 검토
+  approver: string; // 승인
+}
+
+/** 안전 회의록 참석자 1명 (직위 / 성명 / 서명) */
+export interface MeetingAttendee {
+  id: string;
+  position: string; // 직위
+  name: string; // 성명
+  signature: string; // 서명
+}
+
+/**
+ * 안전 회의록 (양식 SCM-02-2.00 / 6페이지, A4 세로)
+ *
+ * 회의 내용은 자유 기술란이므로 textarea 한 칸으로 받습니다.
+ */
+export interface MeetingMinutes {
+  title: string; // 제목
+  docNo: string; // 우선번호
+  meetingAt: string; // 회의일시
+  place: string; // 회의장소
+  approval: ApprovalLine;
+  attendees: MeetingAttendee[]; // 12칸 (2열 × 6행)
+  content: string; // 회의 내용
+  remark: string; // 별첨
+}
+
+/** 위험성평가 참석자 명단 1명 (7페이지) */
+export interface AttendeeListEntry {
+  id: string;
+  company: string; // 업체명
+  jobType: string; // 직종
+  name: string; // 성명
+  signature: string; // 서명
+}
+
+/**
+ * 위험성평가 참석자 명단 (양식 7페이지, A4 세로)
+ * 양식은 40칸(2열 × 20행) 고정입니다.
+ */
+export interface AttendeeList {
+  year: string;
+  month: string;
+  day: string;
+  entries: AttendeeListEntry[];
+}
+
+/** 사진대지 사진 1장. 본문(Blob)은 IndexedDB, 정보만 여기에 저장합니다. */
+export interface PhotoSheetItem {
+  id: string;
+  date: string; // 일자
+  location: string; // 위치
+  caption: string; // 사진설명
+  description: string; // 안전시설 점검내용 (모니터링 사진대지)
+  storageKey: string; // IndexedDB 파일 키
+  fileName: string;
+}
+
+/**
+ * 사진대지 (양식 3·4페이지)
+ *  - meeting   : [KOSAH-MS 관련 위험성평가 회의]  (3페이지, A4 세로)
+ *  - monitoring: 모니터링 안전점검 사진대지        (4페이지, A4 가로)
+ */
+export interface PhotoSheet {
+  title: string;
+  kind: 'meeting' | 'monitoring';
+  constructionName: string; // 공사명 / 현장명
+  items: PhotoSheetItem[];
+}
+
+/**
+ * ( ) 월 안전보건 일정 (양식 SCM-005-2.00 / 9페이지, A4 가로)
+ * 일자별로 적는 내용은 notes['YYYY-MM-DD'] 에 보관합니다.
+ */
+export interface SafetySchedule {
+  year: string;
+  month: string;
+  approval: {
+    writer: string; // 작성
+    review1: string; // 검토
+    review2: string;
+    review3: string;
+    approver: string; // 승인
+  };
+  notes: Record<string, string>;
+}
+
+/**
+ * 등록부 1건에 딸린 부속 서식 묶음.
+ * '한곳에서 순서대로 작성'하는 마법사의 저장 단위입니다.
+ */
+export interface ReportBundle {
+  assessmentId: string;
+  siteId: number;
+  siteName: string;
+  meeting: MeetingMinutes;
+  attendees: AttendeeList;
+  /** 사진대지 2장 — [0] 회의(3페이지), [1] 모니터링 안전점검(4페이지) */
+  photoSheets: PhotoSheet[];
+  schedule: SafetySchedule;
+  /** 게시글 등록 시각 (없으면 미등록) */
+  registeredAt?: string;
+  updatedAt: string;
+}
