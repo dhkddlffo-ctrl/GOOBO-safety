@@ -787,9 +787,8 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
           <div className="ra-doc">
             {pageChunks.map((chunk, pageIndex) => {
               const isFirst = pageIndex === 0;
-              const isLast = pageIndex === pageChunks.length - 1;
-              /* 1장은 하단 기입란 고정, 2장부터는 예전처럼 마지막 장에만 표시 */
-              const showFooter = isFirst || isLast;
+              /* 하단 기입란은 1장에만 표시합니다. 2장부터는 표(행)만 이어집니다. */
+              const showFooter = isFirst;
               return (
                 <section
                   key={pageIndex}
