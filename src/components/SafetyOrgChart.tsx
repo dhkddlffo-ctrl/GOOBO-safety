@@ -607,11 +607,15 @@ const SafetyOrgChart: React.FC<SafetyOrgChartProps> = ({ siteId, siteName, siteM
                 const isDragging = drag?.unitId === unit.id;
                 const isDropCol = isTarget && dragOver?.col === col;
                 const canDrag = editing && !unit.pinCenter;
+                /* 세로 줄기는 항상 가운데(50%)에서 내려옵니다.
+                   상자 높이가 단 높이보다 작을 때 그 아래 빈 구간을 이어 주려면
+                   가운데 칸에만 보조 세로선을 그려야 합니다. */
+                const isSpine = Math.abs(((col + 0.5) / cols) * 100 - 50) < 0.01;
                 return (
                   <div
-                    className={`so-cell${isDragging ? ' is-dragging' : ''}${
-                      isDropCol ? ' is-dropcol' : ''
-                    }`}
+                    className={`so-cell${isSpine ? ' is-spine' : ''}${
+                      isDragging ? ' is-dragging' : ''
+                    }${isDropCol ? ' is-dropcol' : ''}`}
                     key={unit.id}
                     style={{ '--so-col': col + 1 } as React.CSSProperties}
                     draggable={canDrag}

@@ -154,6 +154,26 @@ export const buildOrgChartSvg = (chart: SiteOrgChart, opts: ExportOptions = {}):
       });
     }
 
+    /* 세로 줄기(가운데 칸) 상자의 높이가 단 높이보다 작을 때, 상자 아래에
+       빈 구간이 생겨 줄기가 끊겨 보입니다.
+       (예: 현장 PM 은 1명, 옆 가지인 본사 안전팀은 2명 → 단 높이가 더 큰 쪽에 맞춰짐)
+       상자 아래 ~ 칸 바닥까지 세로선을 그려 다음 단으로 이어 줍니다.
+       상자는 이 뒤에 그려지므로 줄기 구간에서는 선이 가려집니다. */
+    const tierH = tierHeights[tierIndex];
+    const spineUnit = tier.units.find(unit => {
+      const cx = PAD + cellW * (unitCol(unit, cols) + 0.5);
+      return Math.abs(cx - W / 2) < 0.5;
+    });
+    if (spineUnit) {
+      const boxBottom = y + titleH + memberH * Math.max(spineUnit.members.length, 1);
+      const tierBottom = y + tierH;
+      if (tierBottom - boxBottom > 0.5) {
+        out.push(
+          `<line x1="${W / 2}" y1="${boxBottom}" x2="${W / 2}" y2="${tierBottom}" stroke="${LINE}" stroke-width="1.5"/>`
+        );
+      }
+    }
+
     tier.units.forEach(unit => {
       const col = unitCol(unit, cols);
       const cx = PAD + cellW * (col + 0.5);
