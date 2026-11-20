@@ -21,6 +21,7 @@ import { getCategoriesWithOrphans } from '../utils/categoryStorage';
 import DocumentArchive from '../components/DocumentArchive';
 import EmergencyPlan from '../components/EmergencyPlan';
 import SafetyOrgChart from '../components/SafetyOrgChart';
+import RiskAssessment from '../components/RiskAssessment';
 import './SiteDetailPage.css';
 
 interface SiteDetailPageProps {
@@ -30,13 +31,14 @@ interface SiteDetailPageProps {
   initialTab?: string;
 }
 
-type Tab = 'info' | 'documents' | 'emergency' | 'org' | 'activity';
+type Tab = 'info' | 'documents' | 'emergency' | 'org' | 'risk' | 'activity';
 
 const isTab = (value?: string): value is Tab =>
   value === 'info' ||
   value === 'documents' ||
   value === 'emergency' ||
   value === 'org' ||
+  value === 'risk' ||
   value === 'activity';
 
 const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, initialTab }) => {
@@ -285,6 +287,12 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
             onClick={() => changeTab('org')}
           >
             🏛️ 안전조직도
+          </button>
+          <button
+            className={`sd-tab ${activeTab === 'risk' ? 'active' : ''}`}
+            onClick={() => changeTab('risk')}
+          >
+            ⚠️ 위험성평가
           </button>
           <button
             className={`sd-tab ${activeTab === 'activity' ? 'active' : ''}`}
@@ -748,6 +756,23 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               siteName={site.name}
               siteManager={siteInfo?.siteManager}
             />
+          </div>
+        )}
+
+        {/* ============ 위험성평가 탭 ============ */}
+        {activeTab === 'risk' && (
+          <div className="sd-panel sd-panel-risk">
+            <div className="sd-panel-head">
+              <div>
+                <h2>⚠️ 위험성평가표 / 등록부</h2>
+                <p className="sd-panel-sub">
+                  회사 양식(SCM-002-1.01) 그대로 작성하고 A4 가로 2장으로 인쇄할 수 있습니다.
+                  강도·빈도를 고르면 평가합계와 등급이 자동 계산됩니다.
+                </p>
+              </div>
+            </div>
+
+            <RiskAssessment siteId={site.id} siteName={site.name} />
           </div>
         )}
 

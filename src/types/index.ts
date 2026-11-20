@@ -327,3 +327,74 @@ export interface AccidentCase {
   disasterReportSubmitted?: '제출' | '미제출'; // 사업재해조사표 제출 여부
   treatmentResult?: '공상' | '산재' | '질병성' | '미처리'; // 사고 처리결과
 }
+
+/* ------------------------------------------------------------------ */
+/* 위험성평가 (서식 SCM-002-1.01 위험성평가표 / 등록부)                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 강도 · 빈도 점수. 양식 기준으로 1(하) 또는 2(상)만 사용합니다.
+ * (등급표: 가) 강도/빈도 1(하) 2(상))
+ */
+export type RiskScore = 1 | 2;
+
+/**
+ * 평가 등급.
+ * ⚠️ 양식의 '평가합계'는 강도 × 빈도 가 아니라 **강도 + 빈도** 입니다.
+ *    합계 2~3 → 하(일상관리), 합계 4 → 상(중점관리)
+ */
+export type RiskGrade = '하' | '상';
+
+/** 위험요인 1행 */
+export interface RiskRow {
+  id: string;
+  workPeriod: string; // 작업 기간
+  workLocation: string; // 작업 위치
+  hazardFinder: string; // 위험요인 도출자
+  hazard: string; // 위험요인(Hazard) — 근본적인 원인 도출
+  accidentType: string; // 재해 형태 (까임, 끼임, 추락 …)
+  intensity: RiskScore | 0; // 강도 (0 = 미선택)
+  frequency: RiskScore | 0; // 빈도 (0 = 미선택)
+  manageRegistered: 'O' | 'X' | ''; // 관리 등록 여부
+  improvementPlan: string; // 개선조치계획
+  actionDueDate: string; // 조치예정일 (yyyy-mm-dd)
+  actionDoneDate: string; // 조치완료일 (yyyy-mm-dd)
+  inspector: string; // 점검 담당자
+}
+
+/** 위험성평가표 / 등록부 1건 */
+export interface RiskAssessment {
+  id: string;
+  siteId: number;
+  siteName: string;
+  constructionName: string; // 공사명 (표 상단)
+  author: string; // 작성자(팀장/반장)
+  writtenAt: string; // 작성일 (yyyy-mm-dd)
+  rows: RiskRow[]; // 최대 14행 (1페이지 8행 + 2페이지 6행)
+  extraHazards: string; // 추가위험요인 (필요시/소장)
+  monitoringNote: string; // 모니터링 실천통보 (조치내용/요약, 결과)
+  note: string; // 비고
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 위험성평가 부속 서식 첨부 (양식 10~13페이지 등)
+ *
+ * 10~13페이지(일일 재해 有/無 확인현황)는 인원별 일일 대장이라
+ * 화면에서 직접 입력받지 않고, 작성한 파일을 그대로 올려 보관합니다.
+ * 파일 본문은 IndexedDB(documentStorage)에, 정보는 LocalStorage에 저장합니다.
+ */
+export interface RiskAttachment {
+  id: string;
+  siteId: number;
+  siteName: string;
+  title: string; // 문서명 (예: 2026년 11월 일일 재해 유무 확인현황)
+  period: string; // 해당 연월 (예: 2026-11)
+  fileName: string;
+  fileSize: number; // bytes
+  fileType: string; // MIME type
+  storageKey: string; // IndexedDB 파일 키
+  uploadedBy: string;
+  createdAt: string;
+}
