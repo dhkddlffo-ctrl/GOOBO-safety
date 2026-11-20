@@ -16,13 +16,23 @@ const ASSESSMENTS_KEY = 'gubo_risk_assessments';
 const ATTACHMENTS_KEY = 'gubo_risk_attachments';
 
 /**
- * 표 한 벌의 최대 행 수.
- * 회사 양식은 1페이지 8행 + 2페이지 6행 = 14행입니다.
+ * 회사 양식의 기본 행 수.
+ * 1페이지 8행 + 2페이지 6행 = 14행이며, 필요하면 화면에서 행을 더 추가할 수 있습니다.
  */
-export const MAX_RISK_ROWS = 14;
+export const DEFAULT_RISK_ROWS = 14;
 
 /** 1페이지에 들어가는 행 수 (인쇄 시 페이지 나눔 기준) */
 export const ROWS_PER_FIRST_PAGE = 8;
+
+/** 2페이지부터 한 장에 들어가는 행 수 (양식: 8 + 6) */
+export const ROWS_PER_SECOND_PAGE = 6;
+
+/**
+ * 조치/점검 묶음 항목.
+ * 이 중 하나를 고치면 '아래 행에 함께 적용' 옵션이 켜져 있을 때
+ * 아래 행들의 같은 항목도 함께 바뀝니다.
+ */
+export const ACTION_FIELDS = ['actionDueDate', 'actionDoneDate', 'inspector'] as const;
 
 /** 재해 형태 선택지 — 사고사례 분류와 맞춰 통계를 함께 볼 수 있게 합니다. */
 export const ACCIDENT_TYPES = [
@@ -119,7 +129,7 @@ export const createEmptyRiskRow = (): RiskRow => ({
   inspector: '',
 });
 
-/** 위험성평가표 1건의 빈 서식 (14행) */
+/** 위험성평가표 1건의 빈 서식 (기본 14행 — 화면에서 행을 더 추가할 수 있음) */
 export const createEmptyRiskAssessment = (
   siteId: number,
   siteName: string,
@@ -133,7 +143,7 @@ export const createEmptyRiskAssessment = (
     constructionName: siteName,
     author,
     writtenAt: now.slice(0, 10),
-    rows: Array.from({ length: MAX_RISK_ROWS }, () => createEmptyRiskRow()),
+    rows: Array.from({ length: DEFAULT_RISK_ROWS }, () => createEmptyRiskRow()),
     extraHazards: '',
     monitoringNote: '',
     note: '',

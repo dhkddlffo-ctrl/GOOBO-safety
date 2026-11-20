@@ -360,6 +360,12 @@ export interface RiskRow {
   actionDueDate: string; // 조치예정일 (yyyy-mm-dd)
   actionDoneDate: string; // 조치완료일 (yyyy-mm-dd)
   inspector: string; // 점검 담당자
+  /**
+   * 이 행에서 사용자가 직접 고친 조치/점검 항목 목록.
+   * 여기에 들어 있는 항목은 '아래 행에 함께 적용'에서 제외됩니다.
+   * (위에서 값을 내려받기만 한 행은 기록되지 않으므로 계속 따라갑니다)
+   */
+  actionEdited?: ('actionDueDate' | 'actionDoneDate' | 'inspector')[];
 }
 
 /** 위험성평가표 / 등록부 1건 */
@@ -370,10 +376,17 @@ export interface RiskAssessment {
   constructionName: string; // 공사명 (표 상단)
   author: string; // 작성자(팀장/반장)
   writtenAt: string; // 작성일 (yyyy-mm-dd)
-  rows: RiskRow[]; // 최대 14행 (1페이지 8행 + 2페이지 6행)
+  rows: RiskRow[]; // 기본 14행 (1페이지 8행 + 2페이지 6행) — 화면에서 행 추가 가능
   extraHazards: string; // 추가위험요인 (필요시/소장)
   monitoringNote: string; // 모니터링 실천통보 (조치내용/요약, 결과)
   note: string; // 비고
+  /**
+   * 조치/점검 값을 아래 행에 함께 적용할지 여부.
+   * 한 행에서 점검일·점검자를 지정하면 그 아래 행들도 같은 값으로 채워집니다.
+   * (개별 행은 이후에 따로 수정할 수 있습니다)
+   * 저장된 예전 자료에는 이 값이 없으므로 undefined = 적용(켜짐) 으로 봅니다.
+   */
+  actionCascade?: boolean;
   createdAt: string;
   updatedAt: string;
 }

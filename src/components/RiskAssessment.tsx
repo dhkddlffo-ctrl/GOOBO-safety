@@ -7,12 +7,15 @@ import {
   saveRiskAssessment,
   deleteRiskAssessment,
   createEmptyRiskAssessment,
+  createEmptyRiskRow,
   evaluateRow,
   summarizeAssessment,
   scoreLabel,
   toggleScore,
-  MAX_RISK_ROWS,
+  DEFAULT_RISK_ROWS,
   ROWS_PER_FIRST_PAGE,
+  ROWS_PER_SECOND_PAGE,
+  ACTION_FIELDS,
   ACCIDENT_TYPES,
   getRiskAttachments,
   saveRiskAttachment,
@@ -145,10 +148,64 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
   };
 
   /* ---------------- 행 갱신 ---------------- */
+  /**
+   * 행 하나를 수정합니다.
+   *
+   * 조치/점검 항목(조치예정일 · 조치완료일 · 점검자)을 고치면, '아래 행에 함께 적용'이
+   * 켜져 있을 때 아래 행들도 같은 값으로 이어집니다.
+   *
+   * 아래 행이라도 **사용자가 직접 고친 항목**(row.actionEdited 에 기록됨)은 건드리지 않아
+   * 행마다 따로 값을 가질 수 있습니다.
+   */
   const patchRow = (rowId: string, patch: Partial<RiskRow>) => {
-    setDraft(d =>
-      d ? { ...d, rows: d.rows.map(r => (r.id === rowId ? { ...r, ...patch } : r)) } : d
-    );
+    setDraft(d => {
+      if (!d) return d;
+
+      const index = d.rows.findIndex(r => r.id === rowId);
+      if (index < 0) return d;
+
+      const rows = d.rows.map(r => (r.id === rowId ? { ...r, ...patch } : r));
+
+      /* 직접 고친 조치/점검 항목을 이 행의 '개별 수정' 목록에 남깁니다. */
+      const touched = ACTION_FIELDS.filter(f => f in patch);
+      if (touched.length > 0) {
+        const own = rows[index].actionEdited ?? [];
+        rows[index] = { ...rows[index], actionEdited: [...new Set([...own, ...touched])] };
+      }
+
+      /* '아래 행에 함께 적용' 체크가 꺼져 있으면 이 행만 수정합니다. */
+      if (d.actionCascade === false || touched.length === 0) return { ...d, rows };
+
+      touched.forEach(field => {
+        const newValue = patch[field];
+
+        for (let i = index + 1; i < rows.length; i += 1) {
+          /* 아래 행이 이 항목을 직접 고쳐 두었다면 그대로 둡니다. */
+          if (rows[i].actionEdited?.includes(field)) continue;
+
+          rows[i] = {
+            ...rows[i],
+            [field]: newValue,
+          } as RiskRow;
+        }
+      });
+
+      return { ...d, rows };
+    });
+  };
+
+  /* ---------------- 행 추가 / 삭제 ---------------- */
+  /** 등록부에 빈 행을 하나 더 붙입니다. (양식의 14행을 넘어 계속 늘릴 수 있음) */
+  const addRow = () => {
+    setDraft(d => (d ? { ...d, rows: [...d.rows, createEmptyRiskRow()] } : d));
+  };
+
+  /** 마지막 행 삭제 — 회사 양식 기본 14행보다 적게 줄이지는 않습니다. */
+  const removeLastRow = () => {
+    setDraft(d => {
+      if (!d || d.rows.length <= DEFAULT_RISK_ROWS) return d;
+      return { ...d, rows: d.rows.slice(0, -1) };
+    });
   };
 
   const patchDoc = (patch: Partial<RiskAssessmentData>) => {
@@ -243,6 +300,22 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
     () => (view ? summarizeAssessment(view) : { filled: 0, high: 0, low: 0, done: 0 }),
     [view]
   );
+
+  /**
+   * 행을 인쇄 장 단위로 나눕니다.
+   * 1장은 8행, 2장부터는 6행씩 — 회사 양식(8 + 6)을 그대로 따르되,
+   * 행을 추가하면 장이 자동으로 늘어납니다.
+   */
+  const pageChunks = useMemo(() => {
+    const rows = view?.rows ?? [];
+    const chunks: { rows: RiskRow[]; start: number }[] = [
+      { rows: rows.slice(0, ROWS_PER_FIRST_PAGE), start: 0 },
+    ];
+    for (let i = ROWS_PER_FIRST_PAGE; i < rows.length; i += ROWS_PER_SECOND_PAGE) {
+      chunks.push({ rows: rows.slice(i, i + ROWS_PER_SECOND_PAGE), start: i });
+    }
+    return chunks;
+  }, [view]);
 
   /* ---------------- 표 렌더 (보기/편집 공용) ---------------- */
   const tableRows = (rows: RiskRow[], startIndex: number) =>
@@ -537,6 +610,24 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
               <button className="btn btn-sm" onClick={cancelEdit}>
                 취소
               </button>
+              <span className="ra-row-tools">
+                <button
+                  className="btn btn-sm ra-btn-row-add"
+                  onClick={addRow}
+                  title="등록부에 빈 행을 하나 더 붙입니다"
+                >
+                  ＋ 행 추가
+                </button>
+                {view && view.rows.length > DEFAULT_RISK_ROWS && (
+                  <button
+                    className="btn btn-sm ra-btn-row-del"
+                    onClick={removeLastRow}
+                    title="맨 아래 행을 지웁니다"
+                  >
+                    － 마지막 행 삭제
+                  </button>
+                )}
+              </span>
             </>
           )}
           {doc && !editing && (
@@ -640,57 +731,62 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
             </label>
           </div>
 
-          {/* ---------- 1페이지 ---------- */}
+          {/* 조치/점검 값 아래 행 함께 적용 (편집 시에만) */}
+          {editing && (
+            <label className="ra-cascade">
+              <input
+                type="checkbox"
+                checked={view.actionCascade !== false}
+                onChange={e => patchDoc({ actionCascade: e.target.checked })}
+              />
+              <span>
+                조치/점검 값을 <b>아래 행에 함께 적용</b>
+                <span className="ra-cascade-hint">
+                  점검일·점검자를 지정하면 그 아래 행들도 같이 채워집니다. 개별 행은 나중에
+                  따로 수정할 수 있습니다.
+                </span>
+              </span>
+            </label>
+          )}
+
+          {/* ---------- 서식 본문 (1페이지 8행 + 이후 페이지 6행씩) ---------- */}
           <div className="ra-doc">
-            <section className="ra-sheet ra-sheet-1">
-              <div className="ra-sheet-inner">
-                <table className="ra-table">
-                  <colgroup>
-                    <col style={{ width: '3%' }} />
-                    <col style={{ width: '8%' }} />
-                    <col style={{ width: '7%' }} />
-                    <col style={{ width: '6%' }} />
-                    <col style={{ width: '23%' }} />
-                    <col style={{ width: '6%' }} />
-                    <col style={{ width: '4.5%' }} />
-                    <col style={{ width: '4.5%' }} />
-                    <col style={{ width: '5%' }} />
-                    <col style={{ width: '5%' }} />
-                    <col style={{ width: '5%' }} />
-                    <col style={{ width: '14%' }} />
-                    <col style={{ width: '9%' }} />
-                  </colgroup>
-                  {tableHead(false)}
-                  <tbody>{tableRows(view.rows.slice(0, ROWS_PER_FIRST_PAGE), 0)}</tbody>
-                </table>
-              </div>
-            </section>
+            {pageChunks.map((chunk, pageIndex) => {
+              const isFirst = pageIndex === 0;
+              const isLast = pageIndex === pageChunks.length - 1;
+              return (
+                <section
+                  key={pageIndex}
+                  className={`ra-sheet ${isFirst ? 'ra-sheet-1' : 'ra-sheet-cont'} ${
+                    isLast ? 'ra-sheet-last' : ''
+                  }`}
+                >
+                  <div className="ra-sheet-inner">
+                    <table className="ra-table">
+                      <colgroup>
+                        <col style={{ width: '3%' }} />
+                        <col style={{ width: '7%' }} />
+                        <col style={{ width: '6%' }} />
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '20%' }} />
+                        <col style={{ width: '5.5%' }} />
+                        {/* Risk Assessment — 좁게 */}
+                        <col style={{ width: '4%' }} />
+                        <col style={{ width: '4%' }} />
+                        <col style={{ width: '4%' }} />
+                        <col style={{ width: '4%' }} />
+                        <col style={{ width: '4.5%' }} />
+                        {/* 개선조치계획 — 최대한 넓게 */}
+                        <col style={{ width: '24%' }} />
+                        <col style={{ width: '9%' }} />
+                      </colgroup>
+                      {tableHead(!isFirst)}
+                      <tbody>{tableRows(chunk.rows, chunk.start)}</tbody>
+                    </table>
 
-            {/* ---------- 2페이지 ---------- */}
-            <section className="ra-sheet ra-sheet-2">
-              <div className="ra-sheet-inner">
-                <table className="ra-table">
-                  <colgroup>
-                    <col style={{ width: '3%' }} />
-                    <col style={{ width: '8%' }} />
-                    <col style={{ width: '7%' }} />
-                    <col style={{ width: '6%' }} />
-                    <col style={{ width: '23%' }} />
-                    <col style={{ width: '6%' }} />
-                    <col style={{ width: '4.5%' }} />
-                    <col style={{ width: '4.5%' }} />
-                    <col style={{ width: '5%' }} />
-                    <col style={{ width: '5%' }} />
-                    <col style={{ width: '5%' }} />
-                    <col style={{ width: '14%' }} />
-                    <col style={{ width: '9%' }} />
-                  </colgroup>
-                  {tableHead(true)}
-                  <tbody>{tableRows(view.rows.slice(ROWS_PER_FIRST_PAGE, MAX_RISK_ROWS), ROWS_PER_FIRST_PAGE)}</tbody>
-                </table>
-
-                {/* 하단 기입란 */}
-                <div className="ra-footer">
+                    {/* 하단 기입란 — 마지막 장에만 */}
+                    {isLast && (
+                      <div className="ra-footer">
                   <div className="ra-foot-row">
                     <div className="ra-foot-label ra-foot-label-2">
                       추가위험요인
@@ -768,8 +864,11 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
                     <span>A4(297x210)</span>
                   </div>
                 </div>
-              </div>
-            </section>
+                    )}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         </>
       )}
