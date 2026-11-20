@@ -287,7 +287,18 @@ export interface AccidentCase {
   siteId: number;
   siteName: string;
   accidentDate: string; // 사고 발생 일시
-  accidentType: '추락' | '낙하비래' | '전도' | '협착' | '전기감전' | '화재폭발' | '끼임' | '부딪힘' | '넘어짐' | '질병' | '기타';
+  accidentType:
+    | '추락'
+    | '낙하비래'
+    | '전도'
+    | '협착'
+    | '전기감전'
+    | '화재폭발'
+    | '끼임'
+    | '부딪힘'
+    | '넘어짐'
+    | '질병'
+    | '기타';
   severity: '경상' | '중상' | '사망' | '무재해';
   location: string; // 사고 발생 장소
   victimName?: string; // 피해자 성명 (선택)
@@ -376,7 +387,7 @@ export interface RiskAssessment {
   constructionName: string; // 공사명 (표 상단)
   author: string; // 작성자(팀장/반장)
   writtenAt: string; // 작성일 (yyyy-mm-dd)
-  rows: RiskRow[]; // 기본 14행 (1페이지 8행 + 2페이지 6행) — 화면에서 행 추가 가능
+  rows: RiskRow[]; // 기본 5행 (1장) — 화면에서 행 추가·삭제 가능, 5행 초과 시 2장부터 6행씩
   extraHazards: string; // 추가위험요인 (필요시/소장)
   monitoringNote: string; // 모니터링 실천통보 (조치내용/요약, 결과)
   note: string; // 비고

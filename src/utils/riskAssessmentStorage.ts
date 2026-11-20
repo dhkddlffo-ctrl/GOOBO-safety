@@ -16,15 +16,16 @@ const ASSESSMENTS_KEY = 'gubo_risk_assessments';
 const ATTACHMENTS_KEY = 'gubo_risk_attachments';
 
 /**
- * 회사 양식의 기본 행 수.
- * 1페이지 8행 + 2페이지 6행 = 14행이며, 필요하면 화면에서 행을 더 추가할 수 있습니다.
+ * 1장에 들어가는 기본 행 수.
+ * 1장은 5행 + 하단 기입란(추가위험요인·모니터링·서명란·등급안내)으로 **고정**이고,
+ * 행이 5개를 넘으면 2장부터 이어서 인쇄됩니다.
  */
-export const DEFAULT_RISK_ROWS = 14;
+export const DEFAULT_RISK_ROWS = 5;
 
-/** 1페이지에 들어가는 행 수 (인쇄 시 페이지 나눔 기준) */
-export const ROWS_PER_FIRST_PAGE = 8;
+/** 1장에 들어가는 행 수 (1장 = 고정 서식) */
+export const ROWS_PER_FIRST_PAGE = 5;
 
-/** 2페이지부터 한 장에 들어가는 행 수 (양식: 8 + 6) */
+/** 2장부터 한 장에 들어가는 행 수 */
 export const ROWS_PER_SECOND_PAGE = 6;
 
 /**
@@ -133,7 +134,7 @@ export const createEmptyRiskRow = (): RiskRow => ({
 export const createEmptyRiskAssessment = (
   siteId: number,
   siteName: string,
-  author = ''
+  author = '',
 ): RiskAssessment => {
   const now = new Date().toISOString();
   return {
@@ -209,7 +210,7 @@ export const saveRiskAttachment = async (
   siteId: number,
   siteName: string,
   file: File,
-  meta: { title: string; period: string; uploadedBy: string }
+  meta: { title: string; period: string; uploadedBy: string },
 ): Promise<RiskAttachment> => {
   const storageKey = generateStorageKey(file.name);
   await putFile(storageKey, file);

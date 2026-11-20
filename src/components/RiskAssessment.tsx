@@ -12,7 +12,6 @@ import {
   summarizeAssessment,
   scoreLabel,
   toggleScore,
-  DEFAULT_RISK_ROWS,
   ROWS_PER_FIRST_PAGE,
   ROWS_PER_SECOND_PAGE,
   ACTION_FIELDS,
@@ -195,15 +194,30 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
   };
 
   /* ---------------- 행 추가 / 삭제 ---------------- */
-  /** 등록부에 빈 행을 하나 더 붙입니다. (양식의 14행을 넘어 계속 늘릴 수 있음) */
+  /**
+   * 등록부에 빈 행을 하나 더 붙입니다.
+   * 기본 5행은 "1장에 들어가는 양"일 뿐 상한이 아니므로 계속 늘릴 수 있고,
+   * 5행을 넘으면 2장이 자동으로 생깁니다.
+   */
   const addRow = () => {
     setDraft(d => (d ? { ...d, rows: [...d.rows, createEmptyRiskRow()] } : d));
   };
 
-  /** 마지막 행 삭제 — 회사 양식 기본 14행보다 적게 줄이지는 않습니다. */
+  /**
+   * 지정한 행을 삭제합니다. (최소 1행은 남깁니다)
+   * 몇 행이든 자유롭게 지울 수 있고, 지운 뒤 번호는 자동으로 다시 매겨집니다.
+   */
+  const removeRow = (rowId: string) => {
+    setDraft(d => {
+      if (!d || d.rows.length <= 1) return d;
+      return { ...d, rows: d.rows.filter(r => r.id !== rowId) };
+    });
+  };
+
+  /** 맨 아래 행 삭제 — 여러 행을 빠르게 줄일 때 씁니다. (최소 1행 유지) */
   const removeLastRow = () => {
     setDraft(d => {
-      if (!d || d.rows.length <= DEFAULT_RISK_ROWS) return d;
+      if (!d || d.rows.length <= 1) return d;
       return { ...d, rows: d.rows.slice(0, -1) };
     });
   };
@@ -298,12 +312,12 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
   /* ---------------- 요약 ---------------- */
   const summary = useMemo(
     () => (view ? summarizeAssessment(view) : { filled: 0, high: 0, low: 0, done: 0 }),
-    [view]
+    [view],
   );
 
   /**
    * 행을 인쇄 장 단위로 나눕니다.
-   * 1장은 8행, 2장부터는 6행씩 — 회사 양식(8 + 6)을 그대로 따르되,
+   * 1장은 5행 + 하단 기입란으로 고정, 2장부터는 6행씩 이어집니다.
    * 행을 추가하면 장이 자동으로 늘어납니다.
    */
   const pageChunks = useMemo(() => {
@@ -324,7 +338,20 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
       const { total, grade } = evaluateRow(row);
       return (
         <tr key={row.id} className={grade === '상' ? 'ra-row-high' : undefined}>
-          <td className="ra-c-no">{rowNo}</td>
+          <td className="ra-c-no">
+            <span className="ra-no-val">{rowNo}</span>
+            {editing && (
+              <button
+                type="button"
+                className="ra-row-x"
+                onClick={() => removeRow(row.id)}
+                title={`${rowNo}행 삭제`}
+                aria-label={`${rowNo}행 삭제`}
+              >
+                ×
+              </button>
+            )}
+          </td>
           <td>
             {editing ? (
               <input
@@ -434,7 +461,11 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
             <span className={total ? 'ra-total-val' : 'ra-cell-text'}>{total || '-'}</span>
           </td>
           <td className="ra-c-grade">
-            {grade ? <span className={`ra-grade ${grade === '상' ? 'high' : 'low'}`}>{grade}</span> : <span className="ra-cell-text">-</span>}
+            {grade ? (
+              <span className={`ra-grade ${grade === '상' ? 'high' : 'low'}`}>{grade}</span>
+            ) : (
+              <span className="ra-cell-text">-</span>
+            )}
           </td>
           <td>
             {editing ? (
@@ -442,7 +473,9 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
                 className="ra-in"
                 value={row.manageRegistered}
                 onChange={e =>
-                  patchRow(row.id, { manageRegistered: e.target.value as RiskRow['manageRegistered'] })
+                  patchRow(row.id, {
+                    manageRegistered: e.target.value as RiskRow['manageRegistered'],
+                  })
                 }
               >
                 <option value="">-</option>
@@ -618,11 +651,11 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
                 >
                   ＋ 행 추가
                 </button>
-                {view && view.rows.length > DEFAULT_RISK_ROWS && (
+                {view && view.rows.length > 1 && (
                   <button
                     className="btn btn-sm ra-btn-row-del"
                     onClick={removeLastRow}
-                    title="맨 아래 행을 지웁니다"
+                    title="맨 아래 행을 지웁니다 (최소 1행은 남습니다)"
                   >
                     － 마지막 행 삭제
                   </button>
@@ -651,8 +684,7 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
         <div className="ra-empty">
           <p className="ra-empty-title">아직 작성된 위험성평가표가 없습니다.</p>
           <p className="ra-empty-sub">
-            회사 양식(SCM-002-1.01)과 동일한 서식으로 작성하고 A4 가로 2장으로 인쇄할 수
-            있습니다.
+            회사 양식(SCM-002-1.01)과 동일한 서식으로 작성하고 A4 가로로 인쇄할 수 있습니다.
             <br />
             강도·빈도를 고르면 <b>평가합계와 등급이 자동으로 계산</b>됩니다.
           </p>
@@ -682,7 +714,9 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
             조치완료 <b>{summary.done}</b>건
           </span>
           {summary.filled < summary.high + summary.low && (
-            <span className="ra-sum-warn">⚠️ 강도/빈도 미입력 {summary.filled - summary.high - summary.low}건</span>
+            <span className="ra-sum-warn">
+              ⚠️ 강도/빈도 미입력 {summary.filled - summary.high - summary.low}건
+            </span>
           )}
         </div>
       )}
@@ -742,24 +776,24 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
               <span>
                 조치/점검 값을 <b>아래 행에 함께 적용</b>
                 <span className="ra-cascade-hint">
-                  점검일·점검자를 지정하면 그 아래 행들도 같이 채워집니다. 개별 행은 나중에
-                  따로 수정할 수 있습니다.
+                  점검일·점검자를 지정하면 그 아래 행들도 같이 채워집니다. 개별 행은 나중에 따로
+                  수정할 수 있습니다.
                 </span>
               </span>
             </label>
           )}
 
-          {/* ---------- 서식 본문 (1페이지 8행 + 이후 페이지 6행씩) ---------- */}
+          {/* ---------- 서식 본문 (1장 = 5행 + 하단 기입란 고정, 2장부터 6행씩) ---------- */}
           <div className="ra-doc">
             {pageChunks.map((chunk, pageIndex) => {
               const isFirst = pageIndex === 0;
               const isLast = pageIndex === pageChunks.length - 1;
+              /* 1장은 하단 기입란 고정, 2장부터는 예전처럼 마지막 장에만 표시 */
+              const showFooter = isFirst || isLast;
               return (
                 <section
                   key={pageIndex}
-                  className={`ra-sheet ${isFirst ? 'ra-sheet-1' : 'ra-sheet-cont'} ${
-                    isLast ? 'ra-sheet-last' : ''
-                  }`}
+                  className={`ra-sheet ${isFirst ? 'ra-sheet-1' : 'ra-sheet-cont'}`}
                 >
                   <div className="ra-sheet-inner">
                     <table className="ra-table">
@@ -784,86 +818,88 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
                       <tbody>{tableRows(chunk.rows, chunk.start)}</tbody>
                     </table>
 
-                    {/* 하단 기입란 — 마지막 장에만 */}
-                    {isLast && (
+                    {/* 1장 하단 기입란은 고정, 2장부터는 마지막 장에만 표시 */}
+                    {showFooter && (
                       <div className="ra-footer">
-                  <div className="ra-foot-row">
-                    <div className="ra-foot-label ra-foot-label-2">
-                      추가위험요인
-                      <br />
-                      (필요시/소장)
-                    </div>
-                    <div className="ra-foot-value ra-foot-grow">
-                      {editing ? (
-                        <textarea
-                          className="ra-in ra-ta"
-                          value={view.extraHazards}
-                          onChange={e => patchDoc({ extraHazards: e.target.value })}
-                          rows={2}
-                          placeholder="추가로 도출된 위험요인"
-                        />
-                      ) : (
-                        <span className="ra-cell-text">{view.extraHazards}</span>
-                      )}
-                    </div>
-                  </div>
+                        <div className="ra-foot-row">
+                          <div className="ra-foot-label ra-foot-label-2">
+                            추가위험요인
+                            <br />
+                            (필요시/소장)
+                          </div>
+                          <div className="ra-foot-value ra-foot-grow">
+                            {editing ? (
+                              <textarea
+                                className="ra-in ra-ta"
+                                value={view.extraHazards}
+                                onChange={e => patchDoc({ extraHazards: e.target.value })}
+                                rows={2}
+                                placeholder="추가로 도출된 위험요인"
+                              />
+                            ) : (
+                              <span className="ra-cell-text">{view.extraHazards}</span>
+                            )}
+                          </div>
+                        </div>
 
-                  <div className="ra-foot-row">
-                    <div className="ra-foot-label ra-foot-label-2">
-                      모니터링
-                      <br />
-                      실천통보
-                      <br />
-                      <span className="ra-foot-small">(조치내용/요약, 결과)</span>
-                    </div>
-                    <div className="ra-foot-value ra-foot-grow">
-                      {editing ? (
-                        <textarea
-                          className="ra-in ra-ta"
-                          value={view.monitoringNote}
-                          onChange={e => patchDoc({ monitoringNote: e.target.value })}
-                          rows={3}
-                          placeholder="조치 내용 요약 및 결과"
-                        />
-                      ) : (
-                        <span className="ra-cell-text">{view.monitoringNote}</span>
-                      )}
-                    </div>
-                  </div>
+                        <div className="ra-foot-row">
+                          <div className="ra-foot-label ra-foot-label-2">
+                            모니터링
+                            <br />
+                            실천통보
+                            <br />
+                            <span className="ra-foot-small">(조치내용/요약, 결과)</span>
+                          </div>
+                          <div className="ra-foot-value ra-foot-grow">
+                            {editing ? (
+                              <textarea
+                                className="ra-in ra-ta"
+                                value={view.monitoringNote}
+                                onChange={e => patchDoc({ monitoringNote: e.target.value })}
+                                rows={3}
+                                placeholder="조치 내용 요약 및 결과"
+                              />
+                            ) : (
+                              <span className="ra-cell-text">{view.monitoringNote}</span>
+                            )}
+                          </div>
+                        </div>
 
-                  <div className="ra-foot-signs">
-                    {['안전팀장', '상 무', '부 사장', '사 장'].map(role => (
-                      <div className="ra-foot-sign" key={role}>
-                        <span className="ra-foot-sign-role">{role}</span>
-                        <span className="ra-sign-line">(서명)</span>
+                        <div className="ra-foot-signs">
+                          {['안전팀장', '상 무', '부 사장', '사 장'].map(role => (
+                            <div className="ra-foot-sign" key={role}>
+                              <span className="ra-foot-sign-role">{role}</span>
+                              <span className="ra-sign-line">(서명)</span>
+                            </div>
+                          ))}
+                          <div className="ra-foot-sign ra-foot-note">
+                            <span className="ra-foot-sign-role">비고</span>
+                            {editing ? (
+                              <input
+                                className="ra-in"
+                                value={view.note}
+                                onChange={e => patchDoc({ note: e.target.value })}
+                              />
+                            ) : (
+                              <span className="ra-cell-text">{view.note}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="ra-foot-grade">
+                          <span className="ra-foot-grade-title">
+                            등급설정 : 하(일상관리), 상(중점관리)
+                          </span>
+                          <span className="ra-foot-grade-item">가) 강도/빈도 — 1(하) · 2(상)</span>
+                          <span className="ra-foot-grade-item">나) 평가합계 — 하(2~3) · 상(4)</span>
+                        </div>
+
+                        <div className="ra-foot-foot">
+                          <span>양식 SCM-002-1.01</span>
+                          <span className="ra-foot-company">구 보 공 영 (주)</span>
+                          <span>A4(297x210)</span>
+                        </div>
                       </div>
-                    ))}
-                    <div className="ra-foot-sign ra-foot-note">
-                      <span className="ra-foot-sign-role">비고</span>
-                      {editing ? (
-                        <input
-                          className="ra-in"
-                          value={view.note}
-                          onChange={e => patchDoc({ note: e.target.value })}
-                        />
-                      ) : (
-                        <span className="ra-cell-text">{view.note}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="ra-foot-grade">
-                    <span className="ra-foot-grade-title">등급설정 : 하(일상관리), 상(중점관리)</span>
-                    <span className="ra-foot-grade-item">가) 강도/빈도 — 1(하) · 2(상)</span>
-                    <span className="ra-foot-grade-item">나) 평가합계 — 하(2~3) · 상(4)</span>
-                  </div>
-
-                  <div className="ra-foot-foot">
-                    <span>양식 SCM-002-1.01</span>
-                    <span className="ra-foot-company">구 보 공 영 (주)</span>
-                    <span>A4(297x210)</span>
-                  </div>
-                </div>
                     )}
                   </div>
                 </section>
@@ -951,10 +987,7 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({ siteId, siteName }) => 
                     ⬇️ 내려받기
                   </button>
                   {canManage && (
-                    <button
-                      className="btn btn-sm ra-btn-del"
-                      onClick={() => removeAttachment(att)}
-                    >
+                    <button className="btn btn-sm ra-btn-del" onClick={() => removeAttachment(att)}>
                       삭제
                     </button>
                   )}

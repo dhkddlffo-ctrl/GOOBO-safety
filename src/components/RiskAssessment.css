@@ -382,9 +382,45 @@
 }
 
 .ra-c-no {
+  position: relative;
   text-align: center;
   font-size: 0.5625rem;
   color: #6b7280;
+}
+
+.ra-no-val {
+  display: block;
+}
+
+/*
+ * 행 개별 삭제 버튼 (편집 중에만 표시)
+ * No 칸(3%) 폭을 그대로 두기 위해 표 흐름에서 빼고 모서리에 겹쳐 놓습니다.
+ */
+.ra-row-x {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  z-index: 2;
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.ra-row-x:hover {
+  color: #fff;
+  background: #dc2626;
+  border-color: #dc2626;
 }
 
 .ra-c-hazard,
@@ -887,7 +923,8 @@
   .ra-saved,
   .ra-summary,
   .ra-empty,
-  .ra-attach {
+  .ra-attach,
+  .ra-row-x {
     display: none !important;
   }
 

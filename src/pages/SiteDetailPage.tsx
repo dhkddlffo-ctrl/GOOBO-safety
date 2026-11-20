@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Site, SiteInfo, SiteDocument, SiteStaff, STAFF_ROLES, StaffRole } from '../types';
-import { getSites, getSuggestions, getWorkStops, getAccidentCases, formatDate } from '../utils/storage';
+import {
+  getSites,
+  getSuggestions,
+  getWorkStops,
+  getAccidentCases,
+  formatDate,
+} from '../utils/storage';
 import {
   getSiteInfo,
   saveSiteInfo,
@@ -89,14 +95,13 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
    *  (Rules of Hooks: 조기 return 이전에 모든 훅이 호출되어야 함) */
   const summaryCategories = useMemo(
     () => getCategoriesWithOrphans(docs.map(d => d.category)),
-    [categories, docs]
+    [categories, docs],
   );
 
   /** 안전인력 직무교육·선임 상태 요약 (조기 return 이전에 훅 호출) */
   const staffSummary = useMemo(
-    () =>
-      summarizeSite(siteId ?? 0, site?.name ?? '', siteInfo?.staff ?? []),
-    [siteId, site?.name, siteInfo?.staff]
+    () => summarizeSite(siteId ?? 0, site?.name ?? '', siteInfo?.staff ?? []),
+    [siteId, site?.name, siteInfo?.staff],
   );
 
   if (!site) {
@@ -342,7 +347,10 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                   <InfoRow label="현장주소" value={siteInfo?.siteAddress} />
                   <InfoRow label="현장 사무실 연락처" value={siteInfo?.officePhone} />
                   <InfoRow label="안전관리자 연락처" value={siteInfo?.safetyManagerPhone} />
-                  <InfoRow label="현재 인원" value={siteInfo?.workerCount ? `${siteInfo.workerCount}명` : ''} />
+                  <InfoRow
+                    label="현재 인원"
+                    value={siteInfo?.workerCount ? `${siteInfo.workerCount}명` : ''}
+                  />
                 </div>
 
                 {siteInfo?.notes && (
@@ -365,7 +373,10 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                         현장소장 · 안전보건관리책임자 · 안전관리자 · 관리감독자
                       </p>
                     </div>
-                    <button className="btn btn-secondary btn-sm" onClick={() => openStaffAddFor('안전관리자')}>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => openStaffAddFor('안전관리자')}
+                    >
                       ＋ 관리자 추가
                     </button>
                   </div>
@@ -378,7 +389,9 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                         <strong>직무교육 점검이 필요한 인력 {staffSummary.issues}명</strong>
                         <span className="sd-dd-summary-detail">
                           {staffSummary.expired > 0 && `만료 ${staffSummary.expired}명`}
-                          {staffSummary.expired > 0 && (staffSummary.soon > 0 || staffSummary.missing > 0) && ' · '}
+                          {staffSummary.expired > 0 &&
+                            (staffSummary.soon > 0 || staffSummary.missing > 0) &&
+                            ' · '}
                           {staffSummary.soon > 0 && `만료임박 ${staffSummary.soon}명`}
                           {staffSummary.soon > 0 && staffSummary.missing > 0 && ' · '}
                           {staffSummary.missing > 0 && `미입력 ${staffSummary.missing}명`}
@@ -434,84 +447,83 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                                 const apptMissing = isAppointmentMissing(staff);
                                 const supMissing = isSupervisorTrainingMissing(staff);
                                 return (
-                                <div
-                                  key={staff.id}
-                                  className={`sd-staff-row is-${dc.level}`}
-                                >
-                                  <div className="sd-staff-main">
-                                    <span className="sd-staff-name">{staff.name || '성명 미입력'}</span>
-                                    {staff.phone && (
-                                      <span className="sd-staff-phone">☎ {staff.phone}</span>
-                                    )}
-                                    {isSupervisor && (
-                                      <span
-                                        className={`sd-staff-badge ${
-                                          staff.newTraining8h ? 'on' : 'off'
-                                        }`}
-                                      >
-                                        신규교육 8시간 {staff.newTraining8h ? 'O' : 'X'}
+                                  <div key={staff.id} className={`sd-staff-row is-${dc.level}`}>
+                                    <div className="sd-staff-main">
+                                      <span className="sd-staff-name">
+                                        {staff.name || '성명 미입력'}
                                       </span>
-                                    )}
-                                    {/* 직무교육 유효기간 D-day — 직무교육 대상자에게만 표시 */}
-                                    {dc.level !== 'none' && (
-                                      <span
-                                        className={`sd-dd sd-dd-${dc.level}`}
-                                        title={dc.message}
-                                      >
-                                        {dc.label === '해임' ? '해임' : `교육 ${dc.label}`}
-                                      </span>
-                                    )}
-                                    {apptMissing && (
-                                      <span
-                                        className="sd-dd sd-dd-missing"
-                                        title="선임일(지정일)이 입력되지 않았습니다."
-                                      >
-                                        선임일 미입력
-                                      </span>
-                                    )}
-                                    {supMissing && (
-                                      <span
-                                        className="sd-dd sd-dd-expired"
-                                        title="관리감독자 신규교육(8시간) 미이수"
-                                      >
-                                        신규교육 미이수
-                                      </span>
-                                    )}
-                                  </div>
+                                      {staff.phone && (
+                                        <span className="sd-staff-phone">☎ {staff.phone}</span>
+                                      )}
+                                      {isSupervisor && (
+                                        <span
+                                          className={`sd-staff-badge ${
+                                            staff.newTraining8h ? 'on' : 'off'
+                                          }`}
+                                        >
+                                          신규교육 8시간 {staff.newTraining8h ? 'O' : 'X'}
+                                        </span>
+                                      )}
+                                      {/* 직무교육 유효기간 D-day — 직무교육 대상자에게만 표시 */}
+                                      {dc.level !== 'none' && (
+                                        <span
+                                          className={`sd-dd sd-dd-${dc.level}`}
+                                          title={dc.message}
+                                        >
+                                          {dc.label === '해임' ? '해임' : `교육 ${dc.label}`}
+                                        </span>
+                                      )}
+                                      {apptMissing && (
+                                        <span
+                                          className="sd-dd sd-dd-missing"
+                                          title="선임일(지정일)이 입력되지 않았습니다."
+                                        >
+                                          선임일 미입력
+                                        </span>
+                                      )}
+                                      {supMissing && (
+                                        <span
+                                          className="sd-dd sd-dd-expired"
+                                          title="관리감독자 신규교육(8시간) 미이수"
+                                        >
+                                          신규교육 미이수
+                                        </span>
+                                      )}
+                                    </div>
 
-                                  <div className="sd-staff-dates">
-                                    <span className="sd-staff-date">
-                                      {isSupervisor ? '지정일' : '선임일'}{' '}
-                                      <strong>{staff.appointedAt || '-'}</strong>
-                                    </span>
-                                    <span className="sd-staff-date">
-                                      해임일 <strong>{staff.dismissedAt || '-'}</strong>
-                                    </span>
-                                    {/* 관리감독자는 직무교육 대상이 아니므로 표시하지 않습니다 */}
-                                    {!isSupervisor && (
+                                    <div className="sd-staff-dates">
                                       <span className="sd-staff-date">
-                                        직무교육 <strong>{staff.trainingDate || '-'}</strong>
+                                        {isSupervisor ? '지정일' : '선임일'}{' '}
+                                        <strong>{staff.appointedAt || '-'}</strong>
                                       </span>
-                                    )}
-                                  </div>
+                                      <span className="sd-staff-date">
+                                        해임일 <strong>{staff.dismissedAt || '-'}</strong>
+                                      </span>
+                                      {/* 관리감독자는 직무교육 대상이 아니므로 표시하지 않습니다 */}
+                                      {!isSupervisor && (
+                                        <span className="sd-staff-date">
+                                          직무교육 <strong>{staff.trainingDate || '-'}</strong>
+                                        </span>
+                                      )}
+                                    </div>
 
-                                  {staff.note && <p className="sd-staff-note">{staff.note}</p>}
+                                    {staff.note && <p className="sd-staff-note">{staff.note}</p>}
 
-                                  <div className="sd-staff-actions">
-                                    <button
-                                      className="sd-staff-btn"
-                                      onClick={() => openStaffEdit(staff)}
-                                    >
-                                      수정
-                                    </button>
-                                    <button
-                                      className="sd-staff-btn danger"
-                                      onClick={() => deleteStaff(staff)}
-                                    >
-                                      삭제
-                                    </button>
+                                    <div className="sd-staff-actions">
+                                      <button
+                                        className="sd-staff-btn"
+                                        onClick={() => openStaffEdit(staff)}
+                                      >
+                                        수정
+                                      </button>
+                                      <button
+                                        className="sd-staff-btn danger"
+                                        onClick={() => deleteStaff(staff)}
+                                      >
+                                        삭제
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
                                 );
                               })
                             )}
@@ -766,8 +778,8 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               <div>
                 <h2>⚠️ 위험성평가표 / 등록부</h2>
                 <p className="sd-panel-sub">
-                  회사 양식(SCM-002-1.01) 그대로 작성하고 A4 가로 2장으로 인쇄할 수 있습니다.
-                  강도·빈도를 고르면 평가합계와 등급이 자동 계산됩니다.
+                  회사 양식(SCM-002-1.01) 그대로 작성하고 A4 가로로 인쇄할 수 있습니다. 강도·빈도를
+                  고르면 평가합계와 등급이 자동 계산됩니다.
                 </p>
               </div>
             </div>
@@ -784,7 +796,10 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
             </div>
 
             <div className="sd-activity-grid">
-              <button className="sd-activity-card" onClick={() => onNavigate('suggestion', site.id)}>
+              <button
+                className="sd-activity-card"
+                onClick={() => onNavigate('suggestion', site.id)}
+              >
                 <span className="sd-activity-icon">💡</span>
                 <span className="sd-activity-value">{activity.suggestions}</span>
                 <span className="sd-activity-label">건의사항</span>
@@ -796,7 +811,10 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                 <span className="sd-activity-label">작업중지권 요청</span>
               </button>
 
-              <button className="sd-activity-card" onClick={() => onNavigate('accident-case', site.id)}>
+              <button
+                className="sd-activity-card"
+                onClick={() => onNavigate('accident-case', site.id)}
+              >
                 <span className="sd-activity-icon">⚠️</span>
                 <span className="sd-activity-value">{activity.accidents}</span>
                 <span className="sd-activity-label">사고사례</span>
@@ -863,7 +881,9 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               </FormField>
 
               <div className="sd-form-row">
-                <FormField label={staffDraft.role === '관리감독자' ? '관리감독자 지정일' : '선임일'}>
+                <FormField
+                  label={staffDraft.role === '관리감독자' ? '관리감독자 지정일' : '선임일'}
+                >
                   <input
                     type="date"
                     value={staffDraft.appointedAt ?? ''}
@@ -898,9 +918,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                     onChange={e => setStaffField('newTraining8h', e.target.checked)}
                   />
                   <span>관리감독자 신규교육(8시간) 이수</span>
-                  <span
-                    className={`sd-staff-badge ${staffDraft.newTraining8h ? 'on' : 'off'}`}
-                  >
+                  <span className={`sd-staff-badge ${staffDraft.newTraining8h ? 'on' : 'off'}`}>
                     {staffDraft.newTraining8h ? 'O' : 'X'}
                   </span>
                 </label>
