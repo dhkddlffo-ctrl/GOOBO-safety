@@ -139,21 +139,24 @@ export const resolveTierLayout = (tier: OrgTier): OrgTier => {
 /* ------------------------------------------------------------------ */
 
 /** 현재 기본 서식 버전 (구버전 저장 데이터는 자동으로 새 구조로 이전) */
-export const LAYOUT_VERSION = 2;
+export const LAYOUT_VERSION = 3;
 
 /**
- * 첨부자료(안전조직도)의 계층 구성 — 위에서 아래로 한 줄기로 내려옵니다.
+ * 첨부자료(안전조직도)의 계층 구성.
+ *
+ * 현장 조직은 위에서 아래로 한 줄기(대표이사 → 현장 PM → …)로 내려오고,
+ * **본사 안전팀은 그 줄기에서 옆으로 갈라져 나오는 참모 조직**으로 배치합니다.
  *   ① 대표이사
- *   ② 본사 안전팀                          — 항상 가운데 (pinCenter)
- *   ③ 현장 PM
- *   ④ 안전보건관리책임자(현장소장)          — 항상 가운데 (pinCenter)
- *   ⑤ 안전관리자
- *   ⑥ 관리감독자(공사) · (공무) · (품질)    — 3칸으로 펼침
+ *   ② ┌ 현장 PM                      — 줄기, 항상 가운데 (pinCenter)
+ *      └ 본사 안전팀                  — 현장 PM 오른쪽 가지
+ *   ③ 안전보건관리책임자(현장소장)    — 항상 가운데 (pinCenter)
+ *   ④ 안전관리자
+ *   ⑤ 관리감독자(공사) · (공무) · (품질) — 3칸으로 펼침
  *
  * `col` 은 단(段) 안에서의 가로 칸 번호(0부터), `cols` 는 그 단의 전체 칸 수입니다.
+ * ②단은 3칸으로 두어 현장 PM 이 정확히 가운데(1번 칸, 50%)에 오고,
+ * 본사 안전팀은 그 오른쪽 칸(2번 칸, 83%)에 놓여 옆 가지로 보입니다.
  * 상자가 1개뿐인 단은 1칸으로 두어 자동으로 정중앙에 놓입니다.
- * 본사 안전팀·안전보건관리책임자는 `pinCenter` 로 고정해, 칸을 늘리거나
- * 다른 상자를 추가해도 항상 가운데를 지킵니다.
  */
 const defaultTiers = (): OrgTier[] => [
   /* ① 대표이사 */
@@ -174,29 +177,10 @@ const defaultTiers = (): OrgTier[] => [
     ],
     1
   ),
-  /* ② 본사 안전팀 */
-  createOrgTier(
-    'center',
-    [
-      createOrgUnit(
-        '본사 안전팀',
-        [
-          createOrgMember('전무', '권기원', [
-            '전사 안전보건계획 수립·이행 점검',
-            '안전보건 교육·기술 지원',
-          ]),
-          createOrgMember('팀장', '왕일래', [
-            '현장 안전보건 순회점검',
-            '재해조사 및 재발방지대책 수립 지원',
-          ]),
-        ],
-        0,
-        true // 본사 안전팀은 항상 가운데
-      ),
-    ],
-    1
-  ),
-  /* ③ 현장 PM */
+  /* ② 현장 PM  ─┬─  본사 안전팀 (오른쪽 옆 가지)
+     한 단에 두 상자를 두어, 세로 줄기(현장 PM)에서 가로선이 갈라져
+     본사 안전팀으로 이어지도록 합니다.
+     - 3칸 중 현장 PM 은 가운데(1번 칸, 50%), 본사 안전팀은 오른쪽(2번 칸, 83%) */
   createOrgTier(
     'center',
     [
@@ -209,12 +193,27 @@ const defaultTiers = (): OrgTier[] => [
             '현장 안전보건 성과 평가',
           ]),
         ],
-        0
+        1,
+        true // 현장 PM 은 세로 줄기의 중심 → 항상 가운데
+      ),
+      createOrgUnit(
+        '본사 안전팀',
+        [
+          createOrgMember('전무', '권기원', [
+            '전사 안전보건계획 수립·이행 점검',
+            '안전보건 교육·기술 지원',
+          ]),
+          createOrgMember('팀장', '왕일래', [
+            '현장 안전보건 순회점검',
+            '재해조사 및 재발방지대책 수립 지원',
+          ]),
+        ],
+        2 // 현장 PM 오른쪽 칸 → 옆 가지로 표시
       ),
     ],
-    1
+    3
   ),
-  /* ④ 안전보건관리책임자(현장소장) */
+  /* ③ 안전보건관리책임자(현장소장) */
   createOrgTier(
     'center',
     [
@@ -433,8 +432,88 @@ const migrateLegacyChart = (chart: SiteOrgChart): SiteOrgChart => {
   return { ...chart, tiers, layoutVersion: LAYOUT_VERSION };
 };
 
+/* ------------------------------------------------------------------ */
+/* v2 → v3 이전 (본사 안전팀을 별도 단 → 현장 PM 옆 가지로)              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * v2 서식에서는 '본사 안전팀'이 현장 PM **위의 독립된 단**으로 있었습니다.
+ * v3 부터는 현장 PM 과 같은 단에 놓여 옆 가지로 표시되므로,
+ * 저장된 조직도를 새 배치로 옮겨 줍니다.
+ *
+ * - 현장 PM 이 있는 단을 찾아 본사 안전팀을 그 단의 오른쪽 칸으로 합칩니다.
+ * - **성명·연락처·담당업무는 그대로 보존**합니다.
+ * - 사용자가 직접 단을 옮겨 놓은 경우(현장 PM 과 본사 안전팀이 이미 같은 단)는
+ *   손대지 않습니다.
+ */
+const migrateSafetyTeamToSideBranch = (chart: SiteOrgChart): SiteOrgChart => {
+  if ((chart.layoutVersion ?? 0) >= LAYOUT_VERSION) return chart;
+
+  const tiers = (Array.isArray(chart.tiers) ? chart.tiers : []).map(t => ({
+    ...t,
+    units: Array.isArray(t.units) ? t.units : [],
+  }));
+
+  const isSafetyTeam = (u: OrgUnit) => normTitle(u.title) === '본사안전팀';
+  const isSitePm = (u: OrgUnit) => normTitle(u.title) === '현장pm';
+
+  /* 이미 같은 단에 있으면(사용자가 직접 배치) 건드리지 않습니다. */
+  const alreadySideBySide = tiers.some(
+    t => t.units.some(isSafetyTeam) && t.units.some(isSitePm)
+  );
+  if (alreadySideBySide) return { ...chart, layoutVersion: LAYOUT_VERSION };
+
+  const teamTierIndex = tiers.findIndex(t => t.units.some(isSafetyTeam));
+  const pmTierIndex = tiers.findIndex(t => t.units.some(isSitePm));
+  if (teamTierIndex < 0 || pmTierIndex < 0) {
+    return { ...chart, layoutVersion: LAYOUT_VERSION };
+  }
+
+  const teamUnit = tiers[teamTierIndex].units.find(isSafetyTeam);
+  if (!teamUnit) return { ...chart, layoutVersion: LAYOUT_VERSION };
+
+  /* 현장 PM 이 있는 단에 본사 안전팀을 오른쪽 칸으로 합칩니다.
+     - 가운데 고정(pinCenter) 상자가 있으므로 홀수 칸을 유지합니다.
+     - 현장 PM 은 가운데, 본사 안전팀은 바로 오른쪽 칸. */
+  const pmTier = tiers[pmTierIndex];
+  const others = pmTier.units.filter(u => !isSafetyTeam(u));
+  const hasPin = others.some(u => u.pinCenter);
+
+  let cols = Math.max(others.length + 1, 3);
+  if (hasPin && cols % 2 === 0) cols += 1;
+
+  const mid = centerColOf(cols);
+  const mergedTier: OrgTier = {
+    ...pmTier,
+    cols,
+    units: others.map(u => {
+      if (!u.pinCenter) {
+        /* 가운데 고정 상자는 그 자리에, 나머지는 가운데를 피해 왼쪽부터 */
+        return u;
+      }
+      return { ...u, col: mid };
+    }),
+  };
+  mergedTier.units = [
+    ...mergedTier.units,
+    { ...teamUnit, col: mid + 1, pinCenter: undefined },
+  ];
+
+  const nextTiers = tiers
+    .map((t, i) => {
+      if (i === pmTierIndex) return resolveTierLayout(mergedTier);
+      /* 원래 단에서 본사 안전팀 상자를 빼냅니다 (복사가 아니라 이동). */
+      if (i === teamTierIndex) return { ...t, units: t.units.filter(u => !isSafetyTeam(u)) };
+      return t;
+    })
+    /* 본사 안전팀이 빠져 빈 단이 되면 제거합니다. */
+    .filter((t, i) => i !== teamTierIndex || t.units.length > 0);
+
+  return { ...chart, tiers: nextTiers, layoutVersion: LAYOUT_VERSION };
+};
+
 const normalize = (chart: SiteOrgChart, siteId: number, siteName: string): SiteOrgChart => {
-  const migrated = migrateLegacyChart(chart);
+  const migrated = migrateSafetyTeamToSideBranch(migrateLegacyChart(chart));
   return {
     ...createEmptyOrgChart(siteId, siteName),
     ...migrated,

@@ -595,8 +595,10 @@
     padding: 0 !important;
   }
 
-  /* 앱 본체는 인쇄에서 제외 (서류만 출력) */
-  #root {
+  /* 앱 본체는 인쇄에서 제외 (사고 관련 서류만 출력)
+     ⚠️ 무조건 #root 를 숨기면 조직도·비상연락망 등 다른 화면을 인쇄할 때
+        백지가 나옵니다. 이 서류가 열려 있을 때(포털이 body 에 붙었을 때)만 숨깁니다. */
+  body:has(.accident-report-portal) #root {
     display: none !important;
   }
 
