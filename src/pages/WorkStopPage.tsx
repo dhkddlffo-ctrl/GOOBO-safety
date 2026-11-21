@@ -42,10 +42,10 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
     setUploading(true);
 
     const newImages: string[] = [];
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
+
       // 파일 크기 체크 (5MB)
       if (file.size > 5 * 1024 * 1024) {
         alert(`${file.name}은(는) 5MB를 초과합니다.`);
@@ -69,7 +69,7 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
 
     setImages(prev => [...prev, ...newImages]);
     setUploading(false);
-    
+
     // input 초기화
     e.target.value = '';
   };
@@ -122,7 +122,7 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -139,7 +139,8 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
             <div className="success-icon">🛑</div>
             <h2>작업중지권이 행사되었습니다</h2>
             <p>
-              안전관리팀에 즉시 통보되었습니다.<br />
+              안전관리팀에 즉시 통보되었습니다.
+              <br />
               담당자가 곧 현장으로 출동할 예정입니다.
             </p>
             <div className="emergency-info">
@@ -152,13 +153,10 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
               </ul>
             </div>
             <div className="success-actions">
-              <button 
-                className="btn btn-danger"
-                onClick={() => onNavigate('home')}
-              >
+              <button className="btn btn-danger" onClick={() => onNavigate('home')}>
                 홈으로 돌아가기
               </button>
-              <button 
+              <button
                 className="btn btn-secondary"
                 onClick={() => {
                   setSubmitted(false);
@@ -190,15 +188,15 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
           <button className="back-button" onClick={() => onNavigate('home')}>
             ← 뒤로가기
           </button>
-          <h1>🛑 작업중지권 행사</h1>
+          <h1>작업중지권 행사</h1>
           <p>위험 상황을 발견하셨나요? 즉시 신고해주세요.</p>
         </div>
 
         <div className="warning-box">
-          <h3>⚠️ 작업중지권이란?</h3>
+          <h3>작업중지권이란?</h3>
           <p>
-            근로자가 산업재해가 발생할 급박한 위험이 있는 경우,
-            작업을 중지하고 대피할 수 있는 권리입니다.
+            근로자가 산업재해가 발생할 급박한 위험이 있는 경우, 작업을 중지하고 대피할 수 있는
+            권리입니다.
           </p>
           <ul>
             <li>중대재해처벌법 제4조에 근거한 법적 권리</li>
@@ -210,7 +208,7 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
         <form className="work-stop-form" onSubmit={handleSubmit}>
           <div className="form-section">
             <h3>기본 정보</h3>
-            
+
             <div className="form-group">
               <label htmlFor="siteId">현장 선택 *</label>
               <select
@@ -273,7 +271,7 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
 
           <div className="form-section">
             <h3>위험 상황</h3>
-            
+
             <div className="form-group">
               <label htmlFor="dangerType">위험 유형 *</label>
               <select
@@ -351,11 +349,11 @@ const WorkStopPage: React.FC<WorkStopPageProps> = ({ onNavigate, preselectedSite
               <input
                 type="checkbox"
                 checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
+                onChange={e => setConfirmed(e.target.checked)}
               />
               <span>
-                위 내용이 사실이며, 작업중지권 행사에 동의합니다.
-                신고 내용이 허위일 경우 관련 법령에 따라 처벌받을 수 있음을 인지하였습니다.
+                위 내용이 사실이며, 작업중지권 행사에 동의합니다. 신고 내용이 허위일 경우 관련
+                법령에 따라 처벌받을 수 있음을 인지하였습니다.
               </span>
             </label>
           </div>

@@ -8,6 +8,7 @@ import SiteDetailPage from './pages/SiteDetailPage';
 import HqBoardPage from './pages/HqBoardPage';
 import AdminPage from './pages/AdminPage';
 import LoginModal from './components/LoginModal';
+import Icon from './components/Icon';
 import { isAuthenticated, logout } from './utils/auth';
 import { countNewHqPosts, HQ_CHANGED_EVENT, markHqSeen } from './utils/hqStorage';
 import './App.css';
@@ -158,20 +159,25 @@ function App() {
               className={`nav-link${currentPage === 'hq' ? ' is-active' : ''}`}
               onClick={() => navigate('hq')}
             >
-              📢 본사 게시판
+              <Icon name="megaphone" size={15} />
+              본사 게시판
               {newHqCount > 0 && <span className="nav-badge">{newHqCount}</span>}
             </button>
             <button
               className={`nav-link${currentPage === 'documents' ? ' is-active' : ''}`}
               onClick={() => navigate('documents')}
             >
-              📁 현장문서
+              <Icon name="folder" size={15} />
+              현장문서
             </button>
           </nav>
           <div className="auth-section">
             {isLoggedIn ? (
               <div className="user-menu">
-                <span className="admin-badge">👤 관리자</span>
+                <span className="admin-badge">
+                  <Icon name="shield" size={13} />
+                  관리자
+                </span>
                 <button className="btn-logout" onClick={handleLogout}>
                   로그아웃
                 </button>

@@ -1,46 +1,60 @@
 /* ================= 본사 게시판 ================= */
 .hq-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: var(--canvas, #f6f7f9);
   padding: 2rem 0 4rem;
 }
 
 .hq-page .page-header {
-  text-align: center;
-  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  margin-bottom: 1.75rem;
   position: relative;
 }
 
 .hq-page .back-button {
-  position: absolute;
-  left: 0;
-  top: 0;
-  background: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  position: static;
+  margin-left: -0.5rem;
+  margin-bottom: 0.625rem;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9375rem;
-  color: #4b5563;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mute, #6b7280);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .hq-page .back-button:hover {
-  background: #f3f4f6;
-  transform: translateX(-4px);
+  background: #ffffff;
+  border-color: var(--line2, #e5e7eb);
+  color: var(--ink, #111827);
+  transform: none;
 }
 
 .hq-page .page-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 0.5rem;
+  font-size: 1.625rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink, #111827);
+  line-height: 1.25;
 }
 
 .hq-page .page-header p {
-  color: #6b7280;
-  font-size: 1rem;
+  margin-top: 0.4375rem;
+  color: var(--mute, #6b7280);
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 
 /* ---------------- 요약 카드 ---------------- */

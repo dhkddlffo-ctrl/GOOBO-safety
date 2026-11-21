@@ -5,15 +5,41 @@
 }
 
 :root {
+  /* ---------- 브랜드 · 잉크 팔레트 ---------- */
+  --navy: #0c2a4d;
+  --navy-600: #14416f;
+  --navy-300: #b9c7d8;
+  --ink: #111827;
+  --ink2: #374151;
+  --mute: #6b7280;
+  --faint: #9ca3af;
+  --line: #ebeef2;
+  --line2: #e5e7eb;
+  --canvas: #f6f7f9;
+  --surface: #ffffff;
+  --blue: #2563eb;
+  --red: #dc2626;
+  --amber: #b45309;
+  --green: #047857;
+  --gold: #f0b429;
+
+  /* ---------- 형태 · 그림자 ---------- */
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 11px;
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.05);
+  --shadow-2: 0 4px 12px rgba(16, 24, 40, 0.06), 0 2px 4px rgba(16, 24, 40, 0.04);
+
+  /* ---------- 기존 페이지 호환 별칭 ---------- */
   --primary-color: #2563eb;
   --primary-dark: #1e40af;
   --secondary-color: #10b981;
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
-  --text-primary: #1f2937;
+  --text-primary: #111827;
   --text-secondary: #6b7280;
   --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
+  --bg-secondary: #f6f7f9;
   --border-color: #e5e7eb;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -21,9 +47,10 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR';
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif, 'Apple SD Gothic Neo', 'Malgun Gothic',
+    'Noto Sans KR';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-secondary);
@@ -153,7 +180,9 @@ a {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive */

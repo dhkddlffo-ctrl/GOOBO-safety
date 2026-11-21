@@ -50,6 +50,7 @@ import DocumentArchive from '../components/DocumentArchive';
 import EmergencyPlan from '../components/EmergencyPlan';
 import SafetyOrgChart from '../components/SafetyOrgChart';
 import RiskAssessmentPane from '../components/RiskAssessmentPane';
+import Icon from '../components/Icon';
 import './SiteDetailPage.css';
 
 interface SiteDetailPageProps {
@@ -351,7 +352,10 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               <h1>{site.name}</h1>
               <span className="sd-status-badge">운영중</span>
             </div>
-            <p className="sd-location">📍 {site.location}</p>
+            <p className="sd-location">
+              <Icon name="pin" size={14} />
+              {site.location}
+            </p>
           </div>
 
           <div className="sd-header-stats">
@@ -370,43 +374,99 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
           </div>
         </div>
 
+        {/* ---------- 현장 바로가기 (홈 카드에서 이관) ----------
+            홈 현장 목록은 행 전체 클릭으로 상세 이동만 하고,
+            건의사항·작업중지·사고사례 같은 행동은 이 화면에서 고르도록 모았습니다. */}
+        <div className="sd-quick">
+          <button
+            type="button"
+            className="sd-quick-btn is-blue"
+            onClick={() => onNavigate('suggestion', site.id)}
+          >
+            <span className="sd-quick-icon">
+              <Icon name="bulb" size={17} />
+            </span>
+            <span className="sd-quick-body">
+              <strong>건의사항</strong>
+              <span>현장 개선사항 제안</span>
+            </span>
+            <span className="sd-quick-count">{activity.suggestions}</span>
+          </button>
+
+          <button
+            type="button"
+            className="sd-quick-btn is-red"
+            onClick={() => onNavigate('work-stop', site.id)}
+          >
+            <span className="sd-quick-icon">
+              <Icon name="shield" size={17} />
+            </span>
+            <span className="sd-quick-body">
+              <strong>작업중지</strong>
+              <span>급박한 위험 신고</span>
+            </span>
+            <span className="sd-quick-count">{activity.workStops}</span>
+          </button>
+
+          <button
+            type="button"
+            className="sd-quick-btn is-amber"
+            onClick={() => onNavigate('accident-case', site.id)}
+          >
+            <span className="sd-quick-icon">
+              <Icon name="alert" size={17} />
+            </span>
+            <span className="sd-quick-body">
+              <strong>사고사례</strong>
+              <span>사례 공유·제출</span>
+            </span>
+            <span className="sd-quick-count">{activity.accidents}</span>
+          </button>
+        </div>
+
         {/* 탭 */}
         <div className="sd-tabs">
           <button
             className={`sd-tab ${activeTab === 'info' ? 'active' : ''}`}
             onClick={() => changeTab('info')}
           >
-            🏗️ 현장정보
+            <Icon name="building" size={15} />
+            현장정보
           </button>
           <button
             className={`sd-tab ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => changeTab('documents')}
           >
-            📁 문서보관함 <span className="sd-tab-count">{docs.length}</span>
+            <Icon name="folder" size={15} />
+            문서보관함 <span className="sd-tab-count">{docs.length}</span>
           </button>
           <button
             className={`sd-tab ${activeTab === 'emergency' ? 'active' : ''}`}
             onClick={() => changeTab('emergency')}
           >
-            🚨 비상연락망
+            <Icon name="phone" size={15} />
+            비상연락망
           </button>
           <button
             className={`sd-tab ${activeTab === 'org' ? 'active' : ''}`}
             onClick={() => changeTab('org')}
           >
-            🏛️ 안전조직도
+            <Icon name="users" size={15} />
+            안전조직도
           </button>
           <button
             className={`sd-tab ${activeTab === 'risk' ? 'active' : ''}`}
             onClick={() => changeTab('risk')}
           >
-            ⚠️ 위험성평가
+            <Icon name="alert" size={15} />
+            위험성평가
           </button>
           <button
             className={`sd-tab ${activeTab === 'activity' ? 'active' : ''}`}
             onClick={() => changeTab('activity')}
           >
-            📋 안전활동
+            <Icon name="shield" size={15} />
+            안전활동
           </button>
         </div>
 
