@@ -462,104 +462,62 @@
 }
 
 /* ================================================================
-   게시판 — 올린 위험성평가 카드
+   게시판 — 표 한 줄 안의 이미지 미리보기
+   (이미지로 올린 자료도 같은 표에 한 줄로 표시합니다)
    ================================================================ */
-.rb-up {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  padding: 0.875rem 1rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
-}
 
-.rb-up-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.rb-up-title {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.rb-up-sub {
-  margin: 0.125rem 0 0;
-  font-size: 0.6875rem;
-  line-height: 1.6;
-  color: #64748b;
-}
-
-.rb-up-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: 0.625rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.rb-up-card {
-  display: flex;
-  gap: 0.625rem;
-  padding: 0.5rem;
-  background: #fafbfc;
-  border: 1px solid #e8edf4;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
-}
-
-.rb-up-card:hover {
-  background: #f1f6ff;
-  border-color: #bfdbfe;
-}
-
-.rb-up-thumb {
-  position: relative;
+/* 공사명 칸: [썸네일] [이미지 태그 + 제목] */
+.rb-c-title .rb-thumb {
+  display: inline-block;
   flex-shrink: 0;
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 2.375rem;
+  height: 1.875rem;
+  margin-right: 0.375rem;
   overflow: hidden;
-  background: #e2e8f0;
-  border-radius: 0.375rem;
+  vertical-align: middle;
+  background: #eef2f7;
+  border: 1px solid #dbe3ee;
+  border-radius: 0.1875rem;
 }
 
-.rb-up-thumb img {
+.rb-c-title .rb-thumb img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.rb-up-thumb-no {
-  position: absolute;
-  right: 0.1875rem;
-  bottom: 0.1875rem;
-  padding: 0 0.25rem;
-  font-size: 0.5625rem;
-  font-weight: 800;
-  color: #fff;
-  background: rgba(15, 23, 42, 0.72);
-  border-radius: 999px;
-}
-
-/* 미리보기를 아직 못 읽었을 때 */
-.rb-up-thumb-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.rb-thumb-empty {
+  display: block;
   width: 100%;
   height: 100%;
-  font-size: 0.625rem;
+  background: repeating-linear-gradient(45deg, #eef2f7, #eef2f7 4px, #e3e9f2 4px, #e3e9f2 8px);
+}
+
+.rb-c-title .rb-title-text {
+  display: inline;
+  vertical-align: middle;
+}
+
+/* '이미지' 표시 */
+.rb-up-tag {
+  display: inline-block;
+  margin-right: 0.3125rem;
+  padding: 0.0625rem 0.3125rem;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  line-height: 1.4;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.1875rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* 위험요인 칸의 'n장' — 숫자와 구분되게 작게 */
+.rb-c-sub {
+  font-size: 0.75rem;
   color: #64748b;
 }
 
@@ -577,33 +535,12 @@
   border-color: #60a5fa;
 }
 
-.rb-up-info {
+/* 비어 있음 — 작성 / 올리기 버튼 나란히 */
+.rb-empty-btns {
   display: flex;
-  flex-direction: column;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 0.1875rem;
-  min-width: 0;
-}
-
-.rb-up-name {
-  overflow: hidden;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: #0f172a;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rb-up-meta {
-  font-size: 0.6875rem;
-  line-height: 1.5;
-  color: #64748b;
-}
-
-.rb-up-actions {
-  display: flex;
-  gap: 0.25rem;
-  margin-top: 0.1875rem;
 }
 
 /* ================================================================
@@ -611,9 +548,7 @@
    ================================================================ */
 @media print {
   .ru-overlay,
-  .ruv-overlay,
-  .rb-up-actions,
-  .rb-up-card {
+  .ruv-overlay {
     display: none !important;
   }
 }
@@ -647,7 +582,10 @@
     flex: 1;
   }
 
-  .rb-up-list {
-    grid-template-columns: 1fr;
+  /* 좁은 화면에서는 표의 썸네일을 조금 줄입니다. */
+  .rb-c-title .rb-thumb {
+    width: 1.875rem;
+    height: 1.5rem;
+    margin-right: 0.25rem;
   }
 }

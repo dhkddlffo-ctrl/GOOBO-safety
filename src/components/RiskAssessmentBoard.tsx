@@ -7,8 +7,8 @@ import {
   deleteRiskAssessment,
   summarizeAssessment,
 } from '../utils/riskAssessmentStorage';
-import { deleteRiskUpload, getRiskUploads, getUploadTotalSize } from '../utils/riskUploadStorage';
-import { formatFileSize, getFile } from '../utils/documentStorage';
+import { deleteRiskUpload, getRiskUploads } from '../utils/riskUploadStorage';
+import { getFile } from '../utils/documentStorage';
 import RiskUploadDialog from './RiskUploadDialog';
 import RiskUploadViewer from './RiskUploadViewer';
 import { isAuthenticated } from '../utils/auth';
@@ -23,12 +23,12 @@ interface RiskAssessmentBoardProps {
 }
 
 /**
- * 올린 자료 카드의 첫 장 미리보기
+ * IndexedDB 에 저장된 이미지 1장
  *
  * 이미지 본문은 IndexedDB 에 있어서 그냥 <img src> 로는 열 수 없습니다.
- * 카드가 화면에 나타날 때 한 번 읽어 objectURL 로 바꿔 보여줍니다.
+ * 화면에 나타날 때 한 번 읽어 objectURL 로 바꿔 보여줍니다.
  */
-const UploadThumb: React.FC<{ storageKey: string; total: number }> = ({ storageKey, total }) => {
+const StoredImage: React.FC<{ storageKey: string; alt?: string }> = ({ storageKey, alt = '' }) => {
   const [url, setUrl] = useState('');
   const objectUrl = useRef('');
 
@@ -50,13 +50,12 @@ const UploadThumb: React.FC<{ storageKey: string; total: number }> = ({ storageK
     };
   }, [storageKey]);
 
-  return (
-    <span className="rb-up-thumb">
-      {url ? <img src={url} alt="" /> : <span className="rb-up-thumb-empty">이미지</span>}
-      <span className="rb-up-thumb-no">{total}장</span>
-    </span>
-  );
+  if (!url) return <span className="rb-thumb-empty" aria-hidden="true" />;
+  return <img src={url} alt={alt} />;
 };
+
+/** 등록부 한 줄 — 화면에서 작성한 서식이거나, 이미지로 올린 자료 */
+type BoardRow = { kind: 'form'; item: RiskAssessment } | { kind: 'upload'; item: RiskUpload };
 
 /** yyyy-mm-dd → yyyy.mm.dd */
 const formatDateKo = (ymd?: string): string => {
@@ -101,14 +100,34 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
     reload();
   }, [reload]);
 
+  /**
+   * 등록부 한 줄 목록 — 화면에서 작성한 서식과 이미지로 올린 자료를
+   * 작성일 최신순으로 한 표에 섞어 보여줍니다.
+   */
+  const rows = useMemo<BoardRow[]>(() => {
+    const merged: BoardRow[] = [
+      ...list.map(item => ({ kind: 'form' as const, item })),
+      ...uploads.map(item => ({ kind: 'upload' as const, item })),
+    ];
+    return merged.sort((a, b) => {
+      const da = a.item.writtenAt || '';
+      const db = b.item.writtenAt || '';
+      if (da !== db) return db.localeCompare(da);
+      /* 같은 날이면 나중에 등록한 것이 위로 */
+      return (b.item.createdAt || '').localeCompare(a.item.createdAt || '');
+    });
+  }, [list, uploads]);
+
   /** 최신 작성 건 기준 주기 상태 */
   const status = useMemo(() => {
-    if (list.length === 0) return null;
-    const latest = list.reduce((a, b) => (a.writtenAt >= b.writtenAt ? a : b));
-    const days = daysSince(latest.writtenAt);
+    if (rows.length === 0) return null;
+    const latest = rows.reduce((a, b) =>
+      (a.item.writtenAt || '') >= (b.item.writtenAt || '') ? a : b,
+    );
+    const days = daysSince(latest.item.writtenAt);
     if (days === null) return null;
-    return { writtenAt: latest.writtenAt, days, late: days > CYCLE_DAYS };
-  }, [list]);
+    return { writtenAt: latest.item.writtenAt, days, late: days > CYCLE_DAYS };
+  }, [rows]);
 
   /* 새 위험성평가 작성 → 저장 후 바로 편집 화면으로 */
   const createAssessment = () => {
@@ -216,18 +235,25 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
       )}
 
       {/* ---------- 비어 있음 ---------- */}
-      {list.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="rb-empty">
-          <p className="rb-empty-title">아직 작성한 위험성평가가 없습니다.</p>
+          <p className="rb-empty-title">아직 등록된 위험성평가가 없습니다.</p>
           <p className="rb-empty-sub">
             회사 양식(SCM-002-1.01)과 동일한 서식으로 작성하고 A4 가로로 인쇄할 수 있습니다.
             <br />
             강도·빈도를 고르면 <b>평가합계와 등급이 자동으로 계산</b>됩니다.
+            <br />
+            종이에 작성한 서식은 <b>🖼️ 위험성평가 올리기</b>로 사진을 올려도 됩니다.
           </p>
           {canManage ? (
-            <button className="btn btn-primary" onClick={createAssessment}>
-              ✍️ 위험성평가 작성
-            </button>
+            <div className="rb-empty-btns">
+              <button className="btn btn-primary" onClick={createAssessment}>
+                ✍️ 위험성평가 작성
+              </button>
+              <button className="btn rb-btn-upload" onClick={openUploadDialog}>
+                🖼️ 위험성평가 올리기
+              </button>
+            </div>
           ) : (
             <p className="rb-empty-note">관리자 로그인 후 작성할 수 있습니다.</p>
           )}
@@ -239,11 +265,11 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
               <col style={{ width: '7%' }} />
               <col style={{ width: '14%' }} />
               <col style={{ width: '12%' }} />
-              <col style={{ width: '26%' }} />
+              <col style={{ width: '24%' }} />
               <col style={{ width: '10%' }} />
               <col style={{ width: '9%' }} />
               <col style={{ width: '9%' }} />
-              <col style={{ width: '13%' }} />
+              <col style={{ width: '15%' }} />
             </colgroup>
             <thead>
               <tr>
@@ -258,19 +284,99 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
               </tr>
             </thead>
             <tbody>
-              {list.map((item, idx) => {
-                const sum = summarizeAssessment(item);
-                const elapsed = daysSince(item.writtenAt);
+              {rows.map((row, idx) => {
+                const no = rows.length - idx;
+                const writtenAt = row.item.writtenAt;
+                const elapsed = daysSince(writtenAt);
                 const late = elapsed !== null && elapsed > CYCLE_DAYS;
+
+                /* 이 줄의 날짜 칸 (두 종류가 함께 씀) */
+                const dateCell = (
+                  <td className="rb-c-date">
+                    <span>{formatDateKo(writtenAt) || '-'}</span>
+                    {elapsed !== null && elapsed >= 0 && (
+                      <span className={`rb-dday${late ? ' rb-dday-late' : ''}`}>D+{elapsed}</span>
+                    )}
+                  </td>
+                );
+
+                /* 이미지로 올린 자료 */
+                if (row.kind === 'upload') {
+                  const upload = row.item;
+                  return (
+                    <tr
+                      key={`up-${upload.id}`}
+                      className="rb-row rb-row-up"
+                      onClick={() => setViewUpload(upload)}
+                    >
+                      <td className="rb-c-no">{no}</td>
+                      {dateCell}
+                      <td className="rb-c-author">{upload.author || '-'}</td>
+                      <td className="rb-c-title">
+                        <span className="rb-thumb">
+                          {upload.pages[0] ? (
+                            <StoredImage
+                              storageKey={upload.pages[0].storageKey}
+                              alt={`${upload.title} 1장`}
+                            />
+                          ) : null}
+                        </span>
+                        <span className="rb-title-text">
+                          <span className="rb-up-tag">이미지</span>
+                          {upload.title || '제목 없음'}
+                        </span>
+                      </td>
+                      <td className="rb-c-num rb-c-sub">{upload.pages.length}장</td>
+                      <td className="rb-c-num">
+                        <span className="rb-zero">-</span>
+                      </td>
+                      <td className="rb-c-num">
+                        <span className="rb-zero">-</span>
+                      </td>
+                      <td className="rb-c-actions">
+                        <button
+                          className="btn btn-xs"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setViewUpload(upload);
+                          }}
+                        >
+                          열기
+                        </button>
+                        {canManage && (
+                          <button
+                            className="btn btn-xs"
+                            onClick={e => {
+                              e.stopPropagation();
+                              openUploadEdit(upload);
+                            }}
+                          >
+                            수정
+                          </button>
+                        )}
+                        {canManage && (
+                          <button
+                            className="btn btn-xs rb-btn-del"
+                            onClick={e => {
+                              e.stopPropagation();
+                              removeUpload(upload);
+                            }}
+                          >
+                            삭제
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                /* 화면에서 작성한 서식 */
+                const item = row.item;
+                const sum = summarizeAssessment(item);
                 return (
                   <tr key={item.id} className="rb-row" onClick={() => onOpen(item.id, false)}>
-                    <td className="rb-c-no">{list.length - idx}</td>
-                    <td className="rb-c-date">
-                      <span>{formatDateKo(item.writtenAt) || '-'}</span>
-                      {elapsed !== null && elapsed >= 0 && (
-                        <span className={`rb-dday${late ? ' rb-dday-late' : ''}`}>D+{elapsed}</span>
-                      )}
-                    </td>
+                    <td className="rb-c-no">{no}</td>
+                    {dateCell}
                     <td className="rb-c-author">{item.author || '-'}</td>
                     <td className="rb-c-title">{item.constructionName || '제목 없음'}</td>
                     <td className="rb-c-num">{sum.filled}건</td>
@@ -318,80 +424,11 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
         </div>
       )}
 
-      {/* ---------- 이미지로 올린 위험성평가 ---------- */}
-      {uploads.length > 0 && (
-        <section className="rb-up">
-          <div className="rb-up-head">
-            <div>
-              <h4 className="rb-up-title">🖼️ 올린 위험성평가 (이미지)</h4>
-              <p className="rb-up-sub">
-                종이에 작성한 위험성평가표를 사진으로 올린 자료입니다. 카드를 누르면 크게 볼 수
-                있습니다.
-              </p>
-            </div>
-            <span className="rb-count">올린 자료 {uploads.length}건</span>
-          </div>
-          <ul className="rb-up-list">
-            {uploads.map(item => (
-              <li
-                key={item.id}
-                className="rb-up-card"
-                onClick={() => setViewUpload(item)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setViewUpload(item);
-                  }
-                }}
-              >
-                {item.pages[0] ? (
-                  <UploadThumb storageKey={item.pages[0].storageKey} total={item.pages.length} />
-                ) : (
-                  <span className="rb-up-thumb">
-                    <span className="rb-up-thumb-empty">이미지</span>
-                  </span>
-                )}
-                <span className="rb-up-info">
-                  <span className="rb-up-name">{item.title || '제목 없음'}</span>
-                  <span className="rb-up-meta">
-                    {formatDateKo(item.writtenAt) || '-'}
-                    {item.author ? ` · ${item.author}` : ''}
-                  </span>
-                  <span className="rb-up-meta">
-                    {item.pages.length}장 · {formatFileSize(getUploadTotalSize(item))}
-                  </span>
-                  <span className="rb-up-actions" onClick={e => e.stopPropagation()}>
-                    <button className="btn btn-xs" onClick={() => setViewUpload(item)}>
-                      열기
-                    </button>
-                    {canManage && (
-                      <>
-                        <button className="btn btn-xs" onClick={() => openUploadEdit(item)}>
-                          수정
-                        </button>
-                        <button
-                          className="btn btn-xs rb-btn-del"
-                          onClick={() => removeUpload(item)}
-                        >
-                          삭제
-                        </button>
-                      </>
-                    )}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <p className="rb-note">
         ※ 글을 누르면 서식 화면이 열립니다. 서식 화면에서 <b>✏️ 수정</b> 후 저장하거나{' '}
         <b>🖨️ A4 인쇄</b>로 출력할 수 있습니다.
-        <br />※ 화면에 입력하기 어려우면 <b>🖼️ 위험성평가 올리기</b>로 종이 서식을 사진 찍어 올릴 수
-        있습니다.
+        <br />※ <b>이미지</b> 표시가 붙은 줄은 종이에 작성한 서식을 사진으로 올린 자료입니다. 누르면
+        크게 보고 내려받을 수 있습니다.
       </p>
 
       {/* ---------- 다이얼로그 / 보기 ---------- */}
