@@ -16,6 +16,18 @@ interface RiskUploadViewerProps {
 /** yyyy-mm-dd → yyyy.mm.dd */
 const fmtDate = (ymd: string): string => (ymd ? ymd.replace(/-/g, '.') : '');
 
+/** ISO 날짜 → yyyy.mm.dd hh:mm */
+const fmtAt = (iso: string): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getFullYear()}.${mm}.${dd} ${hh}:${mi}`;
+};
+
 /** 이미지 URL 1장 */
 interface LoadedPage {
   storageKey: string;
@@ -24,10 +36,14 @@ interface LoadedPage {
 }
 
 /**
- * 올린 위험성평가 보기
+ * 이미지로 올린 위험성평가 — 글 보기 화면
  *
- * 이미지로 올린 위험성평가표를 원본 크기로 쭉 이어 보여줍니다.
- * 각 장은 따로 내려받을 수 있고, 브라우저 인쇄로 종이 출력도 됩니다.
+ * 서식으로 작성한 글과 **같은 형태**로 열립니다.
+ * 게시판을 덮어쓰는 한 장짜리 글이고, 위에서 아래로 이미지를 이어서 보여준 뒤
+ * 맨 마지막에 댓글이 붙습니다. (다음카페 글처럼)
+ *
+ * 이미지 본문은 IndexedDB 에 있어서 그냥 <img src> 로는 열 수 없습니다.
+ * 화면에 나타날 때 한 번 읽어 objectURL 로 바꿔 보여줍니다.
  */
 const RiskUploadViewer: React.FC<RiskUploadViewerProps> = ({
   upload,
@@ -73,7 +89,7 @@ const RiskUploadViewer: React.FC<RiskUploadViewerProps> = ({
     };
   }, [upload]);
 
-  /* ESC 로 닫기 */
+  /* ESC 로 목록 돌아가기 */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -103,24 +119,21 @@ const RiskUploadViewer: React.FC<RiskUploadViewerProps> = ({
   const totalSize = upload.pages.reduce((sum, p) => sum + (p.fileSize || 0), 0);
 
   return (
-    <div
-      className="ruv-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label="올린 위험성평가 보기"
-      onClick={onClose}
-    >
-      <div className="ruv-modal" onClick={e => e.stopPropagation()}>
-        {/* ---------- 머리글 ---------- */}
+    <div className="ruv">
+      {/* ---------- 머리글 (인쇄에서는 숨김) ---------- */}
+      <div className="ruv-chrome">
         <div className="ruv-head">
-          <div>
-            <h3 className="ruv-title">🖼️ {upload.title || '위험성평가'}</h3>
+          <div className="ruv-head-text">
+            <h3 className="ruv-title">
+              <span className="ruv-tag">이미지</span>
+              {upload.title || '제목 없음'}
+            </h3>
             <p className="ruv-meta">
               {fmtDate(upload.writtenAt) || '-'}
               {upload.author && ` · ${upload.author}`}
               {` · ${upload.pages.length}장`}
               {totalSize > 0 && ` · ${formatFileSize(totalSize)}`}
-              {upload.note && ` · ${upload.note}`}
+              {upload.updatedAt && ` · ${fmtAt(upload.updatedAt)} 수정`}
             </p>
           </div>
 
@@ -141,41 +154,42 @@ const RiskUploadViewer: React.FC<RiskUploadViewerProps> = ({
               </button>
             )}
             <button type="button" className="btn btn-sm ruv-close" onClick={onClose}>
-              닫기
+              ← 목록
             </button>
           </div>
         </div>
 
-        {/* ---------- 이미지 ---------- */}
-        <div className="ruv-body">
-          {loading ? (
-            <p className="ruv-page-loading">이미지를 불러오는 중…</p>
-          ) : error ? (
-            <p className="ruv-page-loading">⚠️ {error}</p>
-          ) : (
-            pages.map((page, index) => (
-              <div className="ruv-page" key={page.storageKey}>
-                <div className="ruv-page-head">
-                  <span>
-                    {index + 1} / {pages.length}장
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-xs"
-                    onClick={() => download(page, index)}
-                  >
-                    ⬇️ 내려받기
-                  </button>
-                </div>
-                <img src={page.url} alt={`${index + 1}장`} />
-              </div>
-            ))
-          )}
-
-          {/* ---------- 댓글 ---------- */}
-          <CommentBox targetType="upload" targetId={upload.id} siteId={upload.siteId} />
-        </div>
+        {upload.note && <p className="ruv-note">📝 {upload.note}</p>}
       </div>
+
+      {/* ---------- 본문 (이미지를 위에서 아래로) ---------- */}
+      <div className="ruv-body">
+        {loading ? (
+          <p className="ruv-page-loading">이미지를 불러오는 중…</p>
+        ) : error ? (
+          <p className="ruv-page-loading">⚠️ {error}</p>
+        ) : (
+          pages.map((page, index) => (
+            <figure className="ruv-page" key={page.storageKey}>
+              <div className="ruv-page-head">
+                <span className="ruv-page-no">{index + 1}장</span>
+                <button type="button" className="btn btn-xs" onClick={() => download(page, index)}>
+                  ⬇️ 내려받기
+                </button>
+              </div>
+              <img src={page.url} alt={`${upload.title || '위험성평가'} ${index + 1}장`} />
+            </figure>
+          ))
+        )}
+      </div>
+
+      <p className="ruv-foot-note">
+        ※ 종이에 작성한 서식을 사진으로 올린 자료입니다. 위에서 아래로 이어서 보거나, 각 장을
+        내려받아 제출할 수 있습니다.
+      </p>
+
+      {/* ---------- 맨 마지막: 댓글 ---------- */}
+      <CommentBox targetType="upload" targetId={upload.id} siteId={upload.siteId} />
     </div>
   );
 };

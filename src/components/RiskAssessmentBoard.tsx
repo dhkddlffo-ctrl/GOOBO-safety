@@ -189,6 +189,19 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
     reload();
   };
 
+  /* ---------- 글 보기 (서식 글과 같은 방식) ---------- */
+  if (viewUpload) {
+    return (
+      <RiskUploadViewer
+        upload={viewUpload}
+        canManage={canManage}
+        onClose={() => setViewUpload(null)}
+        onEdit={() => openUploadEdit(viewUpload)}
+        onDelete={() => removeUpload(viewUpload)}
+      />
+    );
+  }
+
   return (
     <div className="rb">
       {/* ---------- 게시판 머리글 ---------- */}
@@ -431,7 +444,7 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
         크게 보고 내려받을 수 있습니다.
       </p>
 
-      {/* ---------- 다이얼로그 / 보기 ---------- */}
+      {/* ---------- 올리기 / 수정 다이얼로그 ---------- */}
       {uploadOpen && (
         <RiskUploadDialog
           siteId={siteId}
@@ -439,15 +452,6 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
           initial={editUpload}
           onClose={closeUploadDialog}
           onSaved={handleUploadSaved}
-        />
-      )}
-      {viewUpload && (
-        <RiskUploadViewer
-          upload={viewUpload}
-          canManage={canManage}
-          onClose={() => setViewUpload(null)}
-          onEdit={() => openUploadEdit(viewUpload)}
-          onDelete={() => removeUpload(viewUpload)}
         />
       )}
     </div>
