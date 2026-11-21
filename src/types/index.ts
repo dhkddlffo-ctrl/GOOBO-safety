@@ -565,6 +565,33 @@ export interface SafetySchedule {
   notes: Record<string, string>;
 }
 
+/** 공사 공정표 1행 (공종 1개) */
+export interface WorkScheduleRow {
+  id: string;
+  workType: string; // 공 종 (작업명)
+  location: string; // 작업 위치
+  worker: string; // 담당 (업체 / 팀)
+  startDate: string; // 작업 시작일 (yyyy-mm-dd) — 막대 시작
+  endDate: string; // 작업 종료일 (yyyy-mm-dd) — 막대 끝
+  note: string; // 비고
+}
+
+/**
+ * 공사 공정표 (A4 가로)
+ *
+ * 공종별 작업 기간을 일자 칸에 막대로 표시합니다.
+ * 본사 모니터링 확인 항목에 들어가는 서식입니다.
+ */
+export interface WorkSchedule {
+  title: string;
+  constructionName: string; // 현장명 / 공사명
+  writtenAt: string; // 작성일 (yyyy-mm-dd)
+  periodStart: string; // 공정 기간 시작 (yyyy-mm-dd)
+  periodEnd: string; // 공정 기간 종료 (yyyy-mm-dd)
+  approval: ApprovalLine;
+  rows: WorkScheduleRow[];
+}
+
 /**
  * 등록부 1건에 딸린 부속 서식 묶음.
  * '한곳에서 순서대로 작성'하는 마법사의 저장 단위입니다.
@@ -577,6 +604,8 @@ export interface ReportBundle {
   attendees: AttendeeList;
   /** 사진대지 2장 — [0] 회의(3페이지), [1] 모니터링 안전점검(4페이지) */
   photoSheets: PhotoSheet[];
+  /** 공사 공정표 (A4 가로) */
+  workSchedule: WorkSchedule;
   schedule: SafetySchedule;
   /** 게시글 등록 시각 (없으면 미등록) */
   registeredAt?: string;

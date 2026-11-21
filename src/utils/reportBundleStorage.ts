@@ -20,6 +20,8 @@ import {
   PhotoSheet,
   ReportBundle,
   SafetySchedule,
+  WorkSchedule,
+  WorkScheduleRow,
 } from '../types';
 
 const BUNDLE_KEY = 'gubo_report_bundles';
@@ -106,6 +108,45 @@ export const createEmptySafetySchedule = (): SafetySchedule => {
   };
 };
 
+/** 공정표 기본 행 수 */
+export const DEFAULT_WORK_ROWS = 8;
+
+export const createEmptyWorkScheduleRow = (): WorkScheduleRow => ({
+  id: newId(),
+  workType: '',
+  location: '',
+  worker: '',
+  startDate: '',
+  endDate: '',
+  note: '',
+});
+
+/** 이번 달 1일 / 말일 (yyyy-mm-dd) */
+const monthRange = (): { start: string; end: string } => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  return {
+    start: `${y}-${pad(m + 1)}-01`,
+    end: `${y}-${pad(m + 1)}-${pad(lastDay)}`,
+  };
+};
+
+export const createEmptyWorkSchedule = (siteName = ''): WorkSchedule => {
+  const range = monthRange();
+  return {
+    title: '',
+    constructionName: siteName,
+    writtenAt: today(),
+    periodStart: range.start,
+    periodEnd: range.end,
+    approval: { writer: '', reviewer: '', approver: '' },
+    rows: Array.from({ length: DEFAULT_WORK_ROWS }, () => createEmptyWorkScheduleRow()),
+  };
+};
+
 export const createEmptyBundle = (
   assessmentId: string,
   siteId: number,
@@ -120,6 +161,7 @@ export const createEmptyBundle = (
     createEmptyPhotoSheet(siteName, 'meeting'),
     createEmptyPhotoSheet(siteName, 'monitoring'),
   ],
+  workSchedule: createEmptyWorkSchedule(siteName),
   schedule: createEmptySafetySchedule(),
   updatedAt: new Date().toISOString(),
 });
@@ -128,12 +170,21 @@ export const createEmptyBundle = (
 /* 저장 / 불러오기                                                      */
 /* ------------------------------------------------------------------ */
 
+/**
+ * 예전에 저장한 묶음에는 공정표(workSchedule)가 없습니다.
+ * 읽어올 때 빈 공정표를 채워 넣어 화면이 깨지지 않게 합니다.
+ */
+const normalizeBundle = (bundle: ReportBundle): ReportBundle => {
+  if (bundle.workSchedule) return bundle;
+  return { ...bundle, workSchedule: createEmptyWorkSchedule(bundle.siteName) };
+};
+
 const readAll = (): ReportBundle[] => {
   const raw = localStorage.getItem(BUNDLE_KEY);
   if (!raw) return [];
   try {
     const all = JSON.parse(raw) as ReportBundle[];
-    return Array.isArray(all) ? all : [];
+    return Array.isArray(all) ? all.map(normalizeBundle) : [];
   } catch {
     return [];
   }
@@ -270,3 +321,66 @@ export const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] 
 
 /** 오늘 날짜 문자열 */
 export const todayString = today;
+
+/* ------------------------------------------------------------------ */
+/* 공사 공정표 — 날짜 축 헬퍼                                            */
+/* ------------------------------------------------------------------ */
+
+export interface WorkDayCell {
+  /** yyyy-mm-dd */
+  date: string;
+  day: number;
+  /** 0=일 … 6=토 */
+  weekday: number;
+}
+
+/** 공정표에 그릴 수 있는 최대 일수 (A4 가로 한 장에 들어가는 선) */
+export const MAX_WORK_DAYS = 31;
+
+const parseYmd = (ymd: string): Date | null => {
+  if (!ymd || ymd.length < 10) return null;
+  const d = new Date(`${ymd}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const toYmd = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(
+    2,
+    '0',
+  )}`;
+
+/**
+ * 공정 기간(시작~종료)을 하루 단위 칸으로 잘라 줍니다.
+ * 날짜가 잘못되었거나 기간이 뒤집혀 있으면 빈 배열을 돌려줍니다.
+ * 31일을 넘으면 한 장에 담을 수 없으므로 31일까지만 만듭니다.
+ */
+export const buildWorkDayAxis = (start: string, end: string): WorkDayCell[] => {
+  const from = parseYmd(start);
+  const to = parseYmd(end);
+  if (!from || !to || from > to) return [];
+
+  const cells: WorkDayCell[] = [];
+  const cursor = new Date(from);
+  while (cursor <= to && cells.length < MAX_WORK_DAYS) {
+    cells.push({ date: toYmd(cursor), day: cursor.getDate(), weekday: cursor.getDay() });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return cells;
+};
+
+/** 공정표 행의 막대가 해당 날짜에 걸치는지 */
+export const isDayInWork = (date: string, start: string, end: string): boolean => {
+  if (!date || !start || !end) return false;
+  return date >= start && date <= end;
+};
+
+/**
+ * 공정 기간이 실제로 며칠인지 셉니다.
+ * (MAX_WORK_DAYS 를 넘어 잘렸는지 안내하는 데 씁니다)
+ */
+export const countWorkDays = (start: string, end: string): number => {
+  const from = parseYmd(start);
+  const to = parseYmd(end);
+  if (!from || !to || from > to) return 0;
+  return Math.floor((to.getTime() - from.getTime()) / 86_400_000) + 1;
+};

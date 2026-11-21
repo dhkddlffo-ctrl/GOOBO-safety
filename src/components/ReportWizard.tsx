@@ -8,13 +8,16 @@ import {
   PhotoSheetItem,
   ReportBundle,
   SafetySchedule,
+  WorkSchedule,
+  WorkScheduleRow,
 } from '../types';
-import { ensureBundle, saveBundle } from '../utils/reportBundleStorage';
+import { createEmptyWorkScheduleRow, ensureBundle, saveBundle } from '../utils/reportBundleStorage';
 import RiskAssessment from './RiskAssessment';
 import HighGradeControl from './HighGradeControl';
 import MeetingMinutesForm from './MeetingMinutesForm';
 import AttendeeListForm from './AttendeeListForm';
 import PhotoSheetForm from './PhotoSheetForm';
+import WorkScheduleForm from './WorkScheduleForm';
 import SafetyScheduleForm from './SafetyScheduleForm';
 import './ReportForms.css';
 import './ReportWizard.css';
@@ -43,7 +46,8 @@ interface StepMeta {
  *   ③ 안전 회의록             (6페이지)
  *   ④ 참석자 명단             (7페이지)
  *   ⑤ 사진대지                (3·4페이지)
- *   ⑥ 안전보건 일정           (9페이지)
+ *   ⑥ 공사 공정표             (A4 가로)
+ *   ⑦ 안전보건 일정           (9페이지)
  *
  * 다 쓰고 나면 **게시글 등록**(게시판에 올리기)과 **전체 출력**(한 번에 인쇄)을 합니다.
  *
@@ -76,6 +80,11 @@ const STEPS: StepMeta[] = [
     short: '사진대지',
     label: '사진대지',
     hint: '회의 사진(3페이지)과 모니터링 점검 사진(4페이지)을 올립니다.',
+  },
+  {
+    short: '공정표',
+    label: '공사 공정표',
+    hint: '공종별 작업 기간을 넣으면 일자 칸에 막대가 그려집니다.',
   },
   {
     short: '일정',
@@ -165,6 +174,40 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           : s,
       ),
     }));
+
+  const patchWorkSchedule = (patch: Partial<WorkSchedule>) =>
+    setBundle(b => ({ ...b, workSchedule: { ...b.workSchedule, ...patch } }));
+
+  const patchWorkRow = (id: string, patch: Partial<WorkScheduleRow>) =>
+    setBundle(b => ({
+      ...b,
+      workSchedule: {
+        ...b.workSchedule,
+        rows: b.workSchedule.rows.map(r => (r.id === id ? { ...r, ...patch } : r)),
+      },
+    }));
+
+  const addWorkRow = () =>
+    setBundle(b => ({
+      ...b,
+      workSchedule: {
+        ...b.workSchedule,
+        rows: [...b.workSchedule.rows, createEmptyWorkScheduleRow()],
+      },
+    }));
+
+  /* 마지막 남은 한 줄은 지우지 않습니다. (빈 서식이 되어 버립니다) */
+  const removeWorkRow = (id: string) =>
+    setBundle(b => {
+      if (b.workSchedule.rows.length <= 1) return b;
+      return {
+        ...b,
+        workSchedule: {
+          ...b.workSchedule,
+          rows: b.workSchedule.rows.filter(r => r.id !== id),
+        },
+      };
+    });
 
   const patchSchedule = (patch: Partial<SafetySchedule>) =>
     setBundle(b => ({ ...b, schedule: { ...b.schedule, ...patch } }));
@@ -293,7 +336,19 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           </div>
         </div>
 
-        <div className={`rw-pane${step === 5 ? '' : ' rw-pane--off'}`} data-step="schedule">
+        <div className={`rw-pane${step === 5 ? '' : ' rw-pane--off'}`} data-step="work">
+          <WorkScheduleForm
+            value={bundle.workSchedule}
+            editing
+            siteName={siteName}
+            onChange={patchWorkSchedule}
+            onRowChange={patchWorkRow}
+            onAddRow={addWorkRow}
+            onRemoveRow={removeWorkRow}
+          />
+        </div>
+
+        <div className={`rw-pane${step === 6 ? '' : ' rw-pane--off'}`} data-step="schedule">
           <SafetyScheduleForm
             value={bundle.schedule}
             editing
