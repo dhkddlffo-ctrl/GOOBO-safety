@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { RiskAssessment as RiskAssessmentData, RiskRow, RiskAttachment, RiskScore } from '../types';
+import { RiskAssessment as RiskAssessmentData, RiskRow, RiskScore } from '../types';
 import { isAuthenticated } from '../utils/auth';
 import {
   getRiskAssessments,
@@ -16,12 +16,7 @@ import {
   ROWS_PER_SECOND_PAGE,
   ACTION_FIELDS,
   ACCIDENT_TYPES,
-  getRiskAttachments,
-  saveRiskAttachment,
-  deleteRiskAttachment,
-  getRiskAttachmentFile,
 } from '../utils/riskAssessmentStorage';
-import { formatFileSize, isAllowedFile, MAX_FILE_SIZE } from '../utils/documentStorage';
 import './RiskAssessment.css';
 
 interface RiskAssessmentProps {
@@ -63,14 +58,6 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
   const [doc, setDoc] = useState<RiskAssessmentData | null>(null);
   const [draft, setDraft] = useState<RiskAssessmentData | null>(null);
 
-  /* 첨부 (양식 10~13페이지) */
-  const [attachments, setAttachments] = useState<RiskAttachment[]>([]);
-  const [attTitle, setAttTitle] = useState('');
-  const [attPeriod, setAttPeriod] = useState(() => new Date().toISOString().slice(0, 7));
-  const [attFile, setAttFile] = useState<File | null>(null);
-  const [attBusy, setAttBusy] = useState(false);
-  const [attError, setAttError] = useState('');
-
   const [error, setError] = useState('');
   const [savedAt, setSavedAt] = useState('');
 
@@ -81,7 +68,6 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
   const load = useCallback(() => {
     const all = getRiskAssessments(siteId);
     setList(all);
-    setAttachments(getRiskAttachments(siteId));
     if (all.length > 0) {
       const pick = all.find(a => a.id === currentId) ?? all[0];
       setCurrentId(pick.id);
@@ -97,7 +83,6 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
     setSavedAt('');
     const all = getRiskAssessments(siteId);
     setList(all);
-    setAttachments(getRiskAttachments(siteId));
     const pick = all.find(a => a.id === (initialId ?? '')) ?? all[0] ?? null;
     setCurrentId(pick?.id ?? '');
     setDoc(pick);
@@ -265,77 +250,6 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
     requestAnimationFrame(() => {
       requestAnimationFrame(() => window.print());
     });
-  };
-
-  /* ---------------- 첨부 처리 ---------------- */
-  const handleAttachPick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setAttError('');
-    if (!file) {
-      setAttFile(null);
-      return;
-    }
-    if (!isAllowedFile(file.name)) {
-      setAttError('PDF, 한글, 엑셀, 이미지 등 문서 파일만 올릴 수 있습니다.');
-      e.target.value = '';
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setAttError(`파일 용량은 ${formatFileSize(MAX_FILE_SIZE)} 까지 가능합니다.`);
-      e.target.value = '';
-      return;
-    }
-    setAttFile(file);
-    if (!attTitle.trim()) {
-      /* 파일명에서 확장자를 뺀 값을 기본 문서명으로 사용 */
-      setAttTitle(file.name.replace(/\.[^.]+$/, ''));
-    }
-  };
-
-  const uploadAttachment = async () => {
-    if (!attFile) {
-      setAttError('올릴 파일을 선택해주세요.');
-      return;
-    }
-    setAttBusy(true);
-    setAttError('');
-    try {
-      await saveRiskAttachment(siteId, siteName, attFile, {
-        title: attTitle,
-        period: attPeriod,
-        uploadedBy: canManage ? '관리자' : '작성자',
-      });
-      setAttachments(getRiskAttachments(siteId));
-      setAttFile(null);
-      setAttTitle('');
-    } catch (err) {
-      setAttError(err instanceof Error ? err.message : '파일을 저장하지 못했습니다.');
-    } finally {
-      setAttBusy(false);
-    }
-  };
-
-  const downloadAttachment = async (att: RiskAttachment) => {
-    const blob = await getRiskAttachmentFile(att);
-    if (!blob) {
-      alert('파일을 찾을 수 없습니다. (브라우저 저장소가 정리되었을 수 있습니다)');
-      return;
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = att.fileName;
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  };
-
-  const removeAttachment = async (att: RiskAttachment) => {
-    if (!window.confirm(`'${att.title}' 첨부를 삭제할까요?`)) return;
-    await deleteRiskAttachment(att.id);
-    setAttachments(getRiskAttachments(siteId));
   };
 
   /* ---------------- 요약 ---------------- */
@@ -941,95 +855,6 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
           </div>
         </>
       )}
-
-      {/* ---------- 부속 서식 첨부 (양식 10~13페이지) ---------- */}
-      <section className="ra-attach">
-        <div className="ra-attach-head">
-          <div>
-            <h3 className="ra-attach-title">📎 부속 서식 첨부 — 일일 재해 有·無 확인현황</h3>
-            <p className="ra-attach-sub">
-              양식 10~13페이지(인원별 일일 재해 유무 대장)는 엑셀·한글로 작성해 그대로 올려
-              보관합니다.
-              <br />
-              올린 파일은 이 브라우저에 저장되며, 언제든 내려받아 제출할 수 있습니다.
-            </p>
-          </div>
-          <span className="ra-attach-count">{attachments.length}건</span>
-        </div>
-
-        {canManage ? (
-          <div className="ra-upload">
-            <div className="ra-upload-fields">
-              <label className="ra-upload-field">
-                <span>문서명</span>
-                <input
-                  className="ra-in"
-                  value={attTitle}
-                  onChange={e => setAttTitle(e.target.value)}
-                  placeholder="예: 2026년 11월 일일 재해 유무 확인현황"
-                />
-              </label>
-              <label className="ra-upload-field ra-upload-field-narrow">
-                <span>해당 연월</span>
-                <input
-                  className="ra-in"
-                  type="month"
-                  value={attPeriod}
-                  onChange={e => setAttPeriod(e.target.value)}
-                />
-              </label>
-              <label className="ra-upload-field ra-upload-field-file">
-                <span>파일 선택</span>
-                <input type="file" onChange={handleAttachPick} className="ra-file-input" />
-              </label>
-              <button
-                className="btn btn-sm btn-primary ra-upload-btn"
-                onClick={uploadAttachment}
-                disabled={attBusy || !attFile}
-              >
-                {attBusy ? '올리는 중…' : '⬆️ 올리기'}
-              </button>
-            </div>
-            {attFile && (
-              <p className="ra-upload-picked">
-                선택됨: <b>{attFile.name}</b> ({formatFileSize(attFile.size)})
-              </p>
-            )}
-            {attError && <p className="ra-error">⚠️ {attError}</p>}
-          </div>
-        ) : (
-          <p className="ra-attach-note">관리자 로그인 후 파일을 올릴 수 있습니다.</p>
-        )}
-
-        {attachments.length === 0 ? (
-          <p className="ra-attach-empty">아직 올린 파일이 없습니다.</p>
-        ) : (
-          <ul className="ra-attach-list">
-            {attachments.map(att => (
-              <li className="ra-attach-item" key={att.id}>
-                <span className="ra-attach-icon">📄</span>
-                <div className="ra-attach-info">
-                  <span className="ra-attach-name">{att.title}</span>
-                  <span className="ra-attach-meta">
-                    {att.period || '-'} · {att.fileName} · {formatFileSize(att.fileSize)} ·{' '}
-                    {new Date(att.createdAt).toLocaleDateString('ko-KR')}
-                  </span>
-                </div>
-                <div className="ra-attach-actions">
-                  <button className="btn btn-sm" onClick={() => downloadAttachment(att)}>
-                    ⬇️ 내려받기
-                  </button>
-                  {canManage && (
-                    <button className="btn btn-sm ra-btn-del" onClick={() => removeAttachment(att)}>
-                      삭제
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 };

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { RiskUpload } from '../types';
 import { formatFileSize, getFile } from '../utils/documentStorage';
+import CommentBox from './CommentBox';
 import './RiskUpload.css';
+import './CommentBox.css';
 
 interface RiskUploadViewerProps {
   upload: RiskUpload;
@@ -169,6 +171,9 @@ const RiskUploadViewer: React.FC<RiskUploadViewerProps> = ({
               </div>
             ))
           )}
+
+          {/* ---------- 댓글 ---------- */}
+          <CommentBox targetType="upload" targetId={upload.id} siteId={upload.siteId} />
         </div>
       </div>
     </div>

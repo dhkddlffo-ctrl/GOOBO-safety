@@ -453,6 +453,25 @@ export interface RiskUpload {
 }
 
 /**
+ * 위험성평가 게시글에 달린 댓글 1건
+ *
+ * 등록부(서식으로 작성한 글)와 이미지로 올린 글 모두에 달 수 있습니다.
+ * `targetType` 으로 어느 게시판 글에 달린 댓글인지 구분합니다.
+ */
+export interface RiskComment {
+  id: string;
+  /** 어느 게시판 글에 달린 댓글인지 */
+  targetType: 'assessment' | 'upload';
+  /** 등록부 id 또는 올린 자료 id */
+  targetId: string;
+  siteId: number;
+  /** 댓글 작성자 이름 (관리자/작성자가 직접 적습니다) */
+  author: string;
+  body: string;
+  createdAt: string;
+}
+
+/**
  * 상등급(중점관리) 위험요인 1행.
  *
  * 등록부(SCM-002-1.01)에서 평가등급이 '상'으로 나온 항목을 모아

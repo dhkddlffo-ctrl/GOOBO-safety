@@ -93,6 +93,43 @@
   background: #f1f5f9;
 }
 
+/* 보기 방식 전환 (단계별 / 이어 보기) */
+.rw-btn-mode {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rw-btn-mode:hover {
+  background: #dbeafe;
+}
+
+.rw-btn-mode.active {
+  color: #fff;
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+/* 이어 보기에서 각 서식 위에 붙는 제목 */
+.rw-flow-label {
+  margin: 0 0 0.5rem;
+  padding: 0.4375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: #1e293b;
+  background: #f1f5f9;
+  border-left: 3px solid #2563eb;
+  border-radius: 0.25rem;
+}
+
+/* 이어 보기 하단 안내 */
+.rw-flow-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
 /* ---------------- 단계 표시 ---------------- */
 .rw-steps {
   display: flex;
