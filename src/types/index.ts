@@ -709,3 +709,94 @@ export interface ReportBundle {
   registeredAt?: string;
   updatedAt: string;
 }
+
+/* ================================================================== */
+/* 본사 게시판 (공지 · 안전보건경영매뉴얼 · 각종 양식)                   */
+/* ================================================================== */
+
+/**
+ * 본사 게시판 분류.
+ * 현장 문서보관함의 분류와는 성격이 달라 별도로 관리합니다.
+ * (현장 문서 = 현장이 쌓는 기록물 / 본사 게시판 = 본사가 배포하는 지침·양식)
+ */
+export interface HqCategory {
+  key: string;
+  icon: string;
+  color: string;
+  desc: string;
+  createdAt?: string;
+}
+
+/** 본사 게시판 첨부파일 1건 (본문은 IndexedDB, 정보만 LocalStorage) */
+export interface HqAttachment {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  storageKey: string;
+  uploadedAt: string;
+}
+
+/** 게시글 상태 — active = 최신본, archived = 구본(개정 전) */
+export type HqPostStatus = 'active' | 'archived';
+
+/**
+ * 본사 게시판 글 1건.
+ *
+ * 양식·매뉴얼은 개정이 생명이므로 **버전**과 **개정 이력**을 함께 보관합니다.
+ * 같은 자료의 개정본은 `seriesId` 로 묶이고, 새 버전을 올리면
+ * 이전 글의 status 가 `archived`(구본)로 내려갑니다.
+ */
+export interface HqPost {
+  id: string;
+  category: string;
+  subcategory?: string;
+  title: string;
+  /** 공지 본문 (양식은 비어 있어도 됩니다) */
+  body?: string;
+  attachments: HqAttachment[];
+
+  /* ---------- 개정 관리 ---------- */
+  /** 같은 자료의 개정 이력을 묶는 키 */
+  seriesId: string;
+  version: string; // 예: v1.2
+  /** 이번 개정에서 무엇이 바뀌었는지 한 줄 요약 */
+  revisionSummary?: string;
+  status: HqPostStatus;
+  /** 시행일 (yyyy-mm-dd) */
+  effectiveDate?: string;
+  /** 법령 근거 (예: 산업안전보건법 제29조) */
+  legalBasis?: string;
+
+  /* ---------- 노출 / 확인 ---------- */
+  pinned?: boolean; // 목록 최상단 고정
+  important?: boolean; // 중요 배지
+  requireAck?: boolean; // 필독 — 현장 확인 필요
+
+  /* ---------- 부가 ---------- */
+  tags?: string[];
+  author: string;
+  views: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 필독 공지 확인 기록 (현장 1곳당 1건) */
+export interface HqAck {
+  id: string;
+  postId: string;
+  siteId: number;
+  siteName: string;
+  ackedBy: string;
+  ackedAt: string;
+}
+
+/** 필독 공지 확인 현황 요약 */
+export interface HqAckSummary {
+  requireAck: boolean;
+  totalSites: number;
+  ackedSites: number;
+  rate: number; // 0~100
+  acks: HqAck[];
+  pendingSites: { id: number; name: string }[];
+}

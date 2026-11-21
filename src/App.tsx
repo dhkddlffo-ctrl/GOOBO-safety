@@ -5,13 +5,16 @@ import WorkStopPage from './pages/WorkStopPage';
 import AccidentCasePage from './pages/AccidentCasePage';
 import SiteDocumentPage from './pages/SiteDocumentPage';
 import SiteDetailPage from './pages/SiteDetailPage';
+import HqBoardPage from './pages/HqBoardPage';
 import AdminPage from './pages/AdminPage';
 import LoginModal from './components/LoginModal';
 import { isAuthenticated, logout } from './utils/auth';
+import { countNewHqPosts, HQ_CHANGED_EVENT, markHqSeen } from './utils/hqStorage';
 import './App.css';
 
 type Page =
   | 'home'
+  | 'hq'
   | 'suggestion'
   | 'work-stop'
   | 'accident-case'
@@ -22,6 +25,7 @@ type Page =
 /** URL 별칭: site-detail 은 짧게 'site' 로 노출 (#/site/3) */
 const PAGE_TO_SLUG: Record<Page, string> = {
   home: '',
+  hq: 'hq',
   suggestion: 'suggestion',
   'work-stop': 'work-stop',
   'accident-case': 'accident-case',
@@ -31,6 +35,7 @@ const PAGE_TO_SLUG: Record<Page, string> = {
 };
 
 const SLUG_TO_PAGE: Record<string, Page> = {
+  hq: 'hq',
   suggestion: 'suggestion',
   'work-stop': 'work-stop',
   'accident-case': 'accident-case',
@@ -68,10 +73,19 @@ function App() {
   const [preselectedTab, setPreselectedTab] = useState<string | undefined>();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [newHqCount, setNewHqCount] = useState(0);
 
   useEffect(() => {
     setIsLoggedIn(isAuthenticated());
 
+    // 본사 게시판 새 소식 배지
+    const syncBadge = () => setNewHqCount(countNewHqPosts());
+    syncBadge();
+    window.addEventListener(HQ_CHANGED_EVENT, syncBadge);
+    return () => window.removeEventListener(HQ_CHANGED_EVENT, syncBadge);
+  }, []);
+
+  useEffect(() => {
     // 최초 진입 시 해시 복원 (현장별 페이지/탭 북마크·공유 지원)
     const initial = parseHash(window.location.hash);
     if (initial) {
@@ -92,6 +106,16 @@ function App() {
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+
+  /* 본사 게시판을 열면 새 소식 배지를 지웁니다. */
+  useEffect(() => {
+    if (currentPage !== 'hq') return;
+    const timer = window.setTimeout(() => {
+      markHqSeen();
+      setNewHqCount(countNewHqPosts());
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [currentPage]);
 
   const navigate = (page: string, siteId?: number, tab?: string) => {
     if (page === 'admin' && !isLoggedIn) {
@@ -129,6 +153,21 @@ function App() {
           <div className="logo" onClick={() => navigate('home')}>
             구보공영(주)
           </div>
+          <nav className="header-nav">
+            <button
+              className={`nav-link${currentPage === 'hq' ? ' is-active' : ''}`}
+              onClick={() => navigate('hq')}
+            >
+              📢 본사 게시판
+              {newHqCount > 0 && <span className="nav-badge">{newHqCount}</span>}
+            </button>
+            <button
+              className={`nav-link${currentPage === 'documents' ? ' is-active' : ''}`}
+              onClick={() => navigate('documents')}
+            >
+              📁 현장문서
+            </button>
+          </nav>
           <div className="auth-section">
             {isLoggedIn ? (
               <div className="user-menu">
@@ -149,6 +188,7 @@ function App() {
       {/* Main Content */}
       <main className="app-main">
         {currentPage === 'home' && <HomePage onNavigate={navigate} />}
+        {currentPage === 'hq' && <HqBoardPage onNavigate={navigate} />}
         {currentPage === 'suggestion' && (
           <SuggestionPage onNavigate={navigate} preselectedSiteId={preselectedSiteId} />
         )}
@@ -173,10 +213,7 @@ function App() {
 
       {/* Login Modal */}
       {showLoginModal && (
-        <LoginModal
-          onClose={() => setShowLoginModal(false)}
-          onLoginSuccess={handleLoginSuccess}
-        />
+        <LoginModal onClose={() => setShowLoginModal(false)} onLoginSuccess={handleLoginSuccess} />
       )}
     </div>
   );

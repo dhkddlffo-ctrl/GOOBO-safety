@@ -269,7 +269,7 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: linear-gradient(135deg, #FEE500 0%, #FFEB3B 100%);
+  background: linear-gradient(135deg, #fee500 0%, #ffeb3b 100%);
   border-radius: 0.75rem;
   margin-top: 1rem;
   text-decoration: none;
@@ -295,19 +295,19 @@
 }
 
 .kakao-text strong {
-  color: #3C1E1E;
+  color: #3c1e1e;
   font-size: 1rem;
   font-weight: 700;
 }
 
 .kakao-hint {
-  color: #5C4033;
+  color: #5c4033;
   font-size: 0.875rem;
 }
 
 .arrow-icon {
   font-size: 1.5rem;
-  color: #3C1E1E;
+  color: #3c1e1e;
   font-weight: bold;
   flex-shrink: 0;
 }
@@ -367,5 +367,107 @@
 
   .arrow-icon {
     font-size: 1.25rem;
+  }
+}
+
+/* ---------------- 본사 게시판 카드 ---------------- */
+.action-hq {
+  border-color: #fde68a;
+  background-color: #fffdf5;
+}
+
+.action-hq:hover {
+  border-color: #f59e0b;
+  background-color: #fffbeb;
+}
+
+.action-hq h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.action-hq-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 0.3125rem;
+  background: #ef4444;
+  color: white;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---------------- 본사 필독 알림 배너 ---------------- */
+.hq-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  text-align: left;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 0.875rem;
+  padding: 0.9375rem 1.125rem;
+  margin-bottom: 1.5rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12);
+}
+
+.hq-banner:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.22);
+  transform: translateY(-2px);
+}
+
+.hq-banner-icon {
+  font-size: 1.625rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.hq-banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.hq-banner-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.hq-banner-sub {
+  font-size: 0.8125rem;
+  color: #b45309;
+  font-weight: 600;
+}
+
+.hq-banner-arrow {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #b45309;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .hq-banner {
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+  }
+
+  .hq-banner-arrow {
+    display: none;
   }
 }
