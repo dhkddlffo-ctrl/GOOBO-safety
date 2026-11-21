@@ -498,12 +498,22 @@
 /* ==================================================================== */
 /* A4 인쇄                                                              */
 /* ==================================================================== */
-@page {
+/* ⚠️ 전역 `@page` 를 쓰지 않습니다.
+   비상연락망(EmergencyPlan.css)·안전조직도(SafetyOrgChart.css)가 이미
+   전역 `@page { margin: 10mm }` 를 선언하고 있어, 여기서 다시 선언하면
+   CSS 로드 순서에 따라 그쪽 여백을 덮어쓸 수 있습니다.
+   이 코드베이스의 관례대로 이 문서 전용 페이지 이름을 씁니다. */
+@page safety-policy-page {
   size: A4 portrait;
   margin: 14mm;
 }
 
 @media print {
+  /* 이 문서에만 전용 용지를 지정 */
+  .sp-sheet {
+    page: safety-policy-page;
+  }
+
   /* 앱 크롬 · 툴바 · 편집화면 숨김 */
   .app-header,
   .app-footer,
@@ -622,6 +632,7 @@
   .sp-foot {
     display: block;
     margin-top: 2mm;
+    padding-right: 1mm;
     font-size: 8pt;
     color: #6b7280;
     text-align: right;
