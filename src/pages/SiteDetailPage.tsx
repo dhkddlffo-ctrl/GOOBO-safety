@@ -50,6 +50,7 @@ import DocumentArchive from '../components/DocumentArchive';
 import EmergencyPlan from '../components/EmergencyPlan';
 import SafetyOrgChart from '../components/SafetyOrgChart';
 import RiskAssessmentPane from '../components/RiskAssessmentPane';
+import AccidentCasePane from '../components/AccidentCasePane';
 import SiteSafetyPolicy from '../components/SiteSafetyPolicy';
 import Icon from '../components/Icon';
 import './SiteDetailPage.css';
@@ -61,7 +62,7 @@ interface SiteDetailPageProps {
   initialTab?: string;
 }
 
-type Tab = 'info' | 'documents' | 'policy' | 'emergency' | 'org' | 'risk' | 'activity';
+type Tab = 'info' | 'documents' | 'policy' | 'emergency' | 'org' | 'risk' | 'accident' | 'activity';
 
 const isTab = (value?: string): value is Tab =>
   value === 'info' ||
@@ -70,6 +71,7 @@ const isTab = (value?: string): value is Tab =>
   value === 'emergency' ||
   value === 'org' ||
   value === 'risk' ||
+  value === 'accident' ||
   value === 'activity';
 
 const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, initialTab }) => {
@@ -413,14 +415,14 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
           <button
             type="button"
             className="sd-quick-btn is-amber"
-            onClick={() => onNavigate('accident-case', site.id)}
+            onClick={() => changeTab('accident')}
           >
             <span className="sd-quick-icon">
               <Icon name="alert" size={17} />
             </span>
             <span className="sd-quick-body">
               <strong>사고사례</strong>
-              <span>사례 공유·제출</span>
+              <span>게시판·사고보고서</span>
             </span>
             <span className="sd-quick-count">{activity.accidents}</span>
           </button>
@@ -469,6 +471,13 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
           >
             <Icon name="alert" size={15} />
             위험성평가
+          </button>
+          <button
+            className={`sd-tab ${activeTab === 'accident' ? 'active' : ''}`}
+            onClick={() => changeTab('accident')}
+          >
+            <Icon name="message" size={15} />
+            사고사례 <span className="sd-tab-count">{activity.accidents}</span>
           </button>
           <button
             className={`sd-tab ${activeTab === 'activity' ? 'active' : ''}`}
@@ -1017,6 +1026,33 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
           </div>
         )}
 
+        {/* ============ 사고사례 탭 ============ */}
+        {activeTab === 'accident' && (
+          <div className="sd-panel sd-panel-accident">
+            <div className="sd-panel-head">
+              <div>
+                <h2>⚠️ 현장 사고사례 게시판</h2>
+                <p className="sd-panel-sub">
+                  이 현장에서 발생한 사고사례를 게시판으로 관리합니다. 관리자 로그인 후{' '}
+                  <b>✍️ 사고사례 작성</b>으로 등록하고, 등록된 사례는 회사 서식 사고보고서(A4)로
+                  바로 인쇄할 수 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <AccidentCasePane
+              siteId={site.id}
+              siteName={site.name}
+              onChanged={() =>
+                setActivity(prev => ({
+                  ...prev,
+                  accidents: getAccidentCases().filter(a => a.siteId === site.id).length,
+                }))
+              }
+            />
+          </div>
+        )}
+
         {/* ============ 안전활동 탭 ============ */}
         {activeTab === 'activity' && (
           <div className="sd-panel">
@@ -1040,10 +1076,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                 <span className="sd-activity-label">작업중지권 요청</span>
               </button>
 
-              <button
-                className="sd-activity-card"
-                onClick={() => onNavigate('accident-case', site.id)}
-              >
+              <button className="sd-activity-card" onClick={() => changeTab('accident')}>
                 <span className="sd-activity-icon">⚠️</span>
                 <span className="sd-activity-value">{activity.accidents}</span>
                 <span className="sd-activity-label">사고사례</span>
@@ -1057,8 +1090,8 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               <button className="sd-link-btn" onClick={() => onNavigate('work-stop', site.id)}>
                 🛑 이 현장 작업중지권 행사 →
               </button>
-              <button className="sd-link-btn" onClick={() => onNavigate('accident-case', site.id)}>
-                ⚠️ 이 현장 사고사례 제출 →
+              <button className="sd-link-btn" onClick={() => changeTab('accident')}>
+                ⚠️ 이 현장 사고사례 게시판 →
               </button>
             </div>
           </div>
