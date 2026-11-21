@@ -1,0 +1,653 @@
+/* ================================================================
+   위험성평가 올리기 / 보기
+   (RiskUploadDialog.tsx · RiskUploadViewer.tsx 전용)
+   ================================================================ */
+
+/* ---------------- 모달 틀 ---------------- */
+.ru-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.ru-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 46rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: 1.25rem;
+  background: #fff;
+  border-radius: 0.875rem;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3);
+}
+
+/* ---------------- 머리글 ---------------- */
+.ru-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ru-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ru-sub {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.65;
+  color: #64748b;
+}
+
+.ru-sub b {
+  color: #1d4ed8;
+}
+
+.ru-close {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  font-size: 1.125rem;
+  line-height: 1;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.ru-close:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+/* ---------------- 기본 정보 ---------------- */
+.ru-fields {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ru-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  flex: 1 1 9rem;
+  min-width: 0;
+}
+
+.ru-field-wide {
+  flex: 2 1 16rem;
+}
+
+.ru-field > span {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.ru-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.375rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: #111827;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  outline: none;
+}
+
+.ru-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+/* ---------------- 이미지 고르기 ---------------- */
+.ru-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  padding: 0.625rem 0.75rem;
+  background: #f8fafc;
+  border: 1px dashed #b8c4d4;
+  border-radius: 0.5rem;
+}
+
+.ru-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #fff;
+  background: #2563eb;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ru-pick-btn:hover {
+  background: #1d4ed8;
+}
+
+/* 실제 파일 입력은 숨기고 라벨로 누르게 합니다. */
+.ru-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ru-pick-hint {
+  flex: 1;
+  min-width: 8rem;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.ru-pick-count {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 0.1875rem 0.5rem;
+  white-space: nowrap;
+}
+
+/* ---------------- 알림 ---------------- */
+.ru-error {
+  margin: 0;
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.375rem;
+}
+
+.ru-loading {
+  margin: 0;
+  padding: 2rem 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+  text-align: center;
+}
+
+/* ---------------- 비어 있음 ---------------- */
+.ru-empty {
+  padding: 1.75rem 0.75rem;
+  text-align: center;
+  background: #fafbfc;
+  border: 1px solid #e8edf4;
+  border-radius: 0.5rem;
+}
+
+.ru-empty-title {
+  margin: 0 0 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.ru-empty-sub {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.ru-empty-sub b {
+  color: #1d4ed8;
+}
+
+/* ---------------- 미리보기 격자 ---------------- */
+.ru-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ru-thumb {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f1f5f9;
+  border: 1px solid #d7dee8;
+  border-radius: 0.5rem;
+}
+
+.ru-thumb-img {
+  display: block;
+  width: 100%;
+  height: 6.5rem;
+  object-fit: cover;
+  background: #e2e8f0;
+}
+
+.ru-thumb-no {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  min-width: 1.125rem;
+  padding: 0 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  line-height: 1.125rem;
+  text-align: center;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.72);
+  border-radius: 999px;
+}
+
+.ru-thumb-tools {
+  display: flex;
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ru-thumb-btn {
+  flex: 1;
+  padding: 0.0625rem 0;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1.4;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #dbe3ee;
+  border-radius: 0.1875rem;
+  cursor: pointer;
+}
+
+.ru-thumb-btn:hover:not(:disabled) {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.ru-thumb-btn:disabled {
+  color: #cbd5e1;
+  cursor: default;
+}
+
+.ru-thumb-del {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.ru-thumb-del:hover {
+  color: #fff !important;
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
+.ru-thumb-size {
+  padding: 0.125rem 0.25rem;
+  font-size: 0.5625rem;
+  color: #94a3b8;
+  text-align: center;
+  background: #fff;
+}
+
+/* ---------------- 하단 버튼 ---------------- */
+.ru-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.625rem;
+  border-top: 1px solid #e8edf4;
+}
+
+.ru-foot-note {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
+.ru-foot-right {
+  display: flex;
+  gap: 0.375rem;
+  margin-left: auto;
+}
+
+.ru-save {
+  white-space: nowrap;
+}
+
+/* ================================================================
+   올린 위험성평가 보기
+   ================================================================ */
+.ruv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.ruv-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 60rem;
+  max-height: calc(100vh - 2rem);
+  background: #fff;
+  border-radius: 0.875rem;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.34);
+  overflow: hidden;
+}
+
+.ruv-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ruv-title {
+  margin: 0 0 0.1875rem;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ruv-meta {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.ruv-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+/* 버튼 글자가 두 줄로 접히지 않도록 */
+.ruv-head-right .btn,
+.ruv-page-head .btn {
+  white-space: nowrap;
+}
+
+/* 이미지 보기 영역 */
+.ruv-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem;
+  background: #eef2f7;
+}
+
+.ruv-page {
+  display: block;
+  margin: 0 auto 1rem;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.14);
+  border-radius: 0.25rem;
+}
+
+.ruv-page:last-child {
+  margin-bottom: 0;
+}
+
+.ruv-page img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ruv-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #475569;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ruv-page-loading {
+  padding: 2rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+  text-align: center;
+}
+
+/* ================================================================
+   게시판 — 올린 위험성평가 카드
+   ================================================================ */
+.rb-up {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+}
+
+.rb-up-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rb-up-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.rb-up-sub {
+  margin: 0.125rem 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.rb-up-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rb-up-card {
+  display: flex;
+  gap: 0.625rem;
+  padding: 0.5rem;
+  background: #fafbfc;
+  border: 1px solid #e8edf4;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.rb-up-card:hover {
+  background: #f1f6ff;
+  border-color: #bfdbfe;
+}
+
+.rb-up-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 4.5rem;
+  height: 4.5rem;
+  overflow: hidden;
+  background: #e2e8f0;
+  border-radius: 0.375rem;
+}
+
+.rb-up-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rb-up-thumb-no {
+  position: absolute;
+  right: 0.1875rem;
+  bottom: 0.1875rem;
+  padding: 0 0.25rem;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.72);
+  border-radius: 999px;
+}
+
+/* 미리보기를 아직 못 읽었을 때 */
+.rb-up-thumb-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.625rem;
+  color: #64748b;
+}
+
+/* 머리글 — 위험성평가 올리기 버튼 (작성 버튼 옆) */
+.rb-btn-upload {
+  white-space: nowrap;
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.rb-btn-upload:hover {
+  background: #dbeafe;
+  border-color: #60a5fa;
+}
+
+.rb-up-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.1875rem;
+  min-width: 0;
+}
+
+.rb-up-name {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-up-meta {
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.rb-up-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.1875rem;
+}
+
+/* ================================================================
+   인쇄 — 화면용 도구는 숨기고 이미지본은 종이에 그대로
+   ================================================================ */
+@media print {
+  .ru-overlay,
+  .ruv-overlay,
+  .rb-up-actions,
+  .rb-up-card {
+    display: none !important;
+  }
+}
+
+/* ---------------- 좁은 화면 ---------------- */
+@media (max-width: 640px) {
+  .ru-modal,
+  .ruv-modal {
+    max-height: calc(100vh - 1rem);
+    padding: 0.875rem;
+  }
+
+  .ru-grid {
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  }
+
+  .ru-thumb-img {
+    height: 5rem;
+  }
+
+  .ru-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ru-foot-right {
+    margin-left: 0;
+  }
+
+  .ru-foot-right .btn {
+    flex: 1;
+  }
+
+  .rb-up-list {
+    grid-template-columns: 1fr;
+  }
+}

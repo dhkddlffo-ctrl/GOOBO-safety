@@ -423,9 +423,34 @@ export interface RiskAttachment {
   createdAt: string;
 }
 
-/* ------------------------------------------------------------------ */
-/* 위험성평가 상등급 관리 (양식 5페이지 / A4 가로)                       */
-/* ------------------------------------------------------------------ */
+/**
+ * 위험성평가 올리기 — 이미지로 올린 위험성평가 1건
+ *
+ * 현장에서 화면에 직접 입력하기 어려울 때, 종이에 작성한 위험성평가표를
+ * 사진으로 찍어 여러 장 올려 한 건으로 보관합니다.
+ * 페이지(이미지) 본문은 IndexedDB, 정보는 LocalStorage 에 저장합니다.
+ */
+export interface RiskUploadPage {
+  id: string;
+  fileName: string;
+  fileSize: number; // bytes
+  fileType: string; // MIME type
+  storageKey: string; // IndexedDB 파일 키
+}
+
+export interface RiskUpload {
+  id: string;
+  siteId: number;
+  siteName: string;
+  title: string; // 제목 (예: 2026년 11월 수시 위험성평가)
+  writtenAt: string; // 작성일 (yyyy-mm-dd)
+  author: string; // 작성자
+  note: string; // 비고
+  pages: RiskUploadPage[]; // 올린 이미지 (순서대로)
+  uploadedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 /**
  * 상등급(중점관리) 위험요인 1행.
