@@ -4,7 +4,9 @@ import { isAuthenticated } from '../utils/auth';
 import {
   getRiskAssessments,
   getRiskAssessment,
+  getPublishedRiskAssessments,
   saveRiskAssessment,
+  publishRiskAssessment,
   deleteRiskAssessment,
   createEmptyRiskAssessment,
   createEmptyRiskRow,
@@ -20,6 +22,21 @@ import {
 } from '../utils/riskAssessmentStorage';
 import RiskImportDialog, { RiskImportChoice } from './RiskImportDialog';
 import './RiskAssessment.css';
+
+/**
+ * 바깥(작성 마법사)에서 서식의 지금 내용을 다루기 위한 손잡이.
+ *
+ * 마법사는 등록부 내용을 직접 들고 있지 않고 서식 컴포넌트가 자기 상태로 들고 있으므로,
+ * [💾 임시저장]·[📝 게시글 등록]을 누를 때 이 손잡이로 서식에 저장·등록을 시킵니다.
+ */
+export interface RiskAssessmentApi {
+  /** 지금 화면에 보이는 서식 내용 (저장하지 않음) */
+  peek: () => RiskAssessmentData | null;
+  /** 지금 내용을 그대로 저장합니다. (임시저장/등록 표시는 건드리지 않음) */
+  persist: () => RiskAssessmentData | null;
+  /** 게시글 등록 — 임시저장 표시를 지워 게시판 목록에 올립니다. */
+  publish: () => RiskAssessmentData | null;
+}
 
 interface RiskAssessmentProps {
   siteId: number;
@@ -43,6 +60,11 @@ interface RiskAssessmentProps {
    * [✏️ 수정]·[💾 저장]·행 추가/삭제 같은 편집 버튼도 함께 숨깁니다.
    */
   readOnly?: boolean;
+  /**
+   * 마법사가 임시저장·게시글 등록을 시킬 때 쓰는 손잡이.
+   * 마법사는 서식 내용을 직접 들고 있지 않으므로 이 손잡이로 저장을 요청합니다.
+   */
+  apiRef?: React.MutableRefObject<RiskAssessmentApi | null>;
 }
 
 const formatDateKo = (ymd?: string): string => {
@@ -60,6 +82,7 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
   onBack,
   embedded = false,
   readOnly = false,
+  apiRef,
 }) => {
   const canManage = isAuthenticated();
 
@@ -108,8 +131,14 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
   }, [readOnly, doc]);
 
   /* ---------------- 불러오기 ---------------- */
+  /**
+   * 평가 선택 목록은 **게시판에 등록된 글**만 보여줍니다.
+   * (임시저장본은 게시판의 [📂 임시저장 불러오기]에서 고릅니다)
+   */
+  const readList = useCallback(() => getPublishedRiskAssessments(siteId), [siteId]);
+
   const load = useCallback(() => {
-    const all = getRiskAssessments(siteId);
+    const all = readList();
     setList(all);
     if (all.length > 0) {
       const pick = all.find(a => a.id === currentId) ?? all[0];
@@ -119,14 +148,20 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
       setCurrentId('');
       setDoc(null);
     }
-  }, [siteId, currentId]);
+  }, [currentId, readList]);
 
   useEffect(() => {
     setError('');
     setSavedAt('');
+    /*
+     * 처음 열 때: 지정한 id(마법사가 연 글)를 먼저 찾고,
+     * 없으면 게시판에 등록된 가장 최근 글을 엽니다.
+     * 지정한 글이 임시저장본이어도 열 수 있어야 하므로 전체에서 찾습니다.
+     */
     const all = getRiskAssessments(siteId);
-    setList(all);
-    const pick = all.find(a => a.id === (initialId ?? '')) ?? all[0] ?? null;
+    const published = all.filter(a => !a.isDraft);
+    setList(published);
+    const pick = all.find(a => a.id === (initialId ?? '')) ?? published[0] ?? null;
     setCurrentId(pick?.id ?? '');
     setDoc(pick);
     /* 게시판에서 '위험성평가 작성'으로 들어오면 바로 편집 모드로 시작합니다. */
@@ -202,6 +237,51 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
     setDraft(null);
     load();
   };
+
+  /* ---------------- 마법사에서 쓰는 손잡이 ---------------- */
+  /**
+   * 마법사는 서식 내용을 직접 들고 있지 않습니다. (이 컴포넌트가 자기 상태로 들고 있음)
+   * 그래서 [💾 임시저장]·[📝 게시글 등록]을 누를 때 아래 함수로 저장을 요청합니다.
+   *
+   * 매 렌더마다 새로 꽂아 두어, 항상 **지금 화면의 최신 값**을 다루게 합니다.
+   */
+  useEffect(() => {
+    if (!apiRef) return undefined;
+
+    apiRef.current = {
+      /** 저장하지 않고 지금 내용만 봅니다. */
+      peek: () => draft ?? doc,
+
+      /** 지금 내용을 그대로 저장합니다. (임시저장 표시는 유지 → 계속 작업 가능) */
+      persist: () => {
+        if (!draft) return doc;
+        saveRiskAssessment(draft);
+        const saved = getRiskAssessment(draft.id);
+        setDoc(saved);
+        setList(getRiskAssessments(siteId));
+        setSavedAt(new Date().toLocaleTimeString('ko-KR'));
+        setError('');
+        return saved;
+      },
+
+      /** 게시글 등록 — 임시저장 표시를 지워 게시판 목록에 올립니다. */
+      publish: () => {
+        const source = draft ?? doc;
+        if (!source) return null;
+        const published = publishRiskAssessment(source);
+        setDoc(published);
+        setDraft(null);
+        setList(getPublishedRiskAssessments(siteId));
+        setSavedAt(new Date().toLocaleTimeString('ko-KR'));
+        setError('');
+        return published;
+      },
+    };
+
+    return () => {
+      if (apiRef) apiRef.current = null;
+    };
+  });
 
   /* ---------------- 이전 작성글 불러오기 ---------------- */
   /**

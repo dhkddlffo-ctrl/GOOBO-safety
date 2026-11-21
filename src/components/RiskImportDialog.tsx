@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { RiskAssessment } from '../types';
 import {
   evaluateRow,
-  getRiskAssessments,
+  getPublishedRiskAssessments,
   summarizeAssessment,
 } from '../utils/riskAssessmentStorage';
 
@@ -63,7 +63,7 @@ const RiskImportDialog: React.FC<RiskImportDialogProps> = ({
    * (빈 서식까지 목록에 뜨면 고르기 어렵습니다)
    */
   const items = useMemo(() => {
-    const all = getRiskAssessments(crossSite ? undefined : siteId);
+    const all = getPublishedRiskAssessments(crossSite ? undefined : siteId);
     return all
       .filter(a => a.id !== excludeId)
       .map(a => ({ doc: a, summary: summarizeAssessment(a) }))

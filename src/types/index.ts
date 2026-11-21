@@ -398,6 +398,16 @@ export interface RiskAssessment {
    * 저장된 예전 자료에는 이 값이 없으므로 undefined = 적용(켜짐) 으로 봅니다.
    */
   actionCascade?: boolean;
+  /**
+   * 아직 게시판에 올리지 않은 **임시저장(작성 중)** 글인지.
+   *
+   *  - true  : [✍️ 위험성평가 작성]으로 새로 연 작업 사본입니다.
+   *            게시판 목록·이전 작성글 불러오기·상등급 불러오기에는 나타나지 않습니다.
+   *            [📝 게시글 등록]을 누르면 이 값이 지워지며 게시판에 올라갑니다.
+   *  - 없음  : 게시판에 등록된 글입니다.
+   *            (예전에 저장한 자료에는 이 값이 없으므로 그대로 등록된 글로 봅니다)
+   */
+  isDraft?: boolean;
   createdAt: string;
   updatedAt: string;
 }

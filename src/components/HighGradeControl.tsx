@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HighGradeRecord, HighGradeRow } from '../types';
 import { isAuthenticated } from '../utils/auth';
-import { getRiskAssessments } from '../utils/riskAssessmentStorage';
+import { getPublishedRiskAssessments } from '../utils/riskAssessmentStorage';
 import {
   createEmptyHighGradeRow,
   ensureHighGradeRecord,
@@ -127,7 +127,7 @@ const HighGradeControl: React.FC<HighGradeControlProps> = ({
   /* ---------------- 등록부에서 상등급 불러오기 ---------------- */
   const importFromRegister = useCallback(() => {
     if (!draft) return;
-    const assessments = getRiskAssessments(siteId);
+    const assessments = getPublishedRiskAssessments(siteId);
     const added = collectHighGradeRows(assessments, draft.rows);
     if (added.length === 0) {
       setNotice('등록부에서 새로 가져올 상등급 항목이 없습니다. (이미 반영되었거나 상등급이 없음)');

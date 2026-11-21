@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RiskAssessment, RiskUpload } from '../types';
 import {
-  getRiskAssessments,
-  createEmptyRiskAssessment,
+  getPublishedRiskAssessments,
+  getDraftRiskAssessments,
+  createDraftRiskAssessment,
   saveRiskAssessment,
   deleteRiskAssessment,
   summarizeAssessment,
@@ -11,6 +12,7 @@ import { deleteRiskUpload, getRiskUploads } from '../utils/riskUploadStorage';
 import { getFile } from '../utils/documentStorage';
 import RiskUploadDialog from './RiskUploadDialog';
 import RiskUploadViewer from './RiskUploadViewer';
+import DraftLoadDialog from './DraftLoadDialog';
 import { isAuthenticated } from '../utils/auth';
 import './RiskAssessmentBoard.css';
 import './RiskUpload.css';
@@ -81,7 +83,15 @@ const CYCLE_DAYS = 14;
 const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteName, onOpen }) => {
   const canManage = isAuthenticated();
 
-  const [list, setList] = useState<RiskAssessment[]>(() => getRiskAssessments(siteId));
+  /*
+   * 게시판 목록에는 **게시글 등록을 마친 글**만 보입니다.
+   * 아직 [📝 게시글 등록]을 누르지 않은 임시저장본은 여기에 나타나지 않습니다.
+   */
+  const [list, setList] = useState<RiskAssessment[]>(() => getPublishedRiskAssessments(siteId));
+  /** 아직 올리지 않은 임시저장본 (개수 표시·불러오기용) */
+  const [draftCount, setDraftCount] = useState<number>(
+    () => getDraftRiskAssessments(siteId).length,
+  );
   /* 이미지로 올린 위험성평가 (종이 서식을 사진으로 찍어 올린 자료) */
   const [uploads, setUploads] = useState<RiskUpload[]>(() => getRiskUploads(siteId));
   /* 새로 올리기 / 수정 다이얼로그 */
@@ -89,9 +99,12 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
   const [editUpload, setEditUpload] = useState<RiskUpload | null>(null);
   /* 보기 화면에 띄울 자료 */
   const [viewUpload, setViewUpload] = useState<RiskUpload | null>(null);
+  /* 임시저장 불러오기 창 */
+  const [draftOpen, setDraftOpen] = useState(false);
 
   const reload = useCallback(() => {
-    setList(getRiskAssessments(siteId));
+    setList(getPublishedRiskAssessments(siteId));
+    setDraftCount(getDraftRiskAssessments(siteId).length);
     setUploads(getRiskUploads(siteId));
   }, [siteId]);
 
@@ -129,12 +142,25 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
     return { writtenAt: latest.item.writtenAt, days, late: days > CYCLE_DAYS };
   }, [rows]);
 
-  /* 새 위험성평가 작성 → 저장 후 바로 편집 화면으로 */
+  /*
+   * 새 위험성평가 작성 → **임시저장 상태**로 만들어 마법사를 엽니다.
+   *
+   * ⚠️ 여기서 만드는 글은 아직 게시판에 올라가지 않습니다.
+   *    마법사에서 [📝 게시글 등록]을 눌러야 목록에 나타나며,
+   *    그 전까지는 [📂 임시저장 불러오기]에서만 이어 쓸 수 있습니다.
+   */
   const createAssessment = () => {
-    const created = createEmptyRiskAssessment(siteId, siteName);
+    const created = createDraftRiskAssessment(siteId, siteName);
     saveRiskAssessment(created);
     reload();
     onOpen(created.id, true);
+  };
+
+  /** 임시저장본을 골라 이어서 작성 */
+  const openDraft = (id: string) => {
+    setDraftOpen(false);
+    reload();
+    onOpen(id, true);
   };
 
   const removeAssessment = (target: RiskAssessment) => {
@@ -219,6 +245,14 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
             <>
               <button className="btn btn-sm btn-primary rb-btn-write" onClick={createAssessment}>
                 ✍️ 위험성평가 작성
+              </button>
+              <button
+                className="btn btn-sm rb-btn-drafts"
+                onClick={() => setDraftOpen(true)}
+                title="아직 게시판에 올리지 않은 작성 중인 글을 이어서 씁니다."
+              >
+                📂 임시저장 불러오기
+                {draftCount > 0 && <span className="rb-draft-badge">{draftCount}</span>}
               </button>
               <button
                 className="btn btn-sm rb-btn-upload"
@@ -452,6 +486,19 @@ const RiskAssessmentBoard: React.FC<RiskAssessmentBoardProps> = ({ siteId, siteN
           initial={editUpload}
           onClose={closeUploadDialog}
           onSaved={handleUploadSaved}
+        />
+      )}
+
+      {/* ---------- 임시저장 불러오기 ---------- */}
+      {draftOpen && (
+        <DraftLoadDialog
+          siteId={siteId}
+          onClose={() => {
+            setDraftOpen(false);
+            reload();
+          }}
+          onOpen={openDraft}
+          onChanged={reload}
         />
       )}
     </div>

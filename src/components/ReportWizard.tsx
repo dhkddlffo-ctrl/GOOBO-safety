@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   AttendeeList,
   AttendeeListEntry,
@@ -18,7 +18,7 @@ import {
   saveBundle,
 } from '../utils/reportBundleStorage';
 import { isAuthenticated } from '../utils/auth';
-import RiskAssessment from './RiskAssessment';
+import RiskAssessment, { RiskAssessmentApi } from './RiskAssessment';
 import HighGradeControl from './HighGradeControl';
 import MeetingMinutesForm from './MeetingMinutesForm';
 import AttendeeListForm from './AttendeeListForm';
@@ -178,15 +178,44 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
   const paneCls = (index: number) => `rw-pane${flow || index === step ? '' : ' rw-pane--off'}`;
 
   /* ---------------- 저장 ---------------- */
+  /**
+   * 등록부(위험성평가표) 서식의 손잡이.
+   *
+   * 등록부 내용은 `RiskAssessment` 컴포넌트가 자기 상태로 들고 있어서,
+   * 여기(마법사)에서는 직접 알 수 없습니다. [임시저장]·[게시글 등록]을 누를 때
+   * 이 손잡이로 "지금 화면 내용을 저장해 달라"고 요청합니다.
+   */
+  const riskApi = useRef<RiskAssessmentApi | null>(null);
+
+  /* ---------------- 저장 ---------------- */
+  /**
+   * 임시저장.
+   *
+   * 등록부·부속 서식을 모두 저장하되 **게시판에는 올리지 않습니다.**
+   * (등록부는 `isDraft` 표시가 남아 게시판 목록에 나타나지 않습니다)
+   * 나중에 게시판의 [📂 임시저장 불러오기]에서 이어 쓸 수 있습니다.
+   */
   const save = useCallback(() => {
+    const savedAssessment = riskApi.current?.persist() ?? null;
     saveBundle(bundle);
     setSavedAt(new Date().toLocaleTimeString('ko-KR'));
-    setNotice('');
+    setNotice(
+      registered
+        ? '수정한 내용을 저장했습니다.'
+        : '💾 임시저장했습니다. 게시판에 올리려면 [📝 게시글 등록]을 누르세요.',
+    );
+    /* 등록부에서 위험요인이 하나도 없으면 알려 줍니다. (저장은 그대로 됨) */
+    if (savedAssessment && !registered && !savedAssessment.rows.some(r => r.hazard.trim() !== '')) {
+      setNotice(
+        '💾 임시저장했습니다. 위험요인을 아직 적지 않았으니, 이어서 작성한 뒤 [📝 게시글 등록]을 눌러주세요.',
+      );
+    }
     bump();
-  }, [bundle]);
+  }, [bundle, registered]);
 
   /** 수정을 마치고 다시 잠급니다. (저장 후 읽기 전용으로) */
   const finishEdit = () => {
+    riskApi.current?.persist();
     saveBundle(bundle);
     setSavedAt(new Date().toLocaleTimeString('ko-KR'));
     setUnlocked(false);
@@ -195,8 +224,27 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
   };
 
   /* ---------------- 게시글 등록 ---------------- */
+  /**
+   * 게시글 등록.
+   *
+   *  - 등록부의 임시저장 표시를 지워 **게시판 목록에 올립니다.**
+   *  - 부속 서식 묶음에도 등록 시각(registeredAt)을 남깁니다.
+   *  - 등록 후에는 다시 잠가, 실수로 고치지 않게 합니다.
+   */
   const register = () => {
     const now = new Date().toISOString();
+    const isFirstRegister = !bundle.registeredAt;
+
+    /* 1) 등록부 — 게시판에 올립니다. (위험요인이 없으면 등록을 막습니다) */
+    const published = riskApi.current?.publish() ?? null;
+    if (!published || !published.rows.some(r => r.hazard.trim() !== '')) {
+      setNotice(
+        '⚠️ 게시글 등록을 하려면 위험요인을 1개 이상 적어야 합니다. [1단계 등록부]를 확인해 주세요.',
+      );
+      return;
+    }
+
+    /* 2) 부속 서식 묶음 — 등록 시각을 남기고 저장합니다. */
     const next: ReportBundle = { ...bundle, registeredAt: bundle.registeredAt ?? now };
     saveBundle(next);
     setBundle(next);
@@ -204,8 +252,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
     setUnlocked(false);
     setSavedAt(new Date().toLocaleTimeString('ko-KR'));
     setNotice(
-      next.registeredAt === now
-        ? '게시판에 등록되었습니다. 고치려면 [✏️ 수정]을 누르세요.'
+      isFirstRegister
+        ? '📝 게시판에 등록되었습니다. 고치려면 [✏️ 수정]을 누르세요.'
         : '등록 내용을 갱신했습니다. 고치려면 [✏️ 수정]을 누르세요.',
     );
     bump();
@@ -213,6 +261,7 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
 
   /* ---------------- 전체 출력 ---------------- */
   const printAll = () => {
+    riskApi.current?.persist();
     saveBundle(bundle);
     setNotice('저장 후 인쇄합니다. 인쇄 대화상자에서 여백을 “기본”으로 두세요.');
     requestAnimationFrame(() => {
@@ -420,6 +469,7 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
             initialId={assessmentId}
             startEditInitially={!registered}
             readOnly={!editable}
+            apiRef={riskApi}
             embedded
           />
         </div>
@@ -570,10 +620,26 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           {/* 수정 중일 때만 보이는 저장 / 등록 / 잠금 */}
           {editable && (
             <>
-              <button className="btn btn-sm rw-btn-save" onClick={save}>
-                💾 저장
+              <button
+                className="btn btn-sm rw-btn-save"
+                onClick={save}
+                title={
+                  registered
+                    ? '지금 내용을 저장합니다.'
+                    : '게시판에 올리지 않고 작성 중인 내용만 저장합니다. 나중에 [📂 임시저장 불러오기]로 이어 쓸 수 있습니다.'
+                }
+              >
+                {registered ? '💾 저장' : '💾 임시저장'}
               </button>
-              <button className="btn btn-sm rw-btn-register" onClick={register}>
+              <button
+                className="btn btn-sm rw-btn-register"
+                onClick={register}
+                title={
+                  registered
+                    ? '수정한 내용을 게시판에 반영합니다.'
+                    : '게시판에 올립니다. 등록해야 목록에서 다른 사람도 볼 수 있습니다.'
+                }
+              >
                 {registered ? '🔄 등록 갱신' : '📝 게시글 등록'}
               </button>
               {registered && (

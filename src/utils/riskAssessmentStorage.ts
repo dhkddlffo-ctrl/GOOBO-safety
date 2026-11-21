@@ -153,6 +153,22 @@ export const createEmptyRiskAssessment = (
   };
 };
 
+/**
+ * 새 **임시저장(작성 중)** 위험성평가표.
+ *
+ * 게시판의 [✍️ 위험성평가 작성]은 이 서식을 만듭니다.
+ * `isDraft: true` 라서 게시판 목록에는 나타나지 않고,
+ * [📝 게시글 등록]을 눌러야 게시글로 올라갑니다.
+ */
+export const createDraftRiskAssessment = (
+  siteId: number,
+  siteName: string,
+  author = '',
+): RiskAssessment => ({
+  ...createEmptyRiskAssessment(siteId, siteName, author),
+  isDraft: true,
+});
+
 /* ------------------------------------------------------------------ */
 /* 이전 작성글 불러오기                                                 */
 /* ------------------------------------------------------------------ */
@@ -222,6 +238,34 @@ export const saveRiskAssessment = (assessment: RiskAssessment): void => {
 export const deleteRiskAssessment = (id: string): void => {
   const all = getRiskAssessments().filter(a => a.id !== id);
   localStorage.setItem(ASSESSMENTS_KEY, JSON.stringify(all));
+};
+
+/* ------------------------------------------------------------------ */
+/* 임시저장 / 게시글 등록                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 게시판에 **등록된** 평가만 (임시저장본 제외).
+ *
+ * 등록부 목록 · 이전 작성글 불러오기 · 상등급 불러오기는 모두 이 목록을 씁니다.
+ * (임시저장본이 섞이면 아직 올리지 않은 글이 게시판에 보입니다)
+ */
+export const getPublishedRiskAssessments = (siteId?: number): RiskAssessment[] =>
+  getRiskAssessments(siteId).filter(a => !a.isDraft);
+
+/** 아직 게시판에 올리지 않은 **임시저장** 평가만 (최근 저장한 것이 위로) */
+export const getDraftRiskAssessments = (siteId?: number): RiskAssessment[] =>
+  getRiskAssessments(siteId)
+    .filter(a => a.isDraft)
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+
+/** 임시저장된 평가를 게시판에 올립니다. (이후 등록부 목록에 나타납니다) */
+export const publishRiskAssessment = (assessment: RiskAssessment): RiskAssessment => {
+  const published: RiskAssessment = { ...assessment };
+  /* 임시저장 표시를 지워 게시판 목록에 포함되게 합니다. */
+  delete published.isDraft;
+  saveRiskAssessment(published);
+  return { ...published, updatedAt: new Date().toISOString() };
 };
 
 /* ------------------------------------------------------------------ */
