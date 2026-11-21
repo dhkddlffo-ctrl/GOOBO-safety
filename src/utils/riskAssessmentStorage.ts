@@ -154,6 +154,44 @@ export const createEmptyRiskAssessment = (
 };
 
 /* ------------------------------------------------------------------ */
+/* 이전 작성글 불러오기                                                 */
+/* ------------------------------------------------------------------ */
+
+/** 아무 값도 들어 있지 않은 빈 행인지 */
+const isBlankRow = (row: RiskRow): boolean =>
+  row.hazard.trim() === '' &&
+  row.workPeriod.trim() === '' &&
+  row.workLocation.trim() === '' &&
+  row.hazardFinder.trim() === '' &&
+  row.accidentType === '' &&
+  !row.intensity &&
+  !row.frequency &&
+  row.manageRegistered === '' &&
+  row.improvementPlan.trim() === '' &&
+  row.actionDueDate === '' &&
+  row.actionDoneDate === '' &&
+  row.inspector.trim() === '';
+
+/**
+ * 다른 위험성평가표의 행을 지금 서식에 붙일 수 있는 형태로 복사합니다.
+ *
+ *  - 행 id 는 **새로 만듭니다.** (같은 id 가 두 곳에 있으면 수정이 엉뚱한 행에 적용됩니다)
+ *  - 조치/점검 '개별 수정' 기록은 그대로 옮겨 원래 성격을 유지합니다.
+ *  - 맨 아래의 빈 행은 잘라냅니다. (빈 줄까지 따라오면 서식이 지저분해집니다)
+ */
+export const cloneRiskRows = (rows: RiskRow[]): RiskRow[] => {
+  const copy: RiskRow[] = rows.map(row => ({
+    ...row,
+    id: newId(),
+    actionEdited: row.actionEdited ? [...row.actionEdited] : undefined,
+  }));
+
+  while (copy.length > 1 && isBlankRow(copy[copy.length - 1])) copy.pop();
+
+  return copy.length > 0 ? copy : [createEmptyRiskRow()];
+};
+
+/* ------------------------------------------------------------------ */
 /* 위험성평가표 저장 (LocalStorage)                                     */
 /* ------------------------------------------------------------------ */
 

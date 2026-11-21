@@ -8,6 +8,7 @@ import {
   deleteRiskAssessment,
   createEmptyRiskAssessment,
   createEmptyRiskRow,
+  cloneRiskRows,
   evaluateRow,
   summarizeAssessment,
   scoreLabel,
@@ -17,6 +18,7 @@ import {
   ACTION_FIELDS,
   ACCIDENT_TYPES,
 } from '../utils/riskAssessmentStorage';
+import RiskImportDialog, { RiskImportChoice } from './RiskImportDialog';
 import './RiskAssessment.css';
 
 interface RiskAssessmentProps {
@@ -68,6 +70,8 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
 
   const [error, setError] = useState('');
   const [savedAt, setSavedAt] = useState('');
+  /** 이전 작성글 불러오기 창 */
+  const [importOpen, setImportOpen] = useState(false);
 
   /* 바깥에서 잠그면 편집 중이던 내용도 즉시 닫힙니다. */
   const editing = draft !== null && !readOnly;
@@ -197,6 +201,46 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
     setDoc(null);
     setDraft(null);
     load();
+  };
+
+  /* ---------------- 이전 작성글 불러오기 ---------------- */
+  /**
+   * 지난 등록부의 위험요인을 지금 서식으로 가져옵니다.
+   *
+   *  - 행 id 는 새로 만들어집니다. (cloneRiskRows)
+   *  - '현재 서식을 비우고 채우기' 는 지금 행을 전부 지우고 갈아 끼웁니다.
+   *  - '아래에 이어 붙이기' 는 지금 행 아래로 붙입니다.
+   *  - 조치예정일·조치완료일은 기본적으로 비웁니다. (지난 주기 날짜가 남으면 점검에 혼동)
+   */
+  const applyImport = ({ source, mode, clearActionDates }: RiskImportChoice) => {
+    const imported = cloneRiskRows(source.rows).map(row =>
+      clearActionDates ? { ...row, actionDueDate: '', actionDoneDate: '' } : row,
+    );
+
+    setDraft(d => {
+      if (!d) return d;
+
+      /* 비우고 채우기는 지금 행을 버립니다. 이어 붙이기는 빈 행을 걷어낸 뒤 붙입니다. */
+      const base =
+        mode === 'replace'
+          ? []
+          : d.rows.filter(r => r.hazard.trim() !== '' || r.workPeriod.trim() !== '');
+
+      return { ...d, rows: [...base, ...imported] };
+    });
+
+    /* 지난 자료의 공사명이 비어 있지 않고, 지금 공사명이 비어 있으면 채워 넣습니다. */
+    if (source.constructionName.trim() !== '') {
+      setDraft(d =>
+        d && d.constructionName.trim() === ''
+          ? { ...d, constructionName: source.constructionName }
+          : d,
+      );
+    }
+
+    setImportOpen(false);
+    setError('');
+    setSavedAt('');
   };
 
   /* ---------------- 행 갱신 ---------------- */
@@ -633,6 +677,15 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
               </button>
             </>
           )}
+          {editing && canManage && (
+            <button
+              className="btn btn-sm ra-btn-import"
+              onClick={() => setImportOpen(true)}
+              title="지난번에 작성한 위험성평가표의 위험요인을 그대로 가져옵니다"
+            >
+              📋 이전 작성글 불러오기
+            </button>
+          )}
           {editing && (
             <span className="ra-row-tools">
               <button
@@ -896,6 +949,16 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
             })}
           </div>
         </>
+      )}
+
+      {/* ---------- 이전 작성글 불러오기 (편집 중에만) ---------- */}
+      {importOpen && editing && (
+        <RiskImportDialog
+          siteId={siteId}
+          excludeId={draft?.id}
+          onClose={() => setImportOpen(false)}
+          onImport={applyImport}
+        />
       )}
     </div>
   );
