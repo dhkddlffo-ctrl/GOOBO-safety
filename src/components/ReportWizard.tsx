@@ -12,6 +12,7 @@ import {
   WorkScheduleRow,
 } from '../types';
 import { createEmptyWorkScheduleRow, ensureBundle, saveBundle } from '../utils/reportBundleStorage';
+import { isAuthenticated } from '../utils/auth';
 import RiskAssessment from './RiskAssessment';
 import HighGradeControl from './HighGradeControl';
 import MeetingMinutesForm from './MeetingMinutesForm';
@@ -36,13 +37,12 @@ interface ReportWizardProps {
 interface StepMeta {
   short: string;
   label: string;
-  hint: string;
 }
 
 /**
  * 수시 위험성평가 작성 마법사
  *
- * 회사 양식을 **한곳에서 순서대로** 작성합니다.
+ * 회사 양식을 **한곳에서 위에서 아래로 이어서** 작성·확인합니다.
  *   ① 수시 위험성평가 등록부 (SCM-002-1.01)
  *   ② 위험성평가 상등급 관리  (5페이지)
  *   ③ 안전 회의록             (6페이지)
@@ -51,64 +51,30 @@ interface StepMeta {
  *   ⑥ 공사 공정표             (A4 가로)
  *   ⑦ 안전보건 일정           (9페이지)
  *   ⑧ 부속 서식 첨부          (10~13페이지 — 일일 재해 有·無 확인현황)
+ *   ⑨ 댓글
  *
- * 다 쓰고 나면 **게시글 등록**(게시판에 올리기)과 **전체 출력**(한 번에 인쇄)을 합니다.
+ * ⚠️ 보기 방식은 **이어 보기 한 가지**입니다. 여덟 개 서식이 위에서 아래로
+ *    끊김 없이 이어지고, 맨 마지막에 댓글이 붙습니다.
+ *    (모든 서식이 DOM 에 살아 있어 입력한 내용이 사라지지 않습니다)
  *
- * ⚠️ 화면에서는 현재 단계만 보이지만, 모든 단계가 DOM 에 살아 있어
- *    단계를 오가도 입력한 내용이 사라지지 않습니다.
- *    인쇄할 때는 CSS 로 모든 단계를 펼쳐 서식을 순서대로 출력합니다.
+ * ⚠️ **수정 잠금** — 게시글로 등록되면 서식은 곧바로 잠깁니다.
+ *    내용을 고치려면 오른쪽 아래 **[✏️ 수정]** 을 눌러 잠금을 풀어야 합니다.
+ *    (실수로 등록된 글을 건드리는 것을 막기 위함입니다)
  */
 const STEPS: StepMeta[] = [
-  {
-    short: '등록부',
-    label: '수시 위험성평가 등록부',
-    hint: '강도·빈도를 고르면 평가합계와 등급이 자동 계산됩니다.',
-  },
-  {
-    short: '상등급',
-    label: '위험성평가 상등급 관리',
-    hint: '등록부에서 평가등급 ‘상’ 항목을 불러와 실천·완료를 확인합니다.',
-  },
-  {
-    short: '회의록',
-    label: '안전 회의록',
-    hint: '회의 내용과 참석자·결재란을 작성합니다.',
-  },
-  {
-    short: '참석자',
-    label: '참석자 명단',
-    hint: '업체명·직종·성명·서명을 40칸까지 적을 수 있습니다.',
-  },
-  {
-    short: '사진대지',
-    label: '사진대지',
-    hint: '회의 사진(3페이지)과 모니터링 점검 사진(4페이지)을 올립니다.',
-  },
-  {
-    short: '공정표',
-    label: '공사 공정표',
-    hint: '공종별 작업 기간을 넣으면 일자 칸에 막대가 그려집니다.',
-  },
-  {
-    short: '일정',
-    label: '안전보건 일정',
-    hint: '월 달력에 수시위험성평가·교육 일정을 적습니다.',
-  },
-  {
-    short: '부속서식',
-    label: '부속 서식 첨부 — 일일 재해 有·無 확인현황',
-    hint: '양식 10~13페이지는 엑셀·한글로 작성해 파일 그대로 올려 보관합니다.',
-  },
+  { short: '등록부', label: '수시 위험성평가 등록부' },
+  { short: '상등급', label: '위험성평가 상등급 관리' },
+  { short: '회의록', label: '안전 회의록' },
+  { short: '참석자', label: '참석자 명단' },
+  { short: '사진대지', label: '사진대지' },
+  { short: '공정표', label: '공사 공정표' },
+  { short: '일정', label: '안전보건 일정' },
+  { short: '부속서식', label: '부속 서식 첨부 — 일일 재해 有·無 확인현황' },
 ];
 
 const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmentId, onClose }) => {
-  const [step, setStep] = useState(0);
-  /**
-   * 보기 방식
-   *  - 'step' : 단계별로 하나씩 (작성할 때)
-   *  - 'flow' : 8단계 서식을 위에서 아래로 이어서 (확인할 때)
-   */
-  const [viewMode, setViewMode] = useState<'step' | 'flow'>('step');
+  const canManage = isAuthenticated();
+
   const [bundle, setBundle] = useState<ReportBundle>(() =>
     ensureBundle(assessmentId, siteId, siteName),
   );
@@ -120,6 +86,16 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
 
   const registered = Boolean(bundle.registeredAt);
 
+  /**
+   * 수정 잠금 해제 여부
+   *
+   *  - 새로 작성하는 글(미등록): 처음부터 열려 있습니다.
+   *  - 이미 게시글에 등록된 글 : 잠긴 상태로 열리고, [✏️ 수정]을 눌러야 풀립니다.
+   */
+  const [unlocked, setUnlocked] = useState(() => !bundle.registeredAt);
+  /** 지금 서식을 고칠 수 있는지 */
+  const editable = unlocked;
+
   /* ---------------- 저장 ---------------- */
   const save = useCallback(() => {
     saveBundle(bundle);
@@ -128,14 +104,29 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
     bump();
   }, [bundle]);
 
+  /** 수정을 마치고 다시 잠급니다. (저장 후 읽기 전용으로) */
+  const finishEdit = () => {
+    saveBundle(bundle);
+    setSavedAt(new Date().toLocaleTimeString('ko-KR'));
+    setUnlocked(false);
+    setNotice('수정한 내용을 저장하고 다시 잠갔습니다. 고치려면 [✏️ 수정]을 누르세요.');
+    bump();
+  };
+
   /* ---------------- 게시글 등록 ---------------- */
   const register = () => {
     const now = new Date().toISOString();
     const next: ReportBundle = { ...bundle, registeredAt: bundle.registeredAt ?? now };
     saveBundle(next);
     setBundle(next);
+    /* 등록과 동시에 잠급니다 — 등록된 글은 [✏️ 수정] 전까지 고칠 수 없습니다. */
+    setUnlocked(false);
     setSavedAt(new Date().toLocaleTimeString('ko-KR'));
-    setNotice('게시판에 등록되었습니다.');
+    setNotice(
+      next.registeredAt === now
+        ? '게시판에 등록되었습니다. 고치려면 [✏️ 수정]을 누르세요.'
+        : '등록 내용을 갱신했습니다. 고치려면 [✏️ 수정]을 누르세요.',
+    );
     bump();
   };
 
@@ -232,25 +223,6 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
       schedule: { ...b.schedule, notes: { ...b.schedule.notes, [date]: text } },
     }));
 
-  /* ---------------- 단계 이동 ---------------- */
-  const goStep = (next: number) => {
-    if (next < 0 || next >= STEPS.length) return;
-    setStep(next);
-    /* 단계를 직접 고르면 단계별 보기로 돌아갑니다. */
-    setViewMode('step');
-    setNotice('');
-  };
-
-  const active = STEPS[step];
-  const flow = viewMode === 'flow';
-
-  /**
-   * 단계 칸의 클래스.
-   *  - 단계별 보기: 지금 단계만 보이고 나머지는 숨김
-   *  - 이어 보기  : 여덟 단계를 모두 보여줍니다(위에서 아래로)
-   */
-  const paneCls = (index: number) => `rw-pane${flow || step === index ? '' : ' rw-pane--off'}`;
-
   return (
     <div className="rw">
       {/* ---------- 머리글 ---------- */}
@@ -259,123 +231,90 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           <div className="rw-head-text">
             <h3 className="rw-title">🧾 수시 위험성평가 작성</h3>
             <p className="rw-sub">
-              회사 양식 {STEPS.length}종을 <b>한곳에서 순서대로</b> 작성합니다. 다 쓰고 나면
-              게시판에 등록하고 한 번에 인쇄할 수 있습니다.
+              회사 양식 {STEPS.length}종을 <b>위에서 아래로 이어서</b> 작성합니다. 맨 마지막에
+              댓글을 남길 수 있고, 한 번에 인쇄할 수 있습니다.
             </p>
           </div>
           <div className="rw-head-right">
             {registered && <span className="rw-badge rw-badge-done">✅ 등록됨</span>}
-            <span className="rw-count">
-              {flow ? `전체 ${STEPS.length}개 서식` : `${step + 1} / ${STEPS.length} 단계`}
-            </span>
-            <button
-              type="button"
-              className={`btn btn-sm rw-btn-mode${flow ? ' active' : ''}`}
-              onClick={() => {
-                setViewMode(flow ? 'step' : 'flow');
-                setNotice('');
-              }}
-              title={
-                flow
-                  ? '단계별로 하나씩 보기로 돌아갑니다.'
-                  : '서식 8개를 위에서 아래로 이어서 봅니다.'
-              }
-            >
-              {flow ? '📑 단계별 보기' : '📜 이어 보기'}
-            </button>
+            {registered && !unlocked && (
+              <span className="rw-badge rw-badge-lock">🔒 읽기 전용</span>
+            )}
+            {editable && registered && <span className="rw-badge rw-badge-edit">✏️ 수정 중</span>}
+            <span className="rw-count">서식 {STEPS.length}개</span>
             <button className="btn btn-sm rw-btn-back" onClick={onClose}>
               ← 목록
             </button>
           </div>
         </div>
 
-        {/* ---------- 단계 표시 (이어 보기일 때는 숨김) ---------- */}
-        {!flow && (
-          <nav className="rw-steps" aria-label="작성 단계">
-            {STEPS.map((meta, index) => (
-              <button
-                type="button"
-                key={meta.short}
-                className={`rw-step-btn${index === step ? ' active' : ''}${
-                  index < step ? ' passed' : ''
-                }`}
-                onClick={() => goStep(index)}
-                aria-current={index === step ? 'step' : undefined}
-              >
-                <span className="rw-step-no">{index + 1}</span>
-                <span className="rw-step-label">{meta.short}</span>
-              </button>
-            ))}
-          </nav>
-        )}
-
-        {/* ---------- 현재 단계 안내 ---------- */}
-        {flow ? (
-          <div className="rw-current">
-            <span className="rw-current-title">📜 전체 서식 이어 보기</span>
-            <span className="rw-current-hint">
-              여덟 개 서식을 위에서 아래로 이어서 봅니다. 아래로 내려가며 확인하세요.
-            </span>
-          </div>
-        ) : (
-          <div className="rw-current">
-            <span className="rw-current-title">
-              {step + 1}. {active.label}
-            </span>
-            <span className="rw-current-hint">{active.hint}</span>
-          </div>
-        )}
+        {/* ---------- 안내 ---------- */}
+        <div className="rw-current">
+          <span className="rw-current-title">📜 이어 보기</span>
+          <span className="rw-current-hint">
+            {editable
+              ? '여덟 개 서식을 위에서 아래로 이어서 작성합니다. 다 쓰면 [📝 게시글 등록]을 누르세요.'
+              : '등록된 글을 위에서 아래로 이어서 봅니다. 고치려면 오른쪽 아래 [✏️ 수정]을 누르세요.'}
+          </span>
+        </div>
 
         {savedAt && <p className="rw-saved">💾 저장되었습니다 ({savedAt})</p>}
         {notice && <p className="rw-notice">{notice}</p>}
       </div>
 
-      {/* ---------- 서식 (6단계 모두 마운트, 화면에선 현재 단계만) ---------- */}
+      {/* ---------- 서식 (여덟 개 모두 펼쳐서 위에서 아래로) ---------- */}
       <div className="rw-body">
-        <div className={paneCls(0)} data-step="register">
-          {flow && <p className="rw-flow-label">1. 수시 위험성평가 등록부</p>}
+        <div className="rw-pane" data-step="register">
+          <p className="rw-flow-label">1. 수시 위험성평가 등록부</p>
           <RiskAssessment
             siteId={siteId}
             siteName={siteName}
             initialId={assessmentId}
             startEditInitially={!registered}
+            readOnly={!editable}
             embedded
           />
         </div>
 
-        <div className={paneCls(1)} data-step="high">
-          {flow && <p className="rw-flow-label">2. 위험성평가 상등급 관리</p>}
-          <HighGradeControl siteId={siteId} siteName={siteName} autoEdit embedded />
+        <div className="rw-pane" data-step="high">
+          <p className="rw-flow-label">2. 위험성평가 상등급 관리</p>
+          <HighGradeControl
+            siteId={siteId}
+            siteName={siteName}
+            autoEdit={!registered}
+            readOnly={!editable}
+            embedded
+          />
         </div>
 
-        <div className={paneCls(2)} data-step="meeting">
-          {flow && <p className="rw-flow-label">3. 안전 회의록</p>}
+        <div className="rw-pane" data-step="meeting">
+          <p className="rw-flow-label">3. 안전 회의록</p>
           <MeetingMinutesForm
             value={bundle.meeting}
-            editing
+            editing={editable}
             onChange={patchMeeting}
             onAttendeeChange={patchMeetingAttendee}
           />
         </div>
 
-        <div className={paneCls(3)} data-step="attendees">
-          {flow && <p className="rw-flow-label">4. 참석자 명단</p>}
+        <div className="rw-pane" data-step="attendees">
+          <p className="rw-flow-label">4. 참석자 명단</p>
           <AttendeeListForm
             value={bundle.attendees}
-            editing
+            editing={editable}
             siteName={siteName}
             onChange={patchAttendees}
             onEntryChange={patchAttendeeEntry}
           />
         </div>
 
-        <div className={paneCls(4)} data-step="photo">
-          {flow && <p className="rw-flow-label">5. 사진대지</p>}
+        <div className="rw-pane" data-step="photo">
+          <p className="rw-flow-label">5. 사진대지</p>
           <div className="rw-photo-stack">
             <p className="rw-sub-head">① 위험성평가 회의 사진대지 (3페이지)</p>
             <PhotoSheetForm
               value={bundle.photoSheets[0]}
-              editing
+              editing={editable}
               siteName={siteName}
               onChange={patch => patchPhotoSheet(0, patch)}
               onItemChange={(id, patch) => patchPhotoItem(0, id, patch)}
@@ -383,7 +322,7 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
             <p className="rw-sub-head">② 모니터링 안전점검 사진대지 (4페이지)</p>
             <PhotoSheetForm
               value={bundle.photoSheets[1]}
-              editing
+              editing={editable}
               siteName={siteName}
               onChange={patch => patchPhotoSheet(1, patch)}
               onItemChange={(id, patch) => patchPhotoItem(1, id, patch)}
@@ -391,11 +330,11 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           </div>
         </div>
 
-        <div className={paneCls(5)} data-step="work">
-          {flow && <p className="rw-flow-label">6. 공사 공정표</p>}
+        <div className="rw-pane" data-step="work">
+          <p className="rw-flow-label">6. 공사 공정표</p>
           <WorkScheduleForm
             value={bundle.workSchedule}
-            editing
+            editing={editable}
             siteName={siteName}
             onChange={patchWorkSchedule}
             onRowChange={patchWorkRow}
@@ -404,54 +343,75 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           />
         </div>
 
-        <div className={paneCls(6)} data-step="schedule">
-          {flow && <p className="rw-flow-label">7. 안전보건 일정</p>}
+        <div className="rw-pane" data-step="schedule">
+          <p className="rw-flow-label">7. 안전보건 일정</p>
           <SafetyScheduleForm
             value={bundle.schedule}
-            editing
+            editing={editable}
             siteName={siteName}
             onChange={patchSchedule}
             onNoteChange={setScheduleNote}
           />
         </div>
 
-        <div className={paneCls(7)} data-step="attach">
-          {flow && <p className="rw-flow-label">8. 부속 서식 첨부 — 일일 재해 有·無 확인현황</p>}
-          <DailyDisasterForm siteId={siteId} siteName={siteName} />
+        <div className="rw-pane" data-step="attach">
+          <p className="rw-flow-label">8. 부속 서식 첨부 — 일일 재해 有·無 확인현황</p>
+          <DailyDisasterForm
+            siteId={siteId}
+            siteName={siteName}
+            readOnly={!editable || !canManage}
+          />
         </div>
       </div>
 
-      {/* ---------- 댓글 (등록된 글에만) ---------- */}
-      {registered && <CommentBox targetType="assessment" targetId={assessmentId} siteId={siteId} />}
+      {/* ---------- 맨 마지막: 댓글 ---------- */}
+      {registered ? (
+        <CommentBox targetType="assessment" targetId={assessmentId} siteId={siteId} />
+      ) : (
+        <p className="rw-comment-hint">💬 댓글은 [📝 게시글 등록] 후에 남길 수 있습니다.</p>
+      )}
 
-      {/* ---------- 하단 이동 / 등록 / 인쇄 ---------- */}
+      {/* ---------- 하단 잠금 / 등록 / 인쇄 ---------- */}
       <div className="rw-nav">
         <div className="rw-nav-left">
-          {flow ? (
-            <span className="rw-flow-hint">📜 맨 위부터 아래로 이어서 보는 중입니다.</span>
-          ) : (
-            <>
-              <button className="btn btn-sm" onClick={() => goStep(step - 1)} disabled={step === 0}>
-                ← 이전
-              </button>
-              <button
-                className="btn btn-sm"
-                onClick={() => goStep(step + 1)}
-                disabled={step === STEPS.length - 1}
-              >
-                다음 →
-              </button>
-            </>
-          )}
+          <span className="rw-flow-hint">
+            {registered && !unlocked
+              ? '🔒 등록된 글입니다. 내용을 고치려면 [✏️ 수정]을 누르세요.'
+              : '✏️ 수정 중입니다. 다 고쳤으면 [💾 저장] 또는 [🔒 수정 완료]를 누르세요.'}
+          </span>
         </div>
 
         <div className="rw-nav-right">
-          <button className="btn btn-sm rw-btn-save" onClick={save}>
-            💾 저장
-          </button>
-          <button className="btn btn-sm rw-btn-register" onClick={register}>
-            {registered ? '🔄 등록 갱신' : '📝 게시글 등록'}
-          </button>
+          {/* 잠겨 있을 때만 보이는 수정 버튼 */}
+          {registered && !unlocked && canManage && (
+            <button
+              className="btn btn-sm btn-primary rw-btn-edit"
+              onClick={() => {
+                setUnlocked(true);
+                setNotice('');
+              }}
+            >
+              ✏️ 수정
+            </button>
+          )}
+
+          {/* 수정 중일 때만 보이는 저장 / 등록 / 잠금 */}
+          {editable && (
+            <>
+              <button className="btn btn-sm rw-btn-save" onClick={save}>
+                💾 저장
+              </button>
+              <button className="btn btn-sm rw-btn-register" onClick={register}>
+                {registered ? '🔄 등록 갱신' : '📝 게시글 등록'}
+              </button>
+              {registered && (
+                <button className="btn btn-sm rw-btn-lock" onClick={finishEdit}>
+                  🔒 수정 완료
+                </button>
+              )}
+            </>
+          )}
+
           <button className="btn btn-sm btn-primary rw-btn-print" onClick={printAll}>
             🖨️ 전체 출력
           </button>

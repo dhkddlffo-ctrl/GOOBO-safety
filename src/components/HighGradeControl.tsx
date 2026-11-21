@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HighGradeRecord, HighGradeRow } from '../types';
 import { isAuthenticated } from '../utils/auth';
 import { getRiskAssessments } from '../utils/riskAssessmentStorage';
@@ -18,6 +18,13 @@ interface HighGradeControlProps {
   autoEdit?: boolean;
   /** 마법사 안에 넣을 때 화면 전체 인쇄 버튼을 숨김 */
   embedded?: boolean;
+  /**
+   * 바깥(마법사)에서 수정을 잠글 때.
+   *
+   * 게시글로 등록되면 이 값이 true 가 되어 서식이 읽기 전용으로 바뀝니다.
+   * [✏️ 수정]·[💾 저장]·행 추가 버튼도 함께 숨깁니다.
+   */
+  readOnly?: boolean;
 }
 
 /** yyyy-mm-dd → yyyy.mm.dd */
@@ -33,6 +40,7 @@ const HighGradeControl: React.FC<HighGradeControlProps> = ({
   siteName,
   autoEdit = false,
   embedded = false,
+  readOnly = false,
 }) => {
   const canManage = isAuthenticated();
 
@@ -40,14 +48,34 @@ const HighGradeControl: React.FC<HighGradeControlProps> = ({
     ensureHighGradeRecord(siteId, siteName),
   );
   const [draft, setDraft] = useState<HighGradeRecord | null>(() =>
-    /* 마법사에서 열면 바로 편집 모드로 시작합니다. */
-    autoEdit ? ensureHighGradeRecord(siteId, siteName) : null,
+    /* 마법사에서 열면 바로 편집 모드로 시작합니다. (잠긴 글이면 열지 않음) */
+    autoEdit && !readOnly ? ensureHighGradeRecord(siteId, siteName) : null,
   );
   const [savedAt, setSavedAt] = useState('');
   const [notice, setNotice] = useState('');
 
-  const editing = draft !== null;
-  const view = draft ?? record;
+  /* 바깥에서 잠그면 편집 중이던 내용도 즉시 닫습니다. */
+  const editing = draft !== null && !readOnly;
+  const view = editing ? draft : record;
+
+  /** 직전 잠금 상태 — 잠금이 풀리는 순간을 알아채기 위해 기억합니다. */
+  const wasReadOnly = useRef(readOnly);
+
+  /** 바깥에서 잠글 때 편집 중이던 내용을 잃지 않도록 한 번 저장해 둡니다. */
+  useEffect(() => {
+    if (!readOnly || !draft) return;
+    saveHighGradeRecord(draft);
+    setRecord({ ...draft });
+    setDraft(null);
+  }, [readOnly, draft]);
+
+  /** 마법사에서 [✏️ 수정]을 눌러 잠금이 풀리면 편집을 시작합니다. */
+  useEffect(() => {
+    const wasLocked = wasReadOnly.current;
+    wasReadOnly.current = readOnly;
+    if (!wasLocked || readOnly) return;
+    setDraft({ ...record, rows: record.rows.map(r => ({ ...r })) });
+  }, [readOnly, record]);
 
   const summary = useMemo(() => summarizeHighGrade(view), [view]);
 
@@ -140,12 +168,13 @@ const HighGradeControl: React.FC<HighGradeControlProps> = ({
         </div>
 
         <div className="hg-toolbar-actions">
-          {!editing && canManage && (
+          {/* 마법사 안에서는 [수정/저장/취소]를 마법사가 담당하므로 숨깁니다. */}
+          {!editing && canManage && !embedded && !readOnly && (
             <button className="btn btn-sm btn-primary" onClick={startEdit}>
               ✏️ 수정
             </button>
           )}
-          {editing && (
+          {editing && !embedded && (
             <>
               <button className="btn btn-sm btn-primary" onClick={save}>
                 💾 저장
@@ -153,15 +182,17 @@ const HighGradeControl: React.FC<HighGradeControlProps> = ({
               <button className="btn btn-sm" onClick={cancelEdit}>
                 취소
               </button>
-              <span className="hg-row-tools">
-                <button className="btn btn-sm hg-btn-import" onClick={importFromRegister}>
-                  ⤓ 등록부에서 상등급 불러오기
-                </button>
-                <button className="btn btn-sm hg-btn-row-add" onClick={addRow}>
-                  ＋ 행 추가
-                </button>
-              </span>
             </>
+          )}
+          {editing && (
+            <span className="hg-row-tools">
+              <button className="btn btn-sm hg-btn-import" onClick={importFromRegister}>
+                ⤓ 등록부에서 상등급 불러오기
+              </button>
+              <button className="btn btn-sm hg-btn-row-add" onClick={addRow}>
+                ＋ 행 추가
+              </button>
+            </span>
           )}
           {/* 마법사 안에서는 전체 인쇄 버튼을 숨깁니다 (마법사가 한 번에 출력). */}
           {!editing && !embedded && (

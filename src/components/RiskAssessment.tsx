@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { RiskAssessment as RiskAssessmentData, RiskRow, RiskScore } from '../types';
 import { isAuthenticated } from '../utils/auth';
 import {
@@ -34,6 +34,13 @@ interface RiskAssessmentProps {
    * (수정/저장/행 추가·삭제는 그대로 남습니다)
    */
   embedded?: boolean;
+  /**
+   * 바깥(마법사)에서 수정을 잠글 때.
+   *
+   * 게시글로 등록되면 이 값이 true 가 되어 서식이 읽기 전용으로 바뀝니다.
+   * [✏️ 수정]·[💾 저장]·행 추가/삭제 같은 편집 버튼도 함께 숨깁니다.
+   */
+  readOnly?: boolean;
 }
 
 const formatDateKo = (ymd?: string): string => {
@@ -50,6 +57,7 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
   startEditInitially,
   onBack,
   embedded = false,
+  readOnly = false,
 }) => {
   const canManage = isAuthenticated();
 
@@ -61,8 +69,39 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
   const [error, setError] = useState('');
   const [savedAt, setSavedAt] = useState('');
 
-  const editing = draft !== null;
+  /* 바깥에서 잠그면 편집 중이던 내용도 즉시 닫힙니다. */
+  const editing = draft !== null && !readOnly;
   const view = draft ?? doc;
+
+  /** 직전 잠금 상태 — 잠금이 풀리는 순간을 알아채기 위해 기억합니다. */
+  const wasReadOnly = useRef(readOnly);
+
+  /**
+   * 바깥(마법사)에서 잠글 때, 편집 중이던 내용을 잃지 않도록 한 번 저장해 둡니다.
+   *
+   * 게시글 등록 → 잠금 순서로 진행되므로, 등록 직전까지 고친 내용이 그대로 남습니다.
+   * (위험요인이 하나도 없는 빈 서식은 저장하지 않고 화면에 그대로 둡니다)
+   */
+  useEffect(() => {
+    if (!readOnly || !draft) return;
+    if (draft.rows.some(r => r.hazard.trim() !== '')) {
+      saveRiskAssessment(draft);
+      setDoc(getRiskAssessment(draft.id));
+      setList(getRiskAssessments(siteId));
+      setDraft(null);
+    }
+  }, [readOnly, draft, siteId]);
+
+  /**
+   * 마법사에서 [✏️ 수정]을 눌러 잠금이 풀리면 편집을 시작합니다.
+   * (처음부터 열려 있는 새 글은 startEditInitially 가 이미 처리합니다)
+   */
+  useEffect(() => {
+    const wasLocked = wasReadOnly.current;
+    wasReadOnly.current = readOnly;
+    if (!wasLocked || readOnly || !doc) return;
+    setDraft({ ...doc, rows: doc.rows.map(r => ({ ...r })) });
+  }, [readOnly, doc]);
 
   /* ---------------- 불러오기 ---------------- */
   const load = useCallback(() => {
@@ -578,12 +617,13 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
             </button>
           )}
 
-          {doc && !editing && canManage && (
+          {/* 마법사 안에서는 [수정/저장/취소]를 마법사가 담당하므로 숨깁니다. */}
+          {doc && !editing && canManage && !embedded && !readOnly && (
             <button className="btn btn-sm btn-primary" onClick={startEdit}>
               ✏️ 수정
             </button>
           )}
-          {editing && (
+          {editing && !embedded && (
             <>
               <button className="btn btn-sm btn-primary" onClick={save}>
                 💾 저장
@@ -591,25 +631,27 @@ const RiskAssessment: React.FC<RiskAssessmentProps> = ({
               <button className="btn btn-sm" onClick={cancelEdit}>
                 취소
               </button>
-              <span className="ra-row-tools">
-                <button
-                  className="btn btn-sm ra-btn-row-add"
-                  onClick={addRow}
-                  title="등록부에 빈 행을 하나 더 붙입니다"
-                >
-                  ＋ 행 추가
-                </button>
-                {view && view.rows.length > 1 && (
-                  <button
-                    className="btn btn-sm ra-btn-row-del"
-                    onClick={removeLastRow}
-                    title="맨 아래 행을 지웁니다 (최소 1행은 남습니다)"
-                  >
-                    － 마지막 행 삭제
-                  </button>
-                )}
-              </span>
             </>
+          )}
+          {editing && (
+            <span className="ra-row-tools">
+              <button
+                className="btn btn-sm ra-btn-row-add"
+                onClick={addRow}
+                title="등록부에 빈 행을 하나 더 붙입니다"
+              >
+                ＋ 행 추가
+              </button>
+              {view && view.rows.length > 1 && (
+                <button
+                  className="btn btn-sm ra-btn-row-del"
+                  onClick={removeLastRow}
+                  title="맨 아래 행을 지웁니다 (최소 1행은 남습니다)"
+                >
+                  － 마지막 행 삭제
+                </button>
+              )}
+            </span>
           )}
           {doc && !editing && !embedded && (
             <button className="btn btn-sm ra-btn-print" onClick={print}>

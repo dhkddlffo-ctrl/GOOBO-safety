@@ -13,6 +13,13 @@ import './DailyDisasterForm.css';
 interface DailyDisasterFormProps {
   siteId: number;
   siteName: string;
+  /**
+   * 바깥(마법사)에서 수정을 잠글 때.
+   *
+   * 게시글로 등록되면 올리기 폼과 삭제 버튼이 사라지고, 이미 올린 파일의
+   * 내려받기만 남습니다. (내려받기는 언제나 가능)
+   */
+  readOnly?: boolean;
 }
 
 /** ISO 날짜 → yyyy.mm.dd */
@@ -34,8 +41,14 @@ const fmtDate = (iso: string): string => {
  *
  * 파일 본문은 IndexedDB, 정보는 LocalStorage 에 저장합니다.
  */
-const DailyDisasterForm: React.FC<DailyDisasterFormProps> = ({ siteId, siteName }) => {
+const DailyDisasterForm: React.FC<DailyDisasterFormProps> = ({
+  siteId,
+  siteName,
+  readOnly = false,
+}) => {
   const canManage = isAuthenticated();
+  /* 잠긴 글이면 올리기·삭제를 막고 내려받기만 남깁니다. */
+  const canEdit = canManage && !readOnly;
 
   const [attachments, setAttachments] = useState<RiskAttachment[]>(() =>
     getRiskAttachments(siteId),
@@ -136,7 +149,7 @@ const DailyDisasterForm: React.FC<DailyDisasterFormProps> = ({ siteId, siteName 
         <span className="dda-count">{attachments.length}건</span>
       </div>
 
-      {canManage ? (
+      {canEdit ? (
         <div className="dda-upload">
           <div className="dda-fields">
             <label className="dda-field">
@@ -173,7 +186,11 @@ const DailyDisasterForm: React.FC<DailyDisasterFormProps> = ({ siteId, siteName 
           {error && <p className="dda-error">⚠️ {error}</p>}
         </div>
       ) : (
-        <p className="dda-note">관리자 로그인 후 파일을 올릴 수 있습니다.</p>
+        <p className="dda-note">
+          {readOnly
+            ? '🔒 등록된 글입니다. 파일을 올리려면 [✏️ 수정]을 누르세요.'
+            : '관리자 로그인 후 파일을 올릴 수 있습니다.'}
+        </p>
       )}
 
       {attachments.length === 0 ? (
@@ -194,7 +211,7 @@ const DailyDisasterForm: React.FC<DailyDisasterFormProps> = ({ siteId, siteName 
                 <button className="dda-act" onClick={() => download(att)}>
                   ⬇️ 내려받기
                 </button>
-                {canManage && (
+                {canEdit && (
                   <button className="dda-act dda-act-del" onClick={() => remove(att)}>
                     삭제
                   </button>
