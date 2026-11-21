@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Site, SiteInfo, SiteDocument, SiteStaff, STAFF_ROLES, StaffRole } from '../types';
+import {
+  Site,
+  SiteInfo,
+  SiteDocument,
+  SiteStaff,
+  StaffAttachment,
+  StaffDocKind,
+  StaffRole,
+  STAFF_ROLES,
+  STAFF_DOC_KINDS,
+  staffDocLabel,
+} from '../types';
 import {
   getSites,
   getSuggestions,
@@ -14,6 +25,17 @@ import {
   createEmptyStaff,
   generateStaffId,
 } from '../utils/siteInfoStorage';
+import {
+  STAFF_DOC_ACCEPT,
+  createStaffAttachment,
+  deleteStaffDocFile,
+  downloadStaffDoc,
+  formatStaffDocDate,
+  formatStaffDocSize,
+  getStaffDocFile,
+  isStaffDocImage,
+  isStaffDocPreviewable,
+} from '../utils/staffDocsStorage';
 import { getDocuments, formatFileSize, getTotalUsage } from '../utils/documentStorage';
 import { isAuthenticated } from '../utils/auth';
 import {
@@ -65,6 +87,14 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
   const [staffDraft, setStaffDraft] = useState<SiteStaff | null>(null);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [staffError, setStaffError] = useState('');
+  /** 첨부자료 업로드 중인 종류 (버튼 로딩 표시) */
+  const [staffUploading, setStaffUploading] = useState<StaffDocKind | ''>('');
+  /** 첨부자료 미리보기 (이미지·PDF) */
+  const [docPreview, setDocPreview] = useState<{
+    attachment: StaffAttachment;
+    url: string;
+    ownerName: string;
+  } | null>(null);
 
   const [activity, setActivity] = useState({
     suggestions: 0,
@@ -222,7 +252,80 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
   const deleteStaff = (staff: SiteStaff) => {
     if (!canManage) return alert('관리자 로그인 후 삭제할 수 있습니다.');
     if (!confirm(`"${staff.name}(${staff.role})" 정보를 삭제하시겠습니까?`)) return;
+    /* 함께 보관하던 지정서·교육이수증 파일도 정리합니다. */
+    void deleteAttachments(staff.attachments ?? []);
     persistStaff(staffList.filter(s => s.id !== staff.id));
+  };
+
+  /* ---------------- 첨부자료 (지정서 · 교육이수증) ---------------- */
+
+  /** 관리자 1명의 첨부자료 배열 (없으면 빈 배열) */
+  const attachmentsOf = (staff: SiteStaff | null): StaffAttachment[] =>
+    staff && Array.isArray(staff.attachments) ? staff.attachments : [];
+
+  /** IndexedDB 에서 파일 본문 삭제 (실패해도 화면은 계속 진행) */
+  const deleteAttachments = async (attachments: StaffAttachment[]): Promise<void> => {
+    await Promise.all(
+      attachments.map(a => deleteStaffDocFile(a.storageKey).catch(() => undefined)),
+    );
+  };
+
+  /** 모달에서 첨부자료 올리기 — 저장 전까지는 staffDraft 에만 담아 둡니다. */
+  const handleStaffDocUpload = async (
+    kind: StaffDocKind,
+    fileList: FileList | null,
+  ): Promise<void> => {
+    const file = fileList && fileList[0];
+    if (!file) return;
+
+    setStaffUploading(kind);
+    setStaffError('');
+    try {
+      const attachment = await createStaffAttachment(file, kind, staffDraft?.name || '');
+      setStaffDraft(s => (s ? { ...s, attachments: [...attachmentsOf(s), attachment] } : s));
+    } catch (error) {
+      setStaffError(error instanceof Error ? error.message : '첨부자료를 올리지 못했습니다.');
+    } finally {
+      setStaffUploading('');
+    }
+  };
+
+  /** 모달에서 첨부자료 빼기 (저장을 눌러야 실제 파일이 지워집니다) */
+  const removeStaffDoc = (attachment: StaffAttachment) => {
+    if (!confirm(`"${attachment.fileName}" 첨부자료를 빼시겠습니까?`)) return;
+    setStaffDraft(s =>
+      s ? { ...s, attachments: attachmentsOf(s).filter(a => a.id !== attachment.id) } : s,
+    );
+  };
+
+  /** 첨부자료 미리보기 (이미지 · PDF) */
+  const openDocPreview = async (attachment: StaffAttachment, ownerName: string) => {
+    try {
+      const blob = await getStaffDocFile(attachment.storageKey);
+      if (!blob) return alert('첨부파일을 찾을 수 없습니다.');
+      const url = URL.createObjectURL(blob);
+      setDocPreview(prev => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return { attachment, url, ownerName };
+      });
+    } catch {
+      alert('첨부파일을 열지 못했습니다.');
+    }
+  };
+
+  const closeDocPreview = () => {
+    setDocPreview(prev => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  };
+
+  const handleDocDownload = async (attachment: StaffAttachment) => {
+    try {
+      await downloadStaffDoc(attachment);
+    } catch {
+      alert('첨부파일을 내려받지 못했습니다.');
+    }
   };
 
   const docCountByCategory = (key: string) => docs.filter(d => d.category === key).length;
@@ -332,6 +435,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               <>
                 <div className="sd-info-grid">
                   <InfoRow label="현장명" value={site.name} />
+                  <InfoRow label="사업자 개시번호" value={siteInfo?.businessNumber} />
                   <InfoRow label="소재지" value={siteInfo?.address} />
                   <InfoRow label="공사분류" value={siteInfo?.constructionType} />
                   <InfoRow label="규모" value={siteInfo?.scale} />
@@ -509,6 +613,30 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
 
                                     {staff.note && <p className="sd-staff-note">{staff.note}</p>}
 
+                                    {/* 증빙자료 (지정서 · 교육이수증) */}
+                                    {(() => {
+                                      const docs = staff.attachments ?? [];
+                                      if (docs.length === 0) return null;
+                                      return (
+                                        <div className="sd-staff-docs">
+                                          <span className="sd-staff-docs-label">📎 증빙자료</span>
+                                          {docs.map(a => (
+                                            <span key={a.id} className="sd-staff-doc-chip">
+                                              {staffDocLabel(staff.role, a.kind)}
+                                              <button
+                                                type="button"
+                                                className="sd-staff-doc-open"
+                                                onClick={() => void openDocPreview(a, staff.name)}
+                                                title={`${a.fileName} 보기`}
+                                              >
+                                                보기
+                                              </button>
+                                            </span>
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
+
                                     <div className="sd-staff-actions">
                                       <button
                                         className="sd-staff-btn"
@@ -537,6 +665,16 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
             ) : (
               draft && (
                 <div className="sd-edit-form">
+                  <FormField label="사업자 개시번호">
+                    <input
+                      type="text"
+                      value={draft.businessNumber}
+                      onChange={e => setField('businessNumber', e.target.value)}
+                      placeholder="예: 123-45-67890"
+                      inputMode="numeric"
+                    />
+                  </FormField>
+
                   <div className="sd-form-row">
                     <FormField label="소재지">
                       <input
@@ -925,6 +1063,101 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                 </label>
               )}
 
+              {/* ---------- 증빙자료 (지정서 · 교육이수증) ---------- */}
+              <div className="sd-doc-block">
+                <div className="sd-doc-block-head">
+                  <strong>📎 증빙자료</strong>
+                  <span className="sd-doc-block-sub">
+                    {staffDraft.role === '관리감독자'
+                      ? '관리감독자 지정서와 신규교육이수증을 올려두면 서류 점검 때 바로 확인할 수 있습니다.'
+                      : '지정서 · 교육이수증을 올려두면 서류 점검 때 바로 확인할 수 있습니다.'}{' '}
+                    (1건당 20MB)
+                  </span>
+                </div>
+
+                {STAFF_DOC_KINDS.map(kind => {
+                  const label = staffDocLabel(staffDraft.role, kind);
+                  const items = attachmentsOf(staffDraft).filter(a => a.kind === kind);
+                  const busy = staffUploading === kind;
+                  return (
+                    <div key={kind} className="sd-doc-kind">
+                      <div className="sd-doc-kind-head">
+                        <span className="sd-doc-kind-name">
+                          {label}
+                          <span className={`sd-doc-count ${items.length > 0 ? 'on' : ''}`}>
+                            {items.length}
+                          </span>
+                        </span>
+                        <label className={`sd-doc-add ${busy ? 'is-busy' : ''}`}>
+                          {busy ? '올리는 중…' : '＋ 파일 올리기'}
+                          <input
+                            type="file"
+                            accept={STAFF_DOC_ACCEPT}
+                            disabled={busy}
+                            onChange={e => {
+                              void handleStaffDocUpload(kind, e.target.files);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {items.length === 0 ? (
+                        <p className="sd-doc-empty">아직 올린 자료가 없습니다.</p>
+                      ) : (
+                        <ul className="sd-doc-list">
+                          {items.map(a => (
+                            <li key={a.id} className="sd-doc-item">
+                              <span className="sd-doc-icon">
+                                {isStaffDocImage(a.fileName)
+                                  ? '🖼️'
+                                  : a.fileName.toLowerCase().endsWith('.pdf')
+                                    ? '📕'
+                                    : '📄'}
+                              </span>
+                              <span className="sd-doc-info">
+                                <span className="sd-doc-name" title={a.fileName}>
+                                  {a.fileName}
+                                </span>
+                                <span className="sd-doc-meta">
+                                  {formatStaffDocSize(a.fileSize)}
+                                  {a.uploadedAt && ` · ${formatStaffDocDate(a.uploadedAt)}`}
+                                </span>
+                              </span>
+                              <span className="sd-doc-actions">
+                                {isStaffDocPreviewable(a.fileName) && (
+                                  <button
+                                    type="button"
+                                    className="sd-doc-btn"
+                                    onClick={() => void openDocPreview(a, staffDraft.name)}
+                                  >
+                                    보기
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  className="sd-doc-btn"
+                                  onClick={() => void handleDocDownload(a)}
+                                >
+                                  내려받기
+                                </button>
+                                <button
+                                  type="button"
+                                  className="sd-doc-btn danger"
+                                  onClick={() => removeStaffDoc(a)}
+                                >
+                                  빼기
+                                </button>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
               <FormField label="비고">
                 <textarea
                   rows={2}
@@ -944,6 +1177,57 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               <button className="btn btn-primary btn-sm" onClick={saveStaff}>
                 저장
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ 증빙자료 미리보기 (이미지 · PDF) ============ */}
+      {docPreview && (
+        <div className="sd-doc-preview-backdrop" onClick={closeDocPreview}>
+          <div
+            className="sd-doc-preview"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="증빙자료 미리보기"
+          >
+            <div className="sd-doc-preview-head">
+              <div className="sd-doc-preview-title">
+                <span className="sd-doc-preview-kind">{docPreview.attachment.kind}</span>
+                <strong>{docPreview.attachment.fileName}</strong>
+                <span className="sd-doc-preview-owner">
+                  {docPreview.ownerName} · {formatStaffDocSize(docPreview.attachment.fileSize)}
+                </span>
+              </div>
+              <div className="sd-doc-preview-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => void handleDocDownload(docPreview.attachment)}
+                >
+                  ⬇️ 내려받기
+                </button>
+                <button type="button" className="btn btn-primary btn-sm" onClick={closeDocPreview}>
+                  닫기
+                </button>
+              </div>
+            </div>
+
+            <div className="sd-doc-preview-body">
+              {isStaffDocImage(docPreview.attachment.fileName) ? (
+                <img
+                  src={docPreview.url}
+                  alt={docPreview.attachment.fileName}
+                  className="sd-doc-preview-img"
+                />
+              ) : (
+                <iframe
+                  src={docPreview.url}
+                  title={docPreview.attachment.fileName}
+                  className="sd-doc-preview-pdf"
+                />
+              )}
             </div>
           </div>
         </div>

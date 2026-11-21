@@ -87,6 +87,8 @@ export interface SiteDocument {
 export interface SiteInfo {
   siteId: number;
   siteName: string;
+  /** 사업자 개시번호 (예: 123-45-67890) */
+  businessNumber: string;
   address: string; // 소재지
   constructionType: string; // 공사분류 (예: 공동주택 신축)
   scale: string; // 규모 (예: 지하 3층 ~ 지상 25층, 3개동)
@@ -121,6 +123,46 @@ export const STAFF_ROLES: StaffRole[] = [
   '관리감독자',
 ];
 
+/** 관리자별 첨부자료 종류 */
+export type StaffDocKind = '지정서' | '교육이수증';
+
+export const STAFF_DOC_KINDS: StaffDocKind[] = ['지정서', '교육이수증'];
+
+/**
+ * 역할별로 필요한 첨부자료.
+ *
+ * - 안전보건관리책임자 : 안전보건관리책임자 지정서 · 교육이수증
+ * - 안전관리자        : 안전관리자 지정서 · 교육이수증
+ * - 관리감독자        : 관리감독자 지정서 · 신규교육이수증
+ *   (관리감독자는 직무교육이 아니라 신규교육 8시간이므로 이름이 다릅니다)
+ * - 현장소장          : 지정서 · 교육이수증
+ */
+export const STAFF_DOC_REQUIREMENTS: Record<StaffRole, StaffDocKind[]> = {
+  현장소장: ['지정서', '교육이수증'],
+  안전보건관리책임자: ['지정서', '교육이수증'],
+  안전관리자: ['지정서', '교육이수증'],
+  관리감독자: ['지정서', '교육이수증'],
+};
+
+/** 관리감독자의 '교육이수증'은 화면에서 '신규교육이수증'으로 표시합니다. */
+export const staffDocLabel = (role: StaffRole, kind: StaffDocKind): string => {
+  if (!STAFF_DOC_REQUIREMENTS[role].includes(kind)) return kind;
+  if (role === '관리감독자' && kind === '교육이수증') return '신규교육이수증';
+  return kind;
+};
+
+/** 관리자별 첨부자료 1건 (파일 본문은 IndexedDB, 여기에는 정보만 저장) */
+export interface StaffAttachment {
+  id: string;
+  kind: StaffDocKind; // 지정서 / 교육이수증
+  fileName: string;
+  fileSize: number; // bytes
+  fileType: string; // MIME type 또는 확장자
+  storageKey: string; // IndexedDB 파일 키
+  uploadedAt: string; // ISO
+  uploadedBy?: string;
+}
+
 export interface SiteStaff {
   id: string;
   role: StaffRole;
@@ -130,6 +172,8 @@ export interface SiteStaff {
   dismissedAt?: string; // 해임일
   trainingDate?: string; // 직무교육 이수일
   newTraining8h?: boolean; // 관리감독자 신규교육(8시간) 이수 여부
+  /** 지정서 · 교육이수증 등 첨부자료 (없으면 undefined) */
+  attachments?: StaffAttachment[];
   note?: string; // 비고
 }
 

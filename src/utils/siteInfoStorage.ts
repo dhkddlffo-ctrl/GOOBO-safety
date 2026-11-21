@@ -17,6 +17,7 @@ const persist = (map: SiteInfoMap): void => {
 export const createEmptySiteInfo = (siteId: number, siteName: string): SiteInfo => ({
   siteId,
   siteName,
+  businessNumber: '',
   address: '',
   constructionType: '',
   scale: '',
@@ -44,7 +45,14 @@ const normalize = (info: SiteInfo, siteId: number, siteName: string): SiteInfo =
   ...info,
   siteId,
   siteName: info.siteName || siteName,
-  staff: Array.isArray(info.staff) ? info.staff : [],
+  businessNumber: info.businessNumber || '',
+  staff: Array.isArray(info.staff) ? info.staff.map(normalizeStaff) : [],
+});
+
+/** 관리자 1명 보정 — 첨부자료 배열이 없어도 안전하게 */
+const normalizeStaff = (staff: SiteStaff): SiteStaff => ({
+  ...staff,
+  attachments: Array.isArray(staff.attachments) ? staff.attachments : [],
 });
 
 /** 현장 기본정보 조회 (없으면 빈 서식 반환) */
@@ -65,23 +73,24 @@ export const saveSiteInfo = (info: SiteInfo): void => {
 /** 현장 기본정보 입력 여부 (내용이 하나라도 채워졌는지) */
 export const isSiteInfoFilled = (info: SiteInfo): boolean =>
   Boolean(
+    info.businessNumber ||
     info.address ||
-      info.constructionType ||
-      info.scale ||
-      info.contractPeriod ||
-      info.contractAmount ||
-      info.startDate ||
-      info.actualStartDate ||
-      info.clientName ||
-      info.developerName ||
-      info.contractorName ||
-      info.siteManager ||
-      info.siteOfficer ||
-      info.siteAddress ||
-      info.officePhone ||
-      info.safetyManagerPhone ||
-      info.notes ||
-      (info.staff && info.staff.length > 0)
+    info.constructionType ||
+    info.scale ||
+    info.contractPeriod ||
+    info.contractAmount ||
+    info.startDate ||
+    info.actualStartDate ||
+    info.clientName ||
+    info.developerName ||
+    info.contractorName ||
+    info.siteManager ||
+    info.siteOfficer ||
+    info.siteAddress ||
+    info.officePhone ||
+    info.safetyManagerPhone ||
+    info.notes ||
+    (info.staff && info.staff.length > 0),
   );
 
 /* ------------------------------------------------------------------ */
