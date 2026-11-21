@@ -285,6 +285,423 @@
   border-color: #fca5a5;
 }
 
+/* ================================================================
+   게시판 표 — 다른 게시판(위험성평가 등록부)과 같은 형태의 표 목록
+   ================================================================ */
+.da-table-wrap {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.625rem;
+}
+
+.da-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  table-layout: fixed;
+}
+
+.da-table thead th {
+  padding: 0.5625rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.da-table tbody td {
+  padding: 0.625rem 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.da-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.da-tr {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.da-tr:hover {
+  background: #f8fafc;
+}
+
+.da-c-no {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 칸 안쪽 래퍼 — td 자체는 표 칸으로 두고, 정렬은 안쪽 div가 맡습니다 */
+.da-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.da-cell-cat {
+  flex-wrap: wrap;
+  gap: 0.1875rem;
+}
+
+.da-cell-cat .da-badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.da-cell-title {
+  gap: 0.4375rem;
+  overflow: hidden;
+}
+
+.da-type-icon {
+  flex-shrink: 0;
+  font-size: 1.0625rem;
+  line-height: 1;
+}
+
+.da-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.da-title-main {
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.da-title-sub {
+  font-size: 0.6875rem;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.da-c-period {
+  color: #15803d;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.da-c-ext {
+  text-align: center;
+}
+
+.da-ext-chip {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #fff;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+}
+
+.da-c-size {
+  text-align: center;
+  color: #475569;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.da-c-author {
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.da-cell-actions {
+  justify-content: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+/* 표 안의 작은 버튼 (전역 btn 위에 크기만 축소) */
+.da-table .btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 0.3125rem;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.da-table .btn-xs:hover {
+  background: #f1f5f9;
+}
+
+.da-table .da-btn-del {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.da-table .da-btn-del:hover {
+  background: #fef2f2;
+}
+
+/* ================================================================
+   글 보기 — 목록을 덮어쓰는 한 장짜리 글 (DocumentViewer.tsx)
+   이미지 자료는 화면을 가득 채우는 전체화면 글로 보여줍니다.
+   ================================================================ */
+.dv {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  animation: dv-fade 0.16s ease-out;
+}
+
+@keyframes dv-fade {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dv-chrome {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+}
+
+.dv-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.dv-head-text {
+  min-width: 0;
+  flex: 1 1 16rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dv-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.dv-tag {
+  flex-shrink: 0;
+  padding: 0.125rem 0.4375rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  color: #fff;
+  background: #2563eb;
+  border-radius: 0.3125rem;
+}
+
+.dv-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #475569;
+  word-break: break-all;
+}
+
+.dv-meta-sub {
+  color: #64748b;
+  font-size: 0.6875rem;
+}
+
+.dv-head-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.dv-head-right .btn-sm {
+  padding: 0.3125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 0.375rem;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dv-head-right .btn-sm:hover {
+  background: #f1f5f9;
+}
+
+.dv-head-right .dv-del {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.dv-head-right .dv-del:hover {
+  background: #fef2f2;
+}
+
+.dv-head-right .dv-close {
+  font-weight: 700;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.dv-head-right .dv-close:hover {
+  background: #dbeafe;
+}
+
+.dv-note {
+  margin: 0;
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: #334155;
+  background: #f8fafc;
+  border-left: 3px solid #cbd5e1;
+  border-radius: 0.25rem;
+  white-space: pre-wrap;
+}
+
+/* ---------- 본문 ---------- */
+.dv-body {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+}
+
+/* 원본 크기로 볼 때는 스크롤을 허용하고 가운데 정렬을 풉니다 */
+.dv-body--zoom {
+  align-items: flex-start;
+  justify-content: flex-start;
+  max-height: 78vh;
+}
+
+.dv-loading {
+  margin: 0;
+  padding: 3.5rem 1rem;
+  width: 100%;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.dv-figure {
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dv-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 74vh;
+  object-fit: contain;
+  background: #f1f5f9;
+  border-radius: 0.5rem;
+  cursor: zoom-in;
+}
+
+.dv-image--zoom {
+  width: auto;
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+
+.dv-caption {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
+.dv-pdf {
+  width: 100%;
+  height: 78vh;
+  border: none;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+}
+
+/* ---------- 미리 볼 수 없는 형식 ---------- */
+.dv-filecard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+}
+
+.dv-filecard-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.dv-filecard-name {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #1e293b;
+  word-break: break-all;
+}
+
+.dv-filecard-hint {
+  margin: 0 0 0.375rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.dv-foot-note {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
 /* ---------------- 빈 상태 ---------------- */
 .da-empty {
   background: #fff;
@@ -404,7 +821,7 @@
   margin-bottom: 0.3125rem;
 }
 
-.da-field input[type="text"],
+.da-field input[type='text'],
 .da-field select,
 .da-field textarea {
   width: 100%;
@@ -418,7 +835,7 @@
   color: #1f2937;
 }
 
-.da-field input[type="text"]:focus,
+.da-field input[type='text']:focus,
 .da-field select:focus,
 .da-field textarea:focus {
   outline: none;
@@ -696,6 +1113,52 @@
   .da-preview-foot {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  /* 표는 가로로 넘겨서 봅니다 */
+  .da-table {
+    min-width: 46rem;
+  }
+
+  .dv-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dv-head-right {
+    justify-content: flex-end;
+  }
+
+  .dv-body {
+    padding: 0.625rem;
+  }
+
+  .dv-image {
+    max-height: 60vh;
+  }
+
+  .dv-pdf {
+    height: 64vh;
+  }
+}
+
+/* 인쇄할 때는 화면용 버튼과 안내 문구를 감춥니다 */
+@media print {
+  .dv-chrome,
+  .dv-foot-note,
+  .dv-caption {
+    display: none !important;
+  }
+
+  .dv-body {
+    border: none;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .dv-image {
+    max-height: none;
+    page-break-inside: avoid;
   }
 }
 

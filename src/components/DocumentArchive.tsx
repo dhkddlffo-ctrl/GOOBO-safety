@@ -2,8 +2,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { SiteDocument, CategoryMeta } from '../types';
 import { isAuthenticated } from '../utils/auth';
 import { useCategories } from '../hooks/useCategories';
-import { resolveCategoryMeta, getCategoriesWithOrphans, getSubcategories, FALLBACK_CATEGORY } from '../utils/categoryStorage';
+import {
+  resolveCategoryMeta,
+  getCategoriesWithOrphans,
+  getSubcategories,
+  FALLBACK_CATEGORY,
+} from '../utils/categoryStorage';
 import CategoryManager from './CategoryManager';
+import DocumentViewer, { isImageFile } from './DocumentViewer';
 import {
   getDocuments,
   saveDocument,
@@ -15,7 +21,6 @@ import {
   formatFileSize,
   getFileMeta,
   isAllowedFile,
-  isPreviewable,
   getExtension,
   ALLOWED_EXTENSIONS,
   MAX_FILE_SIZE,
@@ -66,20 +71,13 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
     description: '',
   });
 
-  const [previewDoc, setPreviewDoc] = useState<SiteDocument | null>(null);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [previewLoading, setPreviewLoading] = useState(false);
+  /* 글 보기 — 목록을 덮어쓰는 한 장짜리 글 */
+  const [viewDoc, setViewDoc] = useState<SiteDocument | null>(null);
 
   useEffect(() => {
     setCanManage(isAuthenticated());
     refresh();
   }, [siteId]);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
 
   const refresh = () => {
     setDocs(getDocuments().filter(d => d.siteId === siteId));
@@ -103,13 +101,12 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
     });
   }, [docs, activeCategory, activeSub, searchTerm]);
 
-  const countByCategory = (key: string) =>
-    docs.filter(d => d.category === key).length;
+  const countByCategory = (key: string) => docs.filter(d => d.category === key).length;
 
   /** 현재 선택된 분류의 소분류 목록 */
   const currentSubs = useMemo(
     () => (activeCategory === '전체' ? [] : getSubcategories(activeCategory)),
-    [activeCategory, categories]
+    [activeCategory, categories],
   );
 
   /** 분류 변경 시 소분류 필터 초기화 */
@@ -121,7 +118,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
   /** 목록 + 기존 문서에만 남아있는 분류까지 합쳐서 표시 */
   const visibleCategories: CategoryMeta[] = useMemo(
     () => getCategoriesWithOrphans(docs.map(d => d.category)),
-    [categories, docs]
+    [categories, docs],
   );
 
   const defaultCategory = categories[0]?.key || FALLBACK_CATEGORY;
@@ -136,7 +133,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
     }
     if (file.size > MAX_FILE_SIZE) {
       alert(
-        `파일이 너무 큽니다 (${formatFileSize(file.size)}).\n최대 ${formatFileSize(MAX_FILE_SIZE)}까지 가능합니다.`
+        `파일이 너무 큽니다 (${formatFileSize(file.size)}).\n최대 ${formatFileSize(MAX_FILE_SIZE)}까지 가능합니다.`,
       );
       return;
     }
@@ -192,7 +189,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
       const storageKey = generateStorageKey(selectedFile.name);
       await putFile(storageKey, selectedFile);
 
-      saveDocument({
+      const created: SiteDocument = {
         id: generateDocId(),
         siteId,
         siteName,
@@ -208,7 +205,8 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
         description: uploadForm.description.trim() || undefined,
         storageKey,
         createdAt: new Date().toISOString(),
-      });
+      };
+      saveDocument(created);
 
       refresh();
       setShowUpload(false);
@@ -222,6 +220,9 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
         uploadedBy: '',
         description: '',
       });
+
+      /* 이미지 자료는 올리자마자 전체화면 글로 보여줍니다. */
+      if (isImageFile(created.fileName)) setViewDoc(created);
     } catch (error) {
       console.error('업로드 실패:', error);
       alert('업로드에 실패했습니다. 저장 공간을 확인해주세요.');
@@ -244,35 +245,37 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const handlePreview = async (doc: SiteDocument) => {
-    setPreviewDoc(doc);
-    setPreviewLoading(true);
-    try {
-      const blob = await getFile(doc.storageKey);
-      if (!blob) {
-        alert('파일을 찾을 수 없습니다.');
-        setPreviewDoc(null);
-        return;
-      }
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(blob));
-    } finally {
-      setPreviewLoading(false);
-    }
+  /* 글 보기 — 목록을 덮어쓰는 한 장짜리 글 */
+  const openView = (doc: SiteDocument) => {
+    setViewDoc(doc);
   };
 
-  const closePreview = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl('');
-    setPreviewDoc(null);
+  const closeView = () => {
+    setViewDoc(null);
   };
 
   const handleDelete = async (doc: SiteDocument) => {
     if (!canManage) return alert('문서 삭제는 관리자만 가능합니다.');
     if (!confirm(`"${doc.title}" 문서를 삭제하시겠습니까?`)) return;
     await deleteDocument(doc.id);
+    if (viewDoc && viewDoc.id === doc.id) setViewDoc(null);
     refresh();
   };
+
+  /* ---------- 글 보기 — 목록을 덮어쓰는 한 장짜리 글 ---------- */
+  if (viewDoc) {
+    return (
+      <div className="da-wrap">
+        <DocumentViewer
+          doc={viewDoc}
+          canManage={canManage}
+          onClose={closeView}
+          onDownload={() => void handleDownload(viewDoc)}
+          onDelete={() => void handleDelete(viewDoc)}
+        />
+      </div>
+    );
+  }
 
   /* ---------------- 렌더 ---------------- */
   return (
@@ -298,7 +301,10 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
             className={`da-category-card ${activeCategory === meta.key ? 'active' : ''}`}
             onClick={() => selectCategory(meta.key)}
           >
-            <span className="da-cat-icon" style={{ background: `${meta.color}1a`, color: meta.color }}>
+            <span
+              className="da-cat-icon"
+              style={{ background: `${meta.color}1a`, color: meta.color }}
+            >
               {meta.icon}
             </span>
             <div className="da-cat-body">
@@ -307,9 +313,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
                 <span className="da-cat-count">{countByCategory(meta.key)}</span>
               </div>
               <div className="da-cat-desc">
-                {meta.subs && meta.subs.length > 0
-                  ? `${meta.subs.length}개 소분류`
-                  : meta.desc}
+                {meta.subs && meta.subs.length > 0 ? `${meta.subs.length}개 소분류` : meta.desc}
               </div>
             </div>
           </button>
@@ -388,11 +392,7 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
       {filtered.length === 0 ? (
         <div className="da-empty">
           <div className="da-empty-icon">📂</div>
-          <h4>
-            {docs.length === 0
-              ? '등록된 문서가 없습니다'
-              : '조건에 맞는 문서가 없습니다'}
-          </h4>
+          <h4>{docs.length === 0 ? '등록된 문서가 없습니다' : '조건에 맞는 문서가 없습니다'}</h4>
           <p>
             {docs.length === 0
               ? '안전보건관리대장, 안전계획서, 안전관리비, 교육일지 등을 등록해보세요.'
@@ -405,65 +405,110 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
           )}
         </div>
       ) : (
-        <div className="da-list">
-          {filtered.map(doc => {
-            const fmeta = getFileMeta(doc.fileName);
-            const cmeta = resolveCategoryMeta(doc.category);
-            return (
-              <div key={doc.id} className="da-item">
-                <div className="da-file-icon" style={{ color: fmeta.color }}>
-                  <span>{fmeta.icon}</span>
-                  <span className="da-file-ext" style={{ background: fmeta.color }}>
-                    {fmeta.label}
-                  </span>
-                </div>
-
-                <div className="da-item-main">
-                  <div className="da-item-title-row">
-                    <h4>{doc.title}</h4>
-                    <span
-                      className="da-badge"
-                      style={{ background: `${cmeta.color}1a`, color: cmeta.color }}
-                    >
-                      {doc.category}
-                    </span>
-                    {doc.subcategory && (
-                      <span className="da-badge da-badge-sub">{doc.subcategory}</span>
-                    )}
-                    {doc.period && <span className="da-period">{doc.period}</span>}
-                    <span className="da-version">{doc.version}</span>
-                  </div>
-                  <div className="da-item-meta">
-                    <span>📎 {doc.fileName}</span>
-                    <span>💾 {formatFileSize(doc.fileSize)}</span>
-                    <span>✍️ {doc.uploadedBy}</span>
-                    <span>🗓️ {formatDateTime(doc.createdAt)}</span>
-                  </div>
-                  {doc.description && <p className="da-item-desc">{doc.description}</p>}
-                </div>
-
-                <div className="da-item-actions">
-                  {isPreviewable(doc.fileName) && (
-                    <button className="da-btn" title="미리보기" onClick={() => handlePreview(doc)}>
-                      👁️
-                    </button>
-                  )}
-                  <button className="da-btn" title="다운로드" onClick={() => handleDownload(doc)}>
-                    ⬇️
-                  </button>
-                  {canManage && (
-                    <button
-                      className="da-btn da-btn-danger"
-                      title="삭제"
-                      onClick={() => handleDelete(doc)}
-                    >
-                      🗑️
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div className="da-table-wrap">
+          <table className="da-table">
+            <colgroup>
+              <col style={{ width: '6%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '34%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '12%' }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>번호</th>
+                <th>분류</th>
+                <th>문서명</th>
+                <th>해당 기간</th>
+                <th>형식</th>
+                <th>크기</th>
+                <th>등록자</th>
+                <th>관리</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((doc, idx) => {
+                const fmeta = getFileMeta(doc.fileName);
+                const cmeta = resolveCategoryMeta(doc.category);
+                const no = filtered.length - idx;
+                return (
+                  <tr key={doc.id} className="da-tr" onClick={() => openView(doc)}>
+                    <td className="da-c-no">{no}</td>
+                    <td>
+                      <div className="da-cell da-cell-cat">
+                        <span
+                          className="da-badge"
+                          style={{ background: `${cmeta.color}1a`, color: cmeta.color }}
+                        >
+                          {doc.category}
+                        </span>
+                        {doc.subcategory && (
+                          <span className="da-badge da-badge-sub">{doc.subcategory}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="da-cell da-cell-title">
+                        <span className="da-type-icon" style={{ color: fmeta.color }}>
+                          {fmeta.icon}
+                        </span>
+                        <span className="da-title-text">
+                          <span className="da-title-main">{doc.title}</span>
+                          <span className="da-title-sub">
+                            📎 {doc.fileName} · {formatDateTime(doc.createdAt)}
+                          </span>
+                        </span>
+                      </div>
+                    </td>
+                    <td className="da-c-period">{doc.period || '-'}</td>
+                    <td className="da-c-ext">
+                      <span className="da-ext-chip" style={{ background: fmeta.color }}>
+                        {fmeta.label}
+                      </span>
+                    </td>
+                    <td className="da-c-size">{formatFileSize(doc.fileSize)}</td>
+                    <td className="da-c-author">{doc.uploadedBy || '-'}</td>
+                    <td>
+                      <div className="da-cell da-cell-actions">
+                        <button
+                          className="btn btn-xs"
+                          onClick={e => {
+                            e.stopPropagation();
+                            openView(doc);
+                          }}
+                        >
+                          열기
+                        </button>
+                        <button
+                          className="btn btn-xs"
+                          onClick={e => {
+                            e.stopPropagation();
+                            void handleDownload(doc);
+                          }}
+                        >
+                          내려받기
+                        </button>
+                        {canManage && (
+                          <button
+                            className="btn btn-xs da-btn-del"
+                            onClick={e => {
+                              e.stopPropagation();
+                              void handleDelete(doc);
+                            }}
+                          >
+                            삭제
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -620,7 +665,12 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
               </div>
 
               <div className="da-modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={closeUpload} disabled={uploading}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={closeUpload}
+                  disabled={uploading}
+                >
                   취소
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={uploading}>
@@ -635,37 +685,6 @@ const DocumentArchive: React.FC<DocumentArchiveProps> = ({ siteId, siteName }) =
       {/* 분류 관리 모달 */}
       {showCategoryManager && (
         <CategoryManager categories={categories} onClose={() => setShowCategoryManager(false)} />
-      )}
-
-      {/* 미리보기 모달 */}
-      {previewDoc && (
-        <div className="da-modal-backdrop" onClick={closePreview}>
-          <div className="da-preview" onClick={e => e.stopPropagation()}>
-            <div className="da-modal-head">
-              <h3>{previewDoc.title}</h3>
-              <button className="da-modal-close" onClick={closePreview}>
-                ✕
-              </button>
-            </div>
-            <div className="da-preview-body">
-              {previewLoading ? (
-                <div className="da-preview-loading">불러오는 중...</div>
-              ) : getExtension(previewDoc.fileName) === 'pdf' ? (
-                <iframe src={previewUrl} title={previewDoc.title} className="da-preview-pdf" />
-              ) : (
-                <img src={previewUrl} alt={previewDoc.title} className="da-preview-img" />
-              )}
-            </div>
-            <div className="da-preview-foot">
-              <span>
-                {previewDoc.fileName} · {formatFileSize(previewDoc.fileSize)}
-              </span>
-              <button className="btn btn-primary" onClick={() => handleDownload(previewDoc)}>
-                ⬇️ 다운로드
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
