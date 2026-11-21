@@ -944,8 +944,8 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               <div>
                 <h2>현장소장 안전보건 경영방침</h2>
                 <p className="sd-panel-sub">
-                  회사 서식 그대로 작성해 A4 1장으로 출력할 수 있습니다. 문구·서명을 고친 뒤
-                  인쇄하거나 PDF로 저장해 게시판에 부착하세요.
+                  경영방침 · 세부추진계획표 · 성과평가표를 회사 서식 그대로 작성합니다. 작성을
+                  마치면 게시글로 등록되어 게시판에서 다시 열어 보고 A4 · A3로 인쇄할 수 있습니다.
                 </p>
               </div>
             </div>

@@ -4,6 +4,7 @@ import {
   SiteSafetyPolicyPlanRow,
   SiteSafetyPolicyEvalItem,
   SiteSafetyPolicyBoardPost,
+  SiteSafetyPolicyDocSnapshot,
   PolicyDocKind,
   PolicyPaper,
   POLICY_CHECK_CYCLES,
@@ -11,6 +12,7 @@ import {
 import {
   getSafetyPolicy,
   saveSafetyPolicy,
+  createEmptySafetyPolicy,
   koreanOrdinal,
   formatPolicyDate,
   createPlanRow,
@@ -65,6 +67,50 @@ const cycleOptions = (current: string): string[] => {
   return list;
 };
 
+/** 2026.11.21 형태의 표기 */
+const formatBoardDate = (iso: string): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+};
+
+/** 작성한 문서 → 게시글에 보관할 내용 스냅샷 */
+const buildDocSnapshot = (data: SafetyPolicyData): SiteSafetyPolicyDocSnapshot => ({
+  title: data.title,
+  statement: data.statement,
+  goal: data.goal,
+  actionPlans: data.actionPlans,
+  planRows: data.planRows,
+  evalItems: data.evalItems,
+  evalTerm: data.evalTerm,
+  evalNote: data.evalNote,
+  declaredAt: data.declaredAt,
+  signerTitle: data.signerTitle,
+  signerName: data.signerName,
+  sealImageKey: data.sealImageKey,
+});
+
+/** 게시글 스냅샷 → 서식 출력용 문서 */
+const postToDoc = (post: SiteSafetyPolicyBoardPost, base: SafetyPolicyData): SafetyPolicyData => ({
+  ...base,
+  ...(post.content ?? {}),
+  siteId: base.siteId,
+  siteName: base.siteName,
+  paper: base.paper,
+  boards: base.boards,
+});
+
+/** 문서 종류별 기본 게시글 제목 */
+const defaultPostTitle = (kind: PolicyDocKind): string => {
+  const date = new Date();
+  const stamp = `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+  if (kind === 'plan') return `${stamp} 세부추진계획표`;
+  if (kind === 'eval') return `${stamp} 성과평가표`;
+  return `${stamp} 안전보건 경영방침`;
+};
+
 /**
  * 현장별 현장소장 안전보건 경영방침 (3종 문서)
  *
@@ -77,13 +123,26 @@ const cycleOptions = (current: string): string[] => {
 const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, siteManager }) => {
   const [policy, setPolicy] = useState<SafetyPolicyData>(() => getSafetyPolicy(siteId, siteName));
   const [docKind, setDocKind] = useState<PolicyDocKind>('policy');
-  const [view, setView] = useState<'doc' | 'board'>('doc');
-  const [editing, setEditing] = useState(false);
+  /** 게시글(기본) / 서식(회사 기본 서식 미리보기) */
+  const [view, setView] = useState<'doc' | 'board'>('board');
+  /** 작성 중 여부 */
+  const [writing, setWriting] = useState(false);
+  /** 작성 중인 문서 */
   const [draft, setDraft] = useState<SafetyPolicyData | null>(null);
+  /** 작성한 문서의 게시글 제목 */
+  const [postTitle, setPostTitle] = useState('');
+  /** 게시판에서 열어 본 게시글 (문서 게시글) */
+  const [viewPost, setViewPost] = useState<SiteSafetyPolicyBoardPost | null>(null);
+  const [postSealUrl, setPostSealUrl] = useState('');
+  /** 게시글 문서만 인쇄하는 중 */
+  const [printPost, setPrintPost] = useState(false);
+  /** 방금 등록한 게시글 강조 */
+  const [highlightId, setHighlightId] = useState('');
   const [error, setError] = useState('');
   const [sealUrl, setSealUrl] = useState('');
   const [sealUploading, setSealUploading] = useState(false);
   const sealInputRef = useRef<HTMLInputElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   /* 게시판 업로드 */
   const [boardTitle, setBoardTitle] = useState('');
@@ -92,7 +151,7 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
   const boardFileRef = useRef<HTMLInputElement>(null);
 
   const canManage = isAuthenticated();
-  const current = editing && draft ? draft : policy;
+  const current = writing && draft ? draft : policy;
   const paper: PolicyPaper = current.paper[docKind];
   const boardPosts = policy.boards[docKind];
   const docLabel = DOC_TABS.find(tab => tab.kind === docKind)?.label ?? '';
@@ -100,8 +159,11 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
   /* 현장 변경 시 다시 읽기 */
   useEffect(() => {
     setPolicy(getSafetyPolicy(siteId, siteName));
-    setEditing(false);
+    setWriting(false);
     setDraft(null);
+    setPostTitle('');
+    setViewPost(null);
+    setHighlightId('');
     setError('');
   }, [siteId, siteName]);
 
@@ -129,6 +191,31 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
     };
   }, [policy.sealImageKey]);
 
+  /* 게시글로 등록된 문서의 도장 이미지 불러오기 */
+  useEffect(() => {
+    let revoked = '';
+    let cancelled = false;
+    const key = viewPost?.content?.sealImageKey;
+
+    const load = async () => {
+      if (!key) {
+        setPostSealUrl('');
+        return;
+      }
+      const blob = await getFile(key);
+      if (!blob || cancelled) return;
+      const url = URL.createObjectURL(blob);
+      revoked = url;
+      setPostSealUrl(url);
+    };
+    load();
+
+    return () => {
+      cancelled = true;
+      if (revoked) URL.revokeObjectURL(revoked);
+    };
+  }, [viewPost]);
+
   /* ---------------- 인쇄 용지 ---------------- */
   const changePaper = (next: PolicyPaper) => {
     const nextPolicy: SafetyPolicyData = {
@@ -140,68 +227,104 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
     setDraft(d => (d ? { ...d, paper: { ...d.paper, [docKind]: next } } : d));
   };
 
-  /* ---------------- 편집 ---------------- */
-  const startEdit = () => {
+  /* ---------------- 작성 (새 문서 → 게시글) ---------------- */
+  const startWrite = () => {
     if (!canManage) {
-      alert('경영방침 수정은 관리자 로그인 후 가능합니다.');
+      alert('문서 작성은 관리자 로그인 후 가능합니다.');
       return;
     }
-    /* 서명 성명이 비어 있으면 현장소장 성명을 기본값으로 채워 둡니다. */
-    const base = { ...policy };
-    if (!base.signerName && siteManager) base.signerName = siteManager;
-    setDraft(base);
+    /* 회사 서식 기본값에서 새로 작성합니다. (기존 문서를 고치지 않습니다) */
+    const base = createEmptySafetyPolicy(siteId, siteName, siteManager || '');
+    setDraft({ ...base, paper: policy.paper, boards: policy.boards });
+    setPostTitle(defaultPostTitle(docKind));
+    setViewPost(null);
+    setHighlightId('');
     setError('');
-    setEditing(true);
+    setWriting(true);
+    setView('doc');
   };
 
-  const cancelEdit = () => {
+  const cancelWrite = () => {
     setDraft(null);
-    setEditing(false);
+    setWriting(false);
+    setPostTitle('');
     setError('');
   };
 
-  const saveEdit = () => {
+  /** 입력값 정리 (빈 행 제거 · 공백 제거) */
+  const cleanDraft = (data: SafetyPolicyData): SafetyPolicyData => ({
+    ...data,
+    title: data.title.trim(),
+    statement: data.statement.trim(),
+    goal: data.goal.trim(),
+    actionPlans: data.actionPlans.map(p => p.trim()).filter(Boolean),
+    planRows: data.planRows
+      .map(row => ({
+        ...row,
+        plan: row.plan.trim(),
+        owner: row.owner.trim(),
+        cycle: row.cycle.trim(),
+        method: row.method.trim(),
+        target: row.target.trim(),
+        note: row.note.trim(),
+      }))
+      .filter(row => row.plan || row.owner || row.method || row.target || row.note),
+    evalItems: data.evalItems
+      .map(item => ({
+        ...item,
+        item: item.item.trim(),
+        indicator: item.indicator.trim(),
+        method: item.method.trim(),
+        result: item.result.trim(),
+        note: item.note.trim(),
+      }))
+      .filter(item => item.item || item.indicator || item.method || item.result || item.weight),
+    evalTerm: data.evalTerm.trim(),
+    evalNote: data.evalNote.trim(),
+  });
+
+  /** 작성 완료 → 게시글로 등록하고 게시판으로 이동 */
+  const submitWrite = () => {
     if (!draft) return;
+    if (!postTitle.trim()) {
+      setError('게시글 제목을 입력해주세요.');
+      return;
+    }
     if (docKind === 'policy' && !draft.statement.trim() && !draft.goal.trim()) {
       setError('안전보건 방침 또는 목표를 입력해주세요.');
       return;
     }
 
-    /* 빈 줄(입력하지 않은 행)은 저장하지 않습니다. */
-    const cleaned: SafetyPolicyData = {
-      ...draft,
-      statement: draft.statement.trim(),
-      goal: draft.goal.trim(),
-      actionPlans: draft.actionPlans.map(p => p.trim()).filter(Boolean),
-      planRows: draft.planRows
-        .map(row => ({
-          ...row,
-          plan: row.plan.trim(),
-          owner: row.owner.trim(),
-          cycle: row.cycle.trim(),
-          method: row.method.trim(),
-          target: row.target.trim(),
-          note: row.note.trim(),
-        }))
-        .filter(row => row.plan || row.owner || row.method || row.target || row.note),
-      evalItems: draft.evalItems
-        .map(item => ({
-          ...item,
-          item: item.item.trim(),
-          indicator: item.indicator.trim(),
-          method: item.method.trim(),
-          result: item.result.trim(),
-          note: item.note.trim(),
-        }))
-        .filter(item => item.item || item.indicator || item.method || item.result || item.weight),
-      evalTerm: draft.evalTerm.trim(),
-      evalNote: draft.evalNote.trim(),
+    const cleaned = cleanDraft(draft);
+    const post: SiteSafetyPolicyBoardPost = {
+      id: `bd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      kind: 'doc',
+      title: postTitle.trim(),
+      fileName: '',
+      storageKey: '',
+      size: 0,
+      author: '관리자',
+      createdAt: new Date().toISOString(),
+      content: buildDocSnapshot(cleaned),
     };
-    saveSafetyPolicy(cleaned);
+
+    const nextPolicy: SafetyPolicyData = {
+      ...policy,
+      boards: { ...policy.boards, [docKind]: [post, ...policy.boards[docKind]] },
+    };
+    saveSafetyPolicy(nextPolicy);
     setPolicy(getSafetyPolicy(siteId, siteName));
-    setEditing(false);
+    setWriting(false);
     setDraft(null);
+    setPostTitle('');
     setError('');
+    /* 작성한 문서를 게시글로 열어 줍니다. */
+    setViewPost(post);
+    setHighlightId(post.id);
+    setView('board');
+    window.setTimeout(() => {
+      boardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
   };
 
   const setField = <K extends keyof SafetyPolicyData>(key: K, value: SafetyPolicyData[K]) => {
@@ -451,14 +574,24 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
     URL.revokeObjectURL(url);
   };
 
-  /** 게시판 자료 삭제 */
+  /** 게시글 삭제 (작성 문서 · 올린 파일 모두) */
   const handleBoardRemove = async (post: SiteSafetyPolicyBoardPost) => {
     if (!canManage) {
-      alert('게시판 자료 삭제는 관리자 로그인 후 가능합니다.');
+      alert('게시글 삭제는 관리자 로그인 후 가능합니다.');
       return;
     }
-    if (!confirm(`"${post.title}" 자료를 삭제하시겠습니까?`)) return;
-    await deleteFile(post.storageKey).catch(() => undefined);
+    if (!confirm(`"${post.title}" 게시글을 삭제하시겠습니까?`)) return;
+
+    if (post.storageKey) {
+      await deleteFile(post.storageKey).catch(() => undefined);
+    }
+    /* 작성 문서에만 쓰인 도장 이미지는 함께 정리합니다. */
+    const sealKey = post.content?.sealImageKey;
+    if (sealKey && sealKey !== policy.sealImageKey) {
+      await deleteFile(sealKey).catch(() => undefined);
+    }
+    if (viewPost?.id === post.id) setViewPost(null);
+
     const nextPolicy: SafetyPolicyData = {
       ...policy,
       boards: {
@@ -480,11 +613,28 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
 
   /* ---------------- 인쇄 ---------------- */
   const handlePrint = () => {
-    if (editing) {
-      alert('먼저 저장한 뒤 출력해주세요.');
+    if (writing) {
+      alert('작성을 마치고 게시글로 등록한 뒤 출력해주세요.');
+      return;
+    }
+    if (view === 'board') {
+      if (viewPost?.content) {
+        handlePostPrint();
+        return;
+      }
+      alert('게시글의 [보기] 버튼으로 문서를 연 뒤 인쇄해주세요.');
       return;
     }
     window.print();
+  };
+
+  /** 게시글로 등록된 문서 인쇄 — 그 문서만 출력합니다. */
+  const handlePostPrint = () => {
+    setPrintPost(true);
+    window.setTimeout(() => {
+      window.print();
+      window.setTimeout(() => setPrintPost(false), 300);
+    }, 80);
   };
 
   /* ---------------- 공통 조각 ---------------- */
@@ -503,16 +653,16 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
     </div>
   );
 
-  const sheetClass = (kind: PolicyDocKind) => {
+  const sheetClass = (kind: PolicyDocKind, variant?: 'post') => {
     const p = current.paper[kind];
-    return `sp-sheet${p === 'A3' ? ' is-a3' : ' is-a4'}`;
+    return `sp-sheet${p === 'A3' ? ' is-a3' : ' is-a4'}${variant === 'post' ? ' is-post' : ''}`;
   };
 
   /* ---------------- 서식 1 : 경영방침 ---------------- */
-  const policySheet = (data: SafetyPolicyData, seal: string) => {
+  const policySheet = (data: SafetyPolicyData, seal: string, variant?: 'post') => {
     const plans = data.actionPlans.filter(p => p.trim());
     return (
-      <div className={sheetClass('policy')}>
+      <div className={sheetClass('policy', variant)}>
         <div className="sp-title-box">
           <h1 className="sp-title">{docTitle(data, 'policy')}</h1>
         </div>
@@ -552,10 +702,10 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
   };
 
   /* ---------------- 서식 2 : 세부추진계획표 ---------------- */
-  const planSheet = (data: SafetyPolicyData, seal: string) => {
+  const planSheet = (data: SafetyPolicyData, seal: string, variant?: 'post') => {
     const rows = data.planRows;
     return (
-      <div className={`${sheetClass('plan')} sp-sheet-table`}>
+      <div className={`${sheetClass('plan', variant)} sp-sheet-table`}>
         <div className="sp-title-box">
           <h1 className="sp-title sp-title--long">{docTitle(data, 'plan')}</h1>
         </div>
@@ -626,10 +776,10 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
   };
 
   /* ---------------- 서식 3 : 성과평가표 (월별 실적 1~12월) ---------------- */
-  const evalSheet = (data: SafetyPolicyData, seal: string) => {
+  const evalSheet = (data: SafetyPolicyData, seal: string, variant?: 'post') => {
     const items = data.evalItems;
     return (
-      <div className={`${sheetClass('eval')} sp-sheet-table`}>
+      <div className={`${sheetClass('eval', variant)} sp-sheet-table`}>
         <div className="sp-title-box">
           <h1 className="sp-title sp-title--long">{docTitle(data, 'eval')}</h1>
         </div>
@@ -729,10 +879,10 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
     );
   };
 
-  const sheet = (data: SafetyPolicyData, seal: string) => {
-    if (docKind === 'plan') return planSheet(data, seal);
-    if (docKind === 'eval') return evalSheet(data, seal);
-    return policySheet(data, seal);
+  const sheet = (data: SafetyPolicyData, seal: string, variant?: 'post') => {
+    if (docKind === 'plan') return planSheet(data, seal, variant);
+    if (docKind === 'eval') return evalSheet(data, seal, variant);
+    return policySheet(data, seal, variant);
   };
 
   /* ---------------- 공통 서명 편집 ---------------- */
@@ -1230,24 +1380,30 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
   };
 
   /* ---------------- 게시판 화면 ---------------- */
-  const formatBoardDate = (iso: string): string => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+  const openPost = (post: SiteSafetyPolicyBoardPost) => {
+    setViewPost(post);
+    setView('board');
+    window.setTimeout(() => {
+      boardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 40);
   };
 
   const boardPanel = () => (
-    <div className="sp-board">
+    <div className="sp-board" ref={boardRef}>
       <div className="sp-board-head">
         <div className="sp-board-head-text">
           <strong>{docLabel} 게시판</strong>
           <span>
-            출력한 문서(PDF) · 사진 · 서명본 등을 올려 함께 보관합니다. 등록 자료{' '}
-            {boardPosts.length}건
+            작성한 문서와 올린 자료를 게시글로 보관합니다. 등록 게시글 {boardPosts.length}건
           </span>
         </div>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm sp-board-write"
+          onClick={startWrite}
+        >
+          ＋ {docLabel} 작성
+        </button>
       </div>
 
       <div className="sp-board-form">
@@ -1298,33 +1454,58 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
 
       {boardPosts.length === 0 ? (
         <div className="sp-board-empty">
-          <strong>등록된 자료가 없습니다.</strong>
-          <span>문서를 인쇄·PDF 저장한 뒤 위에서 올리면 이 게시판에 쌓입니다.</span>
+          <strong>등록된 게시글이 없습니다.</strong>
+          <span>
+            위의 <b>＋ {docLabel} 작성</b> 버튼으로 문서를 작성하면 이 게시판에 게시글로 등록됩니다.
+          </span>
         </div>
       ) : (
         <ul className="sp-board-list">
           {boardPosts.map(post => {
-            const meta = getFileMeta(post.fileName);
+            const isDoc = post.kind === 'doc';
+            const meta = isDoc ? null : getFileMeta(post.fileName);
+            const open = viewPost?.id === post.id;
             return (
-              <li key={post.id} className="sp-board-item">
-                <span className="sp-board-badge" style={{ color: meta.color }}>
-                  {meta.label}
+              <li
+                key={post.id}
+                className={`sp-board-item${open ? ' is-open' : ''}${
+                  highlightId === post.id ? ' is-new' : ''
+                }`}
+              >
+                <span
+                  className={`sp-board-badge${isDoc ? ' is-doc' : ''}`}
+                  style={meta ? { color: meta.color } : undefined}
+                >
+                  {isDoc ? '문서' : meta?.label}
                 </span>
                 <div className="sp-board-item-body">
                   <strong className="sp-board-item-title">{post.title}</strong>
                   <span className="sp-board-item-meta">
-                    {post.fileName} · {formatFileSize(post.size)} · {post.author} ·{' '}
-                    {formatBoardDate(post.createdAt)}
+                    {isDoc
+                      ? `직접 작성 · ${post.author} · ${formatBoardDate(post.createdAt)}`
+                      : `${post.fileName} · ${formatFileSize(post.size)} · ${post.author} · ${formatBoardDate(
+                          post.createdAt,
+                        )}`}
                   </span>
                 </div>
                 <div className="sp-board-item-actions">
-                  <button
-                    type="button"
-                    className="sp-board-btn"
-                    onClick={() => void handleBoardDownload(post)}
-                  >
-                    내려받기
-                  </button>
+                  {isDoc ? (
+                    <button
+                      type="button"
+                      className="sp-board-btn"
+                      onClick={() => (open ? setViewPost(null) : openPost(post))}
+                    >
+                      {open ? '접기' : '보기'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="sp-board-btn"
+                      onClick={() => void handleBoardDownload(post)}
+                    >
+                      내려받기
+                    </button>
+                  )}
                   {canManage && (
                     <button
                       type="button"
@@ -1335,6 +1516,25 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
                     </button>
                   )}
                 </div>
+                {open && post.content && (
+                  <div className="sp-post">
+                    <div className="sp-post-head">
+                      <div className="sp-post-head-text">
+                        <strong>{docLabel} 게시글</strong>
+                        <span>
+                          {post.content.signerTitle || '현장소장'} {post.content.signerName || ''} ·{' '}
+                          {formatPolicyDate(post.content.declaredAt)} 작성
+                        </span>
+                      </div>
+                      <button type="button" className="sp-board-btn" onClick={handlePostPrint}>
+                        인쇄 / PDF 저장
+                      </button>
+                    </div>
+                    <div className="sp-post-sheet">
+                      {sheet(postToDoc(post, policy), postSealUrl, 'post')}
+                    </div>
+                  </div>
+                )}
               </li>
             );
           })}
@@ -1345,22 +1545,22 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
 
   /* ---------------- 렌더 ---------------- */
   return (
-    <div className="sp-wrap">
+    <div className={`sp-wrap${printPost ? ' is-print-post' : ''}`}>
       {/* 툴바 (인쇄 시 숨김) */}
       <div className="sp-toolbar">
         <div className="sp-toolbar-info">
           <strong>현장소장 안전보건 경영방침</strong>
           <span className="sp-toolbar-sub">
-            {editing
-              ? '내용을 고친 뒤 저장하세요.'
-              : '문서별로 A4 · A3 용지를 선택해 출력할 수 있습니다.'}
+            {writing
+              ? `${docLabel}를 작성하고 있습니다. 작성을 마치면 게시글로 등록됩니다.`
+              : '문서를 작성하면 게시판에 게시글로 등록되고, 게시글에서 A4 · A3로 출력할 수 있습니다.'}
           </span>
         </div>
         <div className="sp-toolbar-actions">
-          {!editing ? (
+          {!writing ? (
             <>
-              <button className="btn btn-secondary btn-sm" onClick={startEdit}>
-                수정
+              <button className="btn btn-secondary btn-sm" onClick={startWrite}>
+                ＋ {docLabel} 작성
               </button>
               <button className="btn btn-primary btn-sm" onClick={handlePrint}>
                 인쇄 / PDF 저장
@@ -1368,11 +1568,11 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
             </>
           ) : (
             <>
-              <button className="btn btn-secondary btn-sm" onClick={cancelEdit}>
+              <button className="btn btn-secondary btn-sm" onClick={cancelWrite}>
                 취소
               </button>
-              <button className="btn btn-primary btn-sm" onClick={saveEdit}>
-                저장
+              <button className="btn btn-primary btn-sm" onClick={submitWrite}>
+                작성 완료 · 게시글로 등록
               </button>
             </>
           )}
@@ -1389,7 +1589,15 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
               role="tab"
               aria-selected={docKind === tab.kind}
               className={`sp-doc-tab${docKind === tab.kind ? ' is-active' : ''}`}
-              onClick={() => setDocKind(tab.kind)}
+              onClick={() => {
+                if (writing) return;
+                setDocKind(tab.kind);
+                setViewPost(null);
+                setHighlightId('');
+                setError('');
+              }}
+              disabled={writing}
+              title={writing ? '작성을 마친 뒤 문서를 바꿀 수 있습니다.' : undefined}
             >
               <span className="sp-doc-tab-label">{tab.label}</span>
               <span className="sp-doc-tab-desc">{tab.desc}</span>
@@ -1398,20 +1606,8 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
         </div>
 
         <div className="sp-docbar-right">
-          {/* 문서 / 게시판 전환 */}
+          {/* 게시글 / 회사 서식 전환 */}
           <div className="sp-viewtabs" role="tablist" aria-label="보기 방식">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === 'doc'}
-              className={`sp-viewtab${view === 'doc' ? ' is-active' : ''}`}
-              onClick={() => {
-                setView('doc');
-                cancelEdit();
-              }}
-            >
-              서식
-            </button>
             <button
               type="button"
               role="tab"
@@ -1419,17 +1615,29 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
               className={`sp-viewtab${view === 'board' ? ' is-active' : ''}`}
               onClick={() => {
                 setView('board');
-                cancelEdit();
+                cancelWrite();
               }}
             >
-              게시판
+              게시글
               {boardPosts.length > 0 && (
                 <span className="sp-viewtab-count">{boardPosts.length}</span>
               )}
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === 'doc'}
+              className={`sp-viewtab${view === 'doc' ? ' is-active' : ''}`}
+              onClick={() => {
+                setView('doc');
+                setViewPost(null);
+              }}
+            >
+              서식
+            </button>
           </div>
 
-          {view === 'doc' && (
+          {view === 'doc' && !writing && (
             <div className="sp-paper">
               <span className="sp-paper-label">출력 용지</span>
               <div className="sp-paper-group">
@@ -1452,19 +1660,39 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
 
       {error && <div className="sp-error">{error}</div>}
 
-      {view === 'board'
-        ? boardPanel()
-        : !editing
-          ? sheet(policy, sealUrl)
-          : draft && <div className="sp-editor">{editor(draft)}</div>}
+      {writing && draft ? (
+        <div className="sp-editor">
+          <div className="sp-write-head">
+            <div className="sp-write-head-text">
+              <strong>{docLabel} 작성</strong>
+              <span>작성을 마치면 게시글로 등록되어 게시판에서 다시 열어 볼 수 있습니다.</span>
+            </div>
+            <div className="sp-write-title">
+              <label htmlFor="sp-post-title">게시글 제목</label>
+              <input
+                id="sp-post-title"
+                type="text"
+                value={postTitle}
+                onChange={e => setPostTitle(e.target.value)}
+                placeholder={defaultPostTitle(docKind)}
+              />
+            </div>
+          </div>
+          {editor(draft)}
+        </div>
+      ) : view === 'board' ? (
+        boardPanel()
+      ) : (
+        sheet(policy, sealUrl)
+      )}
 
-      {editing && view === 'doc' && (
+      {writing && (
         <div className="sp-editor-foot">
-          <button className="btn btn-secondary btn-sm" onClick={cancelEdit}>
+          <button className="btn btn-secondary btn-sm" onClick={cancelWrite}>
             취소
           </button>
-          <button className="btn btn-primary btn-sm" onClick={saveEdit}>
-            저장
+          <button className="btn btn-primary btn-sm" onClick={submitWrite}>
+            작성 완료 · 게시글로 등록
           </button>
         </div>
       )}

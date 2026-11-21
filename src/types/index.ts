@@ -863,21 +863,56 @@ export interface SiteSafetyPolicyEvalItem {
   note: string;
 }
 
+/** 작성한 문서의 내용 스냅샷 — 게시글로 등록되는 시점의 문서 원본 */
+export interface SiteSafetyPolicyDocSnapshot {
+  /** 표제 */
+  title: string;
+  /** 안전보건 방침 */
+  statement: string;
+  /** 안전보건 목표 */
+  goal: string;
+  /** 세부추진계획 */
+  actionPlans: string[];
+  /** 세부추진계획표 */
+  planRows: SiteSafetyPolicyPlanRow[];
+  /** 성과평가표 */
+  evalItems: SiteSafetyPolicyEvalItem[];
+  /** 성과평가 기간 */
+  evalTerm: string;
+  /** 성과평가 종합의견 */
+  evalNote: string;
+  /** 시행일 (YYYY-MM-DD) */
+  declaredAt: string;
+  /** 서명 직책 */
+  signerTitle: string;
+  /** 서명 성명 */
+  signerName: string;
+  /** 도장·서명 이미지 (IndexedDB 키) */
+  sealImageKey?: string;
+}
+
+/** 게시글 종류 — 직접 작성한 문서(doc) 또는 올린 파일(file) */
+export type SafetyPolicyPostKind = 'file' | 'doc';
+
 /** 문서별 게시판에 올린 자료 (파일 본문은 IndexedDB) */
 export interface SiteSafetyPolicyBoardPost {
   id: string;
+  /** 게시글 종류 (기본값 file) */
+  kind?: SafetyPolicyPostKind;
   /** 게시글 제목 */
   title: string;
-  /** 원본 파일명 */
+  /** 원본 파일명 (작성 문서는 빈 값) */
   fileName: string;
-  /** IndexedDB 파일 키 */
+  /** IndexedDB 파일 키 (작성 문서는 빈 값) */
   storageKey: string;
-  /** 파일 크기 (byte) */
+  /** 파일 크기 (byte, 작성 문서는 0) */
   size: number;
   /** 작성자 */
   author: string;
   /** 등록일시 (ISO) */
   createdAt: string;
+  /** 작성한 문서 내용 (kind === 'doc' 일 때) */
+  content?: SiteSafetyPolicyDocSnapshot;
 }
 
 /** 인쇄 용지 */

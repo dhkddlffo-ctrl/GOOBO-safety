@@ -3,6 +3,7 @@ import {
   SiteSafetyPolicyPlanRow,
   SiteSafetyPolicyEvalItem,
   SiteSafetyPolicyBoardPost,
+  SiteSafetyPolicyDocSnapshot,
   PolicyPaper,
   PolicyDocKind,
 } from '../types';
@@ -262,11 +263,33 @@ const normalizePaper = (paper: unknown): Record<PolicyDocKind, PolicyPaper> => {
   return { policy: pick(raw.policy), plan: pick(raw.plan), eval: pick(raw.eval) };
 };
 
-/** 게시판 게시글 보정 */
+/** 작성 문서 내용 보정 */
+const normalizeDocSnapshot = (content: unknown): SiteSafetyPolicyDocSnapshot => {
+  const raw = (content ?? {}) as Partial<SiteSafetyPolicyDocSnapshot>;
+  return {
+    title: asText(raw.title),
+    statement: asText(raw.statement),
+    goal: asText(raw.goal),
+    actionPlans: Array.isArray(raw.actionPlans)
+      ? raw.actionPlans.filter((p): p is string => typeof p === 'string')
+      : [],
+    planRows: Array.isArray(raw.planRows) ? raw.planRows.map(normalizePlanRow) : [],
+    evalItems: Array.isArray(raw.evalItems) ? raw.evalItems.map(normalizeEvalItem) : [],
+    evalTerm: asText(raw.evalTerm),
+    evalNote: asText(raw.evalNote),
+    declaredAt: asText(raw.declaredAt),
+    signerTitle: asText(raw.signerTitle),
+    signerName: asText(raw.signerName),
+    sealImageKey: asText(raw.sealImageKey) || undefined,
+  };
+};
+
+/** 게시글 보정 — 직접 작성한 문서(kind: 'doc')와 올린 파일(kind: 'file')을 함께 보관 */
 const normalizeBoardPost = (post: unknown): SiteSafetyPolicyBoardPost => {
   const raw = (post ?? {}) as Partial<SiteSafetyPolicyBoardPost>;
-  return {
+  const base: SiteSafetyPolicyBoardPost = {
     id: asText(raw.id) || generatePolicyRowId('bd'),
+    kind: raw.kind === 'doc' ? 'doc' : 'file',
     title: asText(raw.title),
     fileName: asText(raw.fileName),
     storageKey: asText(raw.storageKey),
@@ -274,6 +297,10 @@ const normalizeBoardPost = (post: unknown): SiteSafetyPolicyBoardPost => {
     author: asText(raw.author),
     createdAt: asText(raw.createdAt),
   };
+  if (base.kind === 'doc' && raw.content) {
+    base.content = normalizeDocSnapshot(raw.content);
+  }
+  return base;
 };
 
 /** 게시판 목록 보정 (문서별로 누락된 목록은 빈 배열) */
