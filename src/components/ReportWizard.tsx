@@ -11,7 +11,12 @@ import {
   WorkSchedule,
   WorkScheduleRow,
 } from '../types';
-import { createEmptyWorkScheduleRow, ensureBundle, saveBundle } from '../utils/reportBundleStorage';
+import {
+  createEmptyMeetingAttendee,
+  createEmptyWorkScheduleRow,
+  ensureBundle,
+  saveBundle,
+} from '../utils/reportBundleStorage';
 import { isAuthenticated } from '../utils/auth';
 import RiskAssessment from './RiskAssessment';
 import HighGradeControl from './HighGradeControl';
@@ -151,6 +156,29 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
         attendees: b.meeting.attendees.map(a => (a.id === id ? { ...a, ...patch } : a)),
       },
     }));
+
+  /** 회의록 참석자 한 명 추가 (맨 뒤에 붙입니다) */
+  const addMeetingAttendee = () =>
+    setBundle(b => ({
+      ...b,
+      meeting: {
+        ...b.meeting,
+        attendees: [...b.meeting.attendees, createEmptyMeetingAttendee()],
+      },
+    }));
+
+  /** 회의록 참석자 한 명 삭제 (최소 1명은 남깁니다) */
+  const removeMeetingAttendee = (id: string) =>
+    setBundle(b => {
+      if (b.meeting.attendees.length <= 1) return b;
+      return {
+        ...b,
+        meeting: {
+          ...b.meeting,
+          attendees: b.meeting.attendees.filter(a => a.id !== id),
+        },
+      };
+    });
 
   const patchAttendees = (patch: Partial<AttendeeList>) =>
     setBundle(b => ({ ...b, attendees: { ...b.attendees, ...patch } }));
@@ -294,6 +322,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
             editing={editable}
             onChange={patchMeeting}
             onAttendeeChange={patchMeetingAttendee}
+            onAttendeeAdd={addMeetingAttendee}
+            onAttendeeRemove={removeMeetingAttendee}
           />
         </div>
 
