@@ -76,11 +76,14 @@ const MeetingMinutesForm: React.FC<MeetingMinutesFormProps> = ({
     onChange({ content: chunks.join('\n') });
   };
 
-  /** 조각의 textarea 높이 — 내용에 맞추되 장 크기를 넘지 않게 */
-  const chunkRows = (chunk: string, isFirst: boolean) => {
-    const budget = isFirst ? CONTENT_LINES_FIRST : CONTENT_LINES_CONT;
-    return Math.max(6, Math.min(budget, lineCount(chunk) + 2));
-  };
+  /**
+   * 조각의 textarea 줄 수.
+   *
+   * 화면에서는 용지가 세로 flex 라서 이 칸이 A4 의 남는 높이를 모두 차지합니다.
+   * 여기서 정하는 줄 수는 **인쇄했을 때** 글자가 잘리지 않도록 하는 최소 높이입니다.
+   * (입력한 줄 수보다 항상 넉넉하게 잡습니다)
+   */
+  const chunkRows = (chunk: string) => Math.max(6, lineCount(chunk) + 2);
 
   const contentBox = (chunk: string, index: number, isFirst: boolean) => (
     <div className="rf-mm-body">
@@ -88,7 +91,7 @@ const MeetingMinutesForm: React.FC<MeetingMinutesFormProps> = ({
         <textarea
           value={chunk}
           onChange={e => setContentChunk(index, e.target.value)}
-          rows={chunkRows(chunk, isFirst)}
+          rows={chunkRows(chunk)}
           placeholder={
             isFirst
               ? `회의 내용을 입력하세요.\n\n예시)\n1. 위험성평가 결과 공유\n2. 상등급(중점관리) 위험요인 개선조치 이행 확인\n3. 다음 2주 수시위험성평가 일정 협의`
@@ -224,7 +227,7 @@ const MeetingMinutesForm: React.FC<MeetingMinutesFormProps> = ({
   return (
     <>
       {/* ================= 1장 ================= */}
-      <section className="rf-sheet rf-sheet--portrait" aria-label="안전 회의록">
+      <section className="rf-sheet rf-sheet--portrait rf-sheet--mm" aria-label="안전 회의록">
         <h2 className="rf-title rf-title--bordered">안 전 회 의 록</h2>
 
         {/* 화면에서만 보이는 참석자 도구 */}
@@ -423,7 +426,7 @@ const MeetingMinutesForm: React.FC<MeetingMinutesFormProps> = ({
       {/* ================= 회의 내용 (계속) — 1장을 넘길 때 ================= */}
       {contentChunks.slice(1).map((chunk, index) => (
         <section
-          className="rf-sheet rf-sheet--portrait rf-mm-cont"
+          className="rf-sheet rf-sheet--portrait rf-sheet--mm rf-mm-cont"
           aria-label={`안전 회의록 회의 내용 (계속 ${index + 1})`}
           key={`mm-content-sheet-${index}`}
         >

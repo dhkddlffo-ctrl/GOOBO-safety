@@ -172,15 +172,18 @@
 
 .rf-mm-body {
   display: flex;
-  flex: 1;
-  min-height: 300px;
+  flex: 1 1 auto;
+  /* 내용이 짧아도 이 정도는 항상 확보합니다. (남는 공간은 flex 로 더 늘어납니다) */
+  min-height: 12rem;
   border-top: 1px solid #111827;
   padding: 0.5rem;
 }
 
 .rf-mm-body textarea {
+  flex: 1 1 auto;
   width: 100%;
-  min-height: 280px;
+  min-height: 0;
+  box-sizing: border-box;
   padding: 0.25rem;
   font-family: inherit;
   font-size: 0.75rem;
@@ -194,6 +197,29 @@
 
 .rf-mm-body textarea::placeholder {
   color: #b6c0cf;
+}
+
+/* ---------------- 1장이 A4 한 장을 꽉 채우도록 ---------------- */
+/*
+ * 회의록은 위쪽 표(결재·기본정보·참석자)의 높이가 정해져 있어서
+ * 내용이 짧으면 아래가 텅 비어 보입니다.
+ * 그래서 회의록 용지를 세로 flex 로 두고 [회의 내용] 칸이 남는 높이를
+ * 모두 차지하게 합니다. (다른 서식에는 영향이 없도록 전용 클래스를 씁니다)
+ */
+.rf-sheet--mm {
+  display: flex;
+  flex-direction: column;
+}
+
+.rf-sheet--mm > .rf-title,
+.rf-sheet--mm > .rf-mm-tools,
+.rf-sheet--mm > .rf-photo-note {
+  flex: 0 0 auto;
+}
+
+.rf-sheet--mm > .rf-mm {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* ---------------- 회의록 참석자 도구 (화면 전용) ---------------- */
