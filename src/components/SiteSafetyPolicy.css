@@ -1,0 +1,635 @@
+/* ==================================================================== */
+/* 현장소장 안전보건 경영방침 (회사 서식 재현 · A4 출력 대응)              */
+/* ==================================================================== */
+
+.sp-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* ---------------- 툴바 ---------------- */
+.sp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0.875rem;
+  background: #fafbfc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.sp-toolbar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.sp-toolbar-info strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sp-toolbar-sub {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.sp-toolbar-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.sp-toolbar-actions .btn-sm {
+  padding: 0.4375rem 0.8125rem;
+  font-size: 0.8125rem;
+}
+
+.sp-error {
+  padding: 0.625rem 0.875rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #991b1b;
+}
+
+/* ==================================================================== */
+/* 서식 (화면 · 인쇄 공통)                                              */
+/* ==================================================================== */
+.sp-sheet {
+  background: #fff;
+  padding: 1.75rem 1.75rem 1.375rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 1px 3px rgba(16, 24, 40, 0.05);
+  color: #000;
+  font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+}
+
+/* ---------- 표제 박스 ---------- */
+.sp-title-box {
+  border: 2.5px solid #000;
+  padding: 0.875rem 1rem;
+  margin-bottom: 0.875rem;
+  text-align: center;
+}
+
+.sp-title {
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.3;
+  color: #000;
+  /* 제목은 폭이 넘칠 때만 줄입니다. */
+  overflow-wrap: break-word;
+}
+
+/* ---------- 본문 박스 ---------- */
+.sp-body-box {
+  border: 2.5px solid #000;
+  padding: 1.5rem 1.75rem 1.25rem;
+  min-height: 24rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-block {
+  margin-bottom: 1.75rem;
+}
+
+.sp-block-plan {
+  margin-bottom: 1rem;
+}
+
+/* 소제목 (안전보건 방침 / 목표 / 세부추진계획) */
+.sp-h {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  margin-bottom: 0.625rem;
+  color: #000;
+}
+
+/* "- 내용" 한 줄 */
+.sp-line {
+  padding-left: 0.5rem;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: #000;
+  overflow-wrap: break-word;
+}
+
+/* 세부추진계획 — "첫째 : …" */
+.sp-plan {
+  padding-left: 0.5rem;
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  color: #000;
+  overflow-wrap: break-word;
+}
+
+.sp-plan-no {
+  font-weight: 800;
+}
+
+.sp-plan-text {
+  font-weight: 500;
+}
+
+/* ---------- 서명부 ---------- */
+.sp-sign {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 1.25rem;
+  font-size: 1rem;
+  color: #000;
+}
+
+.sp-sign-date {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.sp-sign-role {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-weight: 700;
+}
+
+.sp-sign-name {
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  min-width: 3.25rem;
+  display: inline-block;
+  text-align: center;
+}
+
+/* 성명을 비워 두었을 때만 기입란(밑줄)을 표시합니다. */
+.sp-sign-name:empty {
+  border-bottom: 1px solid #000;
+}
+
+.sp-sign-seal {
+  position: absolute;
+  right: -0.25rem;
+  bottom: 0.75rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  object-fit: contain;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.sp-sign-mark {
+  font-weight: 700;
+  color: #000;
+}
+
+/* 인쇄 전용 현장명 (화면에서는 숨김) */
+.sp-foot {
+  display: none;
+}
+
+/* ==================================================================== */
+/* 편집 화면                                                            */
+/* ==================================================================== */
+.sp-editor {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 1px 3px rgba(16, 24, 40, 0.05);
+}
+
+.sp-field {
+  margin-bottom: 1rem;
+  min-width: 0;
+}
+
+.sp-field > label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 0.375rem;
+}
+
+.sp-label-opt {
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.sp-field input[type='text'],
+.sp-field input[type='date'],
+.sp-field textarea {
+  width: 100%;
+  padding: 0.5rem 0.6875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #111827;
+  background: #fff;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.sp-field input:focus,
+.sp-field textarea:focus {
+  outline: none;
+  border-color: #93b4e0;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.sp-field textarea {
+  resize: vertical;
+  line-height: 1.65;
+}
+
+.sp-field-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+/* ---------- 세부추진계획 편집 ---------- */
+.sp-plan-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.sp-plan-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.sp-plan-row-no {
+  flex-shrink: 0;
+  width: 2.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.sp-plan-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.6875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #111827;
+}
+
+.sp-plan-row input:focus {
+  outline: none;
+  border-color: #93b4e0;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.sp-row-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.875rem;
+  height: 1.875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.sp-row-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  color: #111827;
+  border-color: #d5dbe3;
+}
+
+.sp-row-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sp-row-btn.danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.sp-add-plan {
+  align-self: flex-start;
+  margin-top: 0.125rem;
+  padding: 0.4375rem 0.75rem;
+  border: 1px dashed #d5dbe3;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #6b7280;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.sp-add-plan:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #111827;
+}
+
+/* ---------- 도장 ---------- */
+.sp-seal-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sp-seal-on {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #047857;
+}
+
+.sp-seal-off {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+}
+
+.sp-seal-add,
+.sp-seal-remove {
+  position: relative;
+  padding: 0.375rem 0.6875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.sp-seal-add:hover {
+  background: #f9fafb;
+  border-color: #d5dbe3;
+}
+
+.sp-seal-add.is-busy {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.sp-seal-add input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.sp-seal-remove:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.sp-hint {
+  margin-top: 0.4375rem;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  color: #9ca3af;
+}
+
+.sp-editor-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid #f0f2f5;
+}
+
+/* ---------------- 반응형 ---------------- */
+@media (max-width: 768px) {
+  .sp-sheet {
+    padding: 1rem 0.875rem 1rem;
+  }
+
+  .sp-title {
+    font-size: 1.25rem;
+    letter-spacing: 0.08em;
+  }
+
+  .sp-body-box {
+    padding: 1.125rem 1rem 1rem;
+    min-height: 0;
+  }
+
+  .sp-h {
+    font-size: 1.125rem;
+  }
+
+  .sp-line,
+  .sp-plan {
+    font-size: 0.9375rem;
+  }
+
+  .sp-sign {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.375rem;
+  }
+
+  .sp-sign-seal {
+    position: static;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .sp-field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-plan-row {
+    flex-wrap: wrap;
+  }
+
+  .sp-plan-row input {
+    flex: 1 1 100%;
+    order: -1;
+  }
+
+  .sp-plan-row-no {
+    order: -2;
+  }
+}
+
+/* ==================================================================== */
+/* A4 인쇄                                                              */
+/* ==================================================================== */
+@page {
+  size: A4 portrait;
+  margin: 14mm;
+}
+
+@media print {
+  /* 앱 크롬 · 툴바 · 편집화면 숨김 */
+  .app-header,
+  .app-footer,
+  .sd-header,
+  .sd-tabs,
+  .sd-panel-head,
+  .sp-toolbar,
+  .sp-error,
+  .sp-editor,
+  .sd-quick {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .app,
+  .app-main,
+  .site-detail-page,
+  .site-detail-page .container {
+    display: block !important;
+    background: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+  }
+
+  .sd-panel {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+
+  .sp-wrap {
+    gap: 0 !important;
+  }
+
+  /* 서식 — A4 1장 */
+  .sp-sheet {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .sp-title-box {
+    border: 2.5pt solid #000 !important;
+    padding: 3.5mm 4mm !important;
+    margin-bottom: 3mm !important;
+  }
+
+  .sp-title {
+    font-size: 24pt !important;
+    letter-spacing: 0.16em !important;
+    line-height: 1.25 !important;
+  }
+
+  .sp-body-box {
+    border: 2.5pt solid #000 !important;
+    padding: 5mm 6mm 4mm !important;
+    min-height: 210mm;
+    box-sizing: border-box;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .sp-block {
+    margin-bottom: 7mm !important;
+  }
+
+  .sp-block-plan {
+    margin-bottom: 4mm !important;
+  }
+
+  .sp-h {
+    font-size: 16pt !important;
+    margin-bottom: 2mm !important;
+  }
+
+  .sp-line {
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+    padding-left: 2mm !important;
+  }
+
+  .sp-plan {
+    font-size: 11pt !important;
+    line-height: 1.9 !important;
+    padding-left: 2mm !important;
+  }
+
+  .sp-sign {
+    font-size: 11pt !important;
+    padding-top: 6mm !important;
+  }
+
+  .sp-sign-seal {
+    width: 15mm !important;
+    height: 15mm !important;
+    bottom: 2mm !important;
+    right: 0 !important;
+  }
+
+  .sp-foot {
+    display: block;
+    margin-top: 2mm;
+    font-size: 8pt;
+    color: #6b7280;
+    text-align: right;
+  }
+
+  /* 배경색 · 테두리 그대로 인쇄 */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

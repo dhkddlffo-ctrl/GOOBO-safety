@@ -50,6 +50,7 @@ import DocumentArchive from '../components/DocumentArchive';
 import EmergencyPlan from '../components/EmergencyPlan';
 import SafetyOrgChart from '../components/SafetyOrgChart';
 import RiskAssessmentPane from '../components/RiskAssessmentPane';
+import SiteSafetyPolicy from '../components/SiteSafetyPolicy';
 import Icon from '../components/Icon';
 import './SiteDetailPage.css';
 
@@ -60,11 +61,12 @@ interface SiteDetailPageProps {
   initialTab?: string;
 }
 
-type Tab = 'info' | 'documents' | 'emergency' | 'org' | 'risk' | 'activity';
+type Tab = 'info' | 'documents' | 'policy' | 'emergency' | 'org' | 'risk' | 'activity';
 
 const isTab = (value?: string): value is Tab =>
   value === 'info' ||
   value === 'documents' ||
+  value === 'policy' ||
   value === 'emergency' ||
   value === 'org' ||
   value === 'risk' ||
@@ -439,6 +441,13 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
           >
             <Icon name="folder" size={15} />
             문서보관함 <span className="sd-tab-count">{docs.length}</span>
+          </button>
+          <button
+            className={`sd-tab ${activeTab === 'policy' ? 'active' : ''}`}
+            onClick={() => changeTab('policy')}
+          >
+            <Icon name="check" size={15} />
+            경영방침
           </button>
           <button
             className={`sd-tab ${activeTab === 'emergency' ? 'active' : ''}`}
@@ -925,6 +934,27 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
             </div>
 
             <DocumentArchive siteId={site.id} siteName={site.name} />
+          </div>
+        )}
+
+        {/* ============ 경영방침 탭 ============ */}
+        {activeTab === 'policy' && (
+          <div className="sd-panel sd-panel-policy">
+            <div className="sd-panel-head">
+              <div>
+                <h2>현장소장 안전보건 경영방침</h2>
+                <p className="sd-panel-sub">
+                  회사 서식 그대로 작성해 A4 1장으로 출력할 수 있습니다. 문구·서명을 고친 뒤
+                  인쇄하거나 PDF로 저장해 게시판에 부착하세요.
+                </p>
+              </div>
+            </div>
+
+            <SiteSafetyPolicy
+              siteId={site.id}
+              siteName={site.name}
+              siteManager={siteInfo?.siteManager}
+            />
           </div>
         )}
 

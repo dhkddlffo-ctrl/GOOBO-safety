@@ -800,3 +800,35 @@ export interface HqAckSummary {
   acks: HqAck[];
   pendingSites: { id: number; name: string }[];
 }
+
+/* ------------------------------------------------------------------ */
+/* 현장소장 안전보건 경영방침 (현장별)                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 현장소장 안전보건 경영방침
+ *
+ * 회사 서식(표제 박스 + 안전보건 방침 / 목표 / 세부추진계획 + 서명)을
+ * 그대로 재현해 A4 1장으로 출력하는 문서입니다.
+ */
+export interface SiteSafetyPolicy {
+  siteId: number;
+  siteName: string;
+  /** 표제 (기본값: 현장소장 안전보건 경영방침) */
+  title: string;
+  /** 안전보건 방침 (한 줄 선언문) */
+  statement: string;
+  /** 안전보건 목표 */
+  goal: string;
+  /** 세부추진계획 — 화면에서는 첫째·둘째·셋째 … 로 번호를 붙입니다 */
+  actionPlans: string[];
+  /** 시행일 (YYYY-MM-DD) */
+  declaredAt: string;
+  /** 서명 직책 (기본값: 현장소장) */
+  signerTitle: string;
+  /** 서명 성명 */
+  signerName: string;
+  /** 도장·서명 이미지 (IndexedDB 키) — 선택 */
+  sealImageKey?: string;
+  updatedAt: string;
+}

@@ -29,6 +29,7 @@ export const BACKUP_DATA_KEYS = [
   { key: 'gubo_site_documents', label: '현장문서 (목록)' },
   { key: 'gubo_doc_categories', label: '문서 분류' },
   { key: 'gubo_emergency_plans', label: '비상연락망' },
+  { key: 'gubo_safety_policies', label: '현장소장 경영방침' },
   { key: 'gubo_org_charts', label: '안전조직도' },
 ] as const;
 
@@ -124,7 +125,7 @@ export const createBackup = async (includeFiles: boolean): Promise<BackupPayload
         key: f.key,
         type: f.blob.type || 'application/octet-stream',
         base64: await blobToBase64(f.blob),
-      }))
+      })),
     );
   }
 
@@ -222,7 +223,7 @@ export const parseBackup = (text: string): { payload: BackupPayload; summary: Ba
 
   if (typeof obj.formatVersion !== 'number' || obj.formatVersion > BACKUP_FORMAT_VERSION) {
     throw new Error(
-      `지원하지 않는 백업 버전입니다. (파일 v${String(obj.formatVersion)}, 지원 v${BACKUP_FORMAT_VERSION})`
+      `지원하지 않는 백업 버전입니다. (파일 v${String(obj.formatVersion)}, 지원 v${BACKUP_FORMAT_VERSION})`,
     );
   }
 
@@ -247,7 +248,7 @@ export const parseBackup = (text: string): { payload: BackupPayload; summary: Ba
       ? {
           files: obj.files.filter(
             (f): f is BackupFileEntry =>
-              Boolean(f) && typeof f.key === 'string' && typeof f.base64 === 'string'
+              Boolean(f) && typeof f.key === 'string' && typeof f.base64 === 'string',
           ),
         }
       : {}),
@@ -260,7 +261,10 @@ export const parseBackup = (text: string): { payload: BackupPayload; summary: Ba
 /* 복원                                                                */
 /* ------------------------------------------------------------------ */
 
-const mergeArray = (existingRaw: string | null, incomingRaw: string | null): {
+const mergeArray = (
+  existingRaw: string | null,
+  incomingRaw: string | null,
+): {
   merged: string;
   skipped: number;
 } => {
@@ -303,7 +307,10 @@ const mergeArray = (existingRaw: string | null, incomingRaw: string | null): {
 };
 
 /** 객체 형태(현장ID → 값) 맵을 병합합니다. 기존 값을 우선합니다. */
-const mergeMap = (existingRaw: string | null, incomingRaw: string | null): {
+const mergeMap = (
+  existingRaw: string | null,
+  incomingRaw: string | null,
+): {
   merged: string;
   skipped: number;
 } => {
@@ -311,9 +318,7 @@ const mergeMap = (existingRaw: string | null, incomingRaw: string | null): {
     if (!raw) return {};
     try {
       const v = JSON.parse(raw);
-      return v && typeof v === 'object' && !Array.isArray(v)
-        ? (v as Record<string, unknown>)
-        : {};
+      return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
     } catch {
       return {};
     }
@@ -343,7 +348,7 @@ const mergeMap = (existingRaw: string | null, incomingRaw: string | null): {
  */
 export const applyBackup = async (
   payload: BackupPayload,
-  mode: RestoreMode
+  mode: RestoreMode,
 ): Promise<RestoreResult> => {
   let appliedKeys = 0;
   let skipped = 0;
@@ -376,9 +381,12 @@ export const applyBackup = async (
       const isArray = Array.isArray(incomingParsed) && Array.isArray(existingParsed);
       const isMap =
         !isArray &&
-        incomingParsed && existingParsed &&
-        typeof incomingParsed === 'object' && typeof existingParsed === 'object' &&
-        !Array.isArray(incomingParsed) && !Array.isArray(existingParsed);
+        incomingParsed &&
+        existingParsed &&
+        typeof incomingParsed === 'object' &&
+        typeof existingParsed === 'object' &&
+        !Array.isArray(incomingParsed) &&
+        !Array.isArray(existingParsed);
 
       if (isArray) {
         const r = mergeArray(existing, incoming);
@@ -412,7 +420,7 @@ export const applyBackup = async (
     try {
       const existingKeys = await getAllFileKeys();
       await Promise.all(
-        existingKeys.filter(k => !keep.has(k)).map(k => deleteFile(k).catch(() => undefined))
+        existingKeys.filter(k => !keep.has(k)).map(k => deleteFile(k).catch(() => undefined)),
       );
     } catch {
       /* 파일 정리에 실패해도 복원은 계속합니다. */
