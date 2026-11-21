@@ -42,12 +42,16 @@ interface ReportWizardProps {
 interface StepMeta {
   short: string;
   label: string;
+  hint: string;
 }
+
+/** 보기 방식 — 단계별로 하나씩 / 여덟 서식을 위에서 아래로 */
+type ViewMode = 'step' | 'flow';
 
 /**
  * 수시 위험성평가 작성 마법사
  *
- * 회사 양식을 **한곳에서 위에서 아래로 이어서** 작성·확인합니다.
+ * 회사 양식 여덟 가지를 한곳에서 작성·확인합니다.
  *   ① 수시 위험성평가 등록부 (SCM-002-1.01)
  *   ② 위험성평가 상등급 관리  (5페이지)
  *   ③ 안전 회의록             (6페이지)
@@ -58,23 +62,59 @@ interface StepMeta {
  *   ⑧ 부속 서식 첨부          (10~13페이지 — 일일 재해 有·無 확인현황)
  *   ⑨ 댓글
  *
- * ⚠️ 보기 방식은 **이어 보기 한 가지**입니다. 여덟 개 서식이 위에서 아래로
- *    끊김 없이 이어지고, 맨 마지막에 댓글이 붙습니다.
- *    (모든 서식이 DOM 에 살아 있어 입력한 내용이 사라지지 않습니다)
+ * ⚠️ **보기 방식 두 가지**
+ *    · 단계별 보기 — 한 번에 한 서식만 크게 보고 [← 이전] [다음 →] 로 넘깁니다.
+ *                    새로 작성할 때 기본값입니다.
+ *    · 이어 보기   — 여덟 서식을 위에서 아래로 죽 이어서 봅니다.
+ *                    이미 등록된 글을 확인할 때 기본값입니다.
+ *    두 방식 모두 **모든 서식이 DOM 에 살아 있어** 오가도 입력한 내용이 사라지지 않고,
+ *    인쇄할 때는 CSS 로 여덟 서식을 모두 펼쳐 순서대로 출력합니다.
  *
  * ⚠️ **수정 잠금** — 게시글로 등록되면 서식은 곧바로 잠깁니다.
  *    내용을 고치려면 오른쪽 아래 **[✏️ 수정]** 을 눌러 잠금을 풀어야 합니다.
  *    (실수로 등록된 글을 건드리는 것을 막기 위함입니다)
  */
 const STEPS: StepMeta[] = [
-  { short: '등록부', label: '수시 위험성평가 등록부' },
-  { short: '상등급', label: '위험성평가 상등급 관리' },
-  { short: '회의록', label: '안전 회의록' },
-  { short: '참석자', label: '참석자 명단' },
-  { short: '사진대지', label: '사진대지' },
-  { short: '공정표', label: '공사 공정표' },
-  { short: '일정', label: '안전보건 일정' },
-  { short: '부속서식', label: '부속 서식 첨부 — 일일 재해 有·無 확인현황' },
+  {
+    short: '등록부',
+    label: '수시 위험성평가 등록부',
+    hint: '강도·빈도를 고르면 평가합계와 등급이 자동 계산됩니다. 지난 작성글을 불러올 수도 있습니다.',
+  },
+  {
+    short: '상등급',
+    label: '위험성평가 상등급 관리',
+    hint: '등록부에서 평가등급 ‘상’ 항목을 불러와 실천·완료를 확인합니다.',
+  },
+  {
+    short: '회의록',
+    label: '안전 회의록',
+    hint: '회의 내용과 참석자·결재란을 작성합니다. 내용이 길면 장이 늘어납니다.',
+  },
+  {
+    short: '참석자',
+    label: '참석자 명단',
+    hint: '업체명·직종·성명·서명을 40칸까지 적을 수 있습니다.',
+  },
+  {
+    short: '사진대지',
+    label: '사진대지',
+    hint: '회의 사진(3페이지)과 모니터링 점검 사진(4페이지)을 올립니다.',
+  },
+  {
+    short: '공정표',
+    label: '공사 공정표',
+    hint: '공종별 작업 기간을 넣으면 일자 칸에 막대가 그려집니다.',
+  },
+  {
+    short: '일정',
+    label: '안전보건 일정',
+    hint: '월 달력에 수시위험성평가·교육 일정을 적습니다.',
+  },
+  {
+    short: '부속서식',
+    label: '부속 서식 첨부 — 일일 재해 有·無 확인현황',
+    hint: '양식 10~13페이지는 엑셀·한글로 작성해 파일 그대로 올려 보관합니다.',
+  },
 ];
 
 const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmentId, onClose }) => {
@@ -100,6 +140,42 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
   const [unlocked, setUnlocked] = useState(() => !bundle.registeredAt);
   /** 지금 서식을 고칠 수 있는지 */
   const editable = unlocked;
+
+  /* ---------------- 보기 방식 / 단계 ---------------- */
+  /**
+   * 보기 방식
+   *  - 새로 작성하는 글은 **단계별 보기**로 시작합니다. (한 번에 한 서식만 크게)
+   *  - 이미 등록된 글은 **이어 보기**로 시작합니다. (전체를 훑어보는 편이 낫습니다)
+   */
+  const [viewMode, setViewMode] = useState<ViewMode>(() => (bundle.registeredAt ? 'flow' : 'step'));
+  const [step, setStep] = useState(0);
+
+  const flow = viewMode === 'flow';
+  const active = STEPS[step];
+
+  /** 단계 이동 — 범위를 벗어나면 무시하고, 화면 맨 위로 올립니다. */
+  const goStep = (next: number) => {
+    if (next < 0 || next >= STEPS.length) return;
+    setStep(next);
+    setViewMode('step');
+    setNotice('');
+    requestAnimationFrame(() => {
+      document.querySelector('.rw')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const toggleMode = () => {
+    setViewMode(flow ? 'step' : 'flow');
+    setNotice('');
+  };
+
+  /**
+   * 서식 칸의 클래스.
+   *  - 단계별 보기: 지금 단계만 보이고 나머지는 화면에서만 감춥니다.
+   *  - 이어 보기  : 여덟 개를 모두 위에서 아래로 보여줍니다.
+   * 두 경우 모두 DOM 에는 그대로 남아 있어 입력값이 유지되고, 인쇄에서는 전부 펼쳐집니다.
+   */
+  const paneCls = (index: number) => `rw-pane${flow || index === step ? '' : ' rw-pane--off'}`;
 
   /* ---------------- 저장 ---------------- */
   const save = useCallback(() => {
@@ -259,8 +335,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           <div className="rw-head-text">
             <h3 className="rw-title">🧾 수시 위험성평가 작성</h3>
             <p className="rw-sub">
-              회사 양식 {STEPS.length}종을 <b>위에서 아래로 이어서</b> 작성합니다. 맨 마지막에
-              댓글을 남길 수 있고, 한 번에 인쇄할 수 있습니다.
+              회사 양식 {STEPS.length}종을 <b>한곳에서 순서대로</b> 작성합니다. 다 쓰고 나면
+              게시판에 등록하고 한 번에 인쇄할 수 있습니다.
             </p>
           </div>
           <div className="rw-head-right">
@@ -269,31 +345,75 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
               <span className="rw-badge rw-badge-lock">🔒 읽기 전용</span>
             )}
             {editable && registered && <span className="rw-badge rw-badge-edit">✏️ 수정 중</span>}
-            <span className="rw-count">서식 {STEPS.length}개</span>
+            <span className="rw-count">
+              {flow ? `전체 ${STEPS.length}개 서식` : `${step + 1} / ${STEPS.length} 단계`}
+            </span>
+            <button
+              type="button"
+              className={`btn btn-sm rw-btn-mode${flow ? ' active' : ''}`}
+              onClick={toggleMode}
+              title={
+                flow
+                  ? '단계별로 하나씩 보는 방식으로 돌아갑니다.'
+                  : `서식 ${STEPS.length}개를 위에서 아래로 이어서 봅니다.`
+              }
+            >
+              {flow ? '📑 단계별 보기' : '📜 이어 보기'}
+            </button>
             <button className="btn btn-sm rw-btn-back" onClick={onClose}>
               ← 목록
             </button>
           </div>
         </div>
 
-        {/* ---------- 안내 ---------- */}
-        <div className="rw-current">
-          <span className="rw-current-title">📜 이어 보기</span>
-          <span className="rw-current-hint">
-            {editable
-              ? '여덟 개 서식을 위에서 아래로 이어서 작성합니다. 다 쓰면 [📝 게시글 등록]을 누르세요.'
-              : '등록된 글을 위에서 아래로 이어서 봅니다. 고치려면 오른쪽 아래 [✏️ 수정]을 누르세요.'}
-          </span>
-        </div>
+        {/* ---------- 단계 표시 (이어 보기일 때는 숨김) ---------- */}
+        {!flow && (
+          <nav className="rw-steps" aria-label="작성 단계">
+            {STEPS.map((meta, index) => (
+              <button
+                type="button"
+                key={meta.short}
+                className={`rw-step-btn${index === step ? ' active' : ''}${
+                  index < step ? ' passed' : ''
+                }`}
+                onClick={() => goStep(index)}
+                aria-current={index === step ? 'step' : undefined}
+                title={meta.label}
+              >
+                <span className="rw-step-no">{index + 1}</span>
+                <span className="rw-step-label">{meta.short}</span>
+              </button>
+            ))}
+          </nav>
+        )}
+
+        {/* ---------- 지금 보고 있는 곳 안내 ---------- */}
+        {flow ? (
+          <div className="rw-current">
+            <span className="rw-current-title">📜 전체 서식 이어 보기</span>
+            <span className="rw-current-hint">
+              {editable
+                ? `여덟 개 서식을 위에서 아래로 이어서 작성합니다. 다 쓰면 [📝 게시글 등록]을 누르세요.`
+                : '등록된 글을 위에서 아래로 이어서 봅니다. 고치려면 오른쪽 아래 [✏️ 수정]을 누르세요.'}
+            </span>
+          </div>
+        ) : (
+          <div className="rw-current">
+            <span className="rw-current-title">
+              {step + 1}. {active.label}
+            </span>
+            <span className="rw-current-hint">{active.hint}</span>
+          </div>
+        )}
 
         {savedAt && <p className="rw-saved">💾 저장되었습니다 ({savedAt})</p>}
         {notice && <p className="rw-notice">{notice}</p>}
       </div>
 
-      {/* ---------- 서식 (여덟 개 모두 펼쳐서 위에서 아래로) ---------- */}
+      {/* ---------- 서식 (여덟 개 모두 마운트, 화면에선 보기 방식에 따라) ---------- */}
       <div className="rw-body">
-        <div className="rw-pane" data-step="register">
-          <p className="rw-flow-label">1. 수시 위험성평가 등록부</p>
+        <div className={paneCls(0)} data-step="register">
+          {flow && <p className="rw-flow-label">1. 수시 위험성평가 등록부</p>}
           <RiskAssessment
             siteId={siteId}
             siteName={siteName}
@@ -304,8 +424,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           />
         </div>
 
-        <div className="rw-pane" data-step="high">
-          <p className="rw-flow-label">2. 위험성평가 상등급 관리</p>
+        <div className={paneCls(1)} data-step="high">
+          {flow && <p className="rw-flow-label">2. 위험성평가 상등급 관리</p>}
           <HighGradeControl
             siteId={siteId}
             siteName={siteName}
@@ -315,8 +435,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           />
         </div>
 
-        <div className="rw-pane" data-step="meeting">
-          <p className="rw-flow-label">3. 안전 회의록</p>
+        <div className={paneCls(2)} data-step="meeting">
+          {flow && <p className="rw-flow-label">3. 안전 회의록</p>}
           <MeetingMinutesForm
             value={bundle.meeting}
             editing={editable}
@@ -327,8 +447,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           />
         </div>
 
-        <div className="rw-pane" data-step="attendees">
-          <p className="rw-flow-label">4. 참석자 명단</p>
+        <div className={paneCls(3)} data-step="attendees">
+          {flow && <p className="rw-flow-label">4. 참석자 명단</p>}
           <AttendeeListForm
             value={bundle.attendees}
             editing={editable}
@@ -338,8 +458,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           />
         </div>
 
-        <div className="rw-pane" data-step="photo">
-          <p className="rw-flow-label">5. 사진대지</p>
+        <div className={paneCls(4)} data-step="photo">
+          {flow && <p className="rw-flow-label">5. 사진대지</p>}
           <div className="rw-photo-stack">
             <p className="rw-sub-head">① 위험성평가 회의 사진대지 (3페이지)</p>
             <PhotoSheetForm
@@ -360,8 +480,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           </div>
         </div>
 
-        <div className="rw-pane" data-step="work">
-          <p className="rw-flow-label">6. 공사 공정표</p>
+        <div className={paneCls(5)} data-step="work">
+          {flow && <p className="rw-flow-label">6. 공사 공정표</p>}
           <WorkScheduleForm
             value={bundle.workSchedule}
             editing={editable}
@@ -373,8 +493,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           />
         </div>
 
-        <div className="rw-pane" data-step="schedule">
-          <p className="rw-flow-label">7. 안전보건 일정</p>
+        <div className={paneCls(6)} data-step="schedule">
+          {flow && <p className="rw-flow-label">7. 안전보건 일정</p>}
           <SafetyScheduleForm
             value={bundle.schedule}
             editing={editable}
@@ -384,8 +504,8 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
           />
         </div>
 
-        <div className="rw-pane" data-step="attach">
-          <p className="rw-flow-label">8. 부속 서식 첨부 — 일일 재해 有·無 확인현황</p>
+        <div className={paneCls(7)} data-step="attach">
+          {flow && <p className="rw-flow-label">8. 부속 서식 첨부 — 일일 재해 有·無 확인현황</p>}
           <DailyDisasterForm
             siteId={siteId}
             siteName={siteName}
@@ -401,14 +521,36 @@ const ReportWizard: React.FC<ReportWizardProps> = ({ siteId, siteName, assessmen
         <p className="rw-comment-hint">💬 댓글은 [📝 게시글 등록] 후에 남길 수 있습니다.</p>
       )}
 
-      {/* ---------- 하단 잠금 / 등록 / 인쇄 ---------- */}
+      {/* ---------- 하단 이동 / 잠금 / 등록 / 인쇄 ---------- */}
       <div className="rw-nav">
         <div className="rw-nav-left">
-          <span className="rw-flow-hint">
-            {registered && !unlocked
-              ? '🔒 등록된 글입니다. 내용을 고치려면 [✏️ 수정]을 누르세요.'
-              : '✏️ 수정 중입니다. 다 고쳤으면 [💾 저장] 또는 [🔒 수정 완료]를 누르세요.'}
-          </span>
+          {flow ? (
+            <span className="rw-flow-hint">
+              {registered && !unlocked
+                ? '🔒 등록된 글입니다. 내용을 고치려면 [✏️ 수정]을 누르세요.'
+                : '✏️ 수정 중입니다. 다 고쳤으면 [💾 저장] 또는 [🔒 수정 완료]를 누르세요.'}
+            </span>
+          ) : (
+            <>
+              <button
+                className="btn btn-sm rw-btn-prev"
+                onClick={() => goStep(step - 1)}
+                disabled={step === 0}
+              >
+                ← 이전
+              </button>
+              <button
+                className="btn btn-sm rw-btn-next"
+                onClick={() => goStep(step + 1)}
+                disabled={step === STEPS.length - 1}
+              >
+                다음 →
+              </button>
+              <span className="rw-flow-hint">
+                {step + 1} / {STEPS.length} · {active.short}
+              </span>
+            </>
+          )}
         </div>
 
         <div className="rw-nav-right">

@@ -116,6 +116,25 @@
   white-space: nowrap;
 }
 
+/* 보기 방식 전환 (단계별 / 이어 보기) */
+.rw-btn-mode {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rw-btn-mode:hover {
+  background: #dbeafe;
+}
+
+.rw-btn-mode.active {
+  color: #fff;
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
 /* 이어 보기에서 각 서식 위에 붙는 제목 */
 .rw-flow-label {
   margin: 0 0 0.5rem;
@@ -134,7 +153,77 @@
   color: #64748b;
 }
 
-/* 등록 전 댓글 자리 안내 */
+/* ---------------- 단계 표시 ---------------- */
+.rw-steps {
+  display: flex;
+  gap: 0.375rem;
+  overflow-x: auto;
+  padding-bottom: 0.125rem;
+}
+
+.rw-step-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  padding: 0.4375rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #55637a;
+  background: #fff;
+  border: 1px solid #d7dee8;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.rw-step-btn:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.rw-step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: #64748b;
+  background: #eef2f7;
+  border-radius: 999px;
+}
+
+.rw-step-btn.passed {
+  color: #15803d;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.rw-step-btn.passed .rw-step-no {
+  color: #fff;
+  background: #22c55e;
+}
+
+.rw-step-btn.active {
+  color: #fff;
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+}
+
+.rw-step-btn.active .rw-step-no {
+  color: #1d4ed8;
+  background: #fff;
+}
+
+/* ---------------- 등록 전 댓글 자리 안내 ---------------- */
 .rw-comment-hint {
   margin: 0;
   padding: 0.875rem 1rem;
@@ -201,6 +290,14 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
+}
+
+/*
+ * 단계별 보기에서 지금 단계가 아닌 서식은 DOM 에 남겨두되 화면에서만 감춥니다.
+ * (입력값 유지 + 인쇄할 때 CSS 로 전부 펼치기 위함)
+ */
+.rw-pane--off {
+  display: none;
 }
 
 /* 등록부 단계의 서식 자체 여백을 살짝 줄입니다. */
@@ -312,8 +409,9 @@
     display: none !important;
   }
 
-  /* 서식은 모두 그대로 펼쳐 인쇄합니다. */
-  .rw-pane {
+  /* 서식은 모두 그대로 펼쳐 인쇄합니다. (단계별 보기에서 숨긴 단계까지) */
+  .rw-pane,
+  .rw-pane--off {
     display: block !important;
     padding: 0 !important;
     border: 0 !important;
