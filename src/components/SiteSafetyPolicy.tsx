@@ -3,6 +3,7 @@ import {
   SiteSafetyPolicy as SafetyPolicyData,
   SiteSafetyPolicyPlanRow,
   SiteSafetyPolicyEvalItem,
+  SiteSafetyPolicyBoardPost,
   PolicyDocKind,
   PolicyPaper,
   POLICY_CHECK_CYCLES,
@@ -17,8 +18,21 @@ import {
   sumEvalWeight,
   sumEvalScore,
   evalRate,
+  monthCheckCount,
+  checkedMonthCount,
+  POLICY_MONTHS,
+  emptyMonths,
 } from '../utils/safetyPolicyStorage';
-import { putFile, getFile, deleteFile, generateStorageKey } from '../utils/documentStorage';
+import {
+  putFile,
+  getFile,
+  deleteFile,
+  generateStorageKey,
+  isAllowedFile,
+  formatFileSize,
+  getFileMeta,
+  MAX_FILE_SIZE,
+} from '../utils/documentStorage';
 import { isAuthenticated } from '../utils/auth';
 import './SiteSafetyPolicy.css';
 
@@ -35,7 +49,7 @@ const MAX_SEAL_SIZE = 3 * 1024 * 1024; // 3MB
 const DOC_TABS: { kind: PolicyDocKind; label: string; desc: string }[] = [
   { kind: 'policy', label: '경영방침', desc: '방침 · 목표 · 세부추진계획' },
   { kind: 'plan', label: '세부추진계획표', desc: '관리담당 · 점검주기 · 점검방법' },
-  { kind: 'eval', label: '성과평가표', desc: '배점 · 실적 · 획득점수' },
+  { kind: 'eval', label: '성과평가표', desc: '배점 · 월별 실적 · 획득점수' },
 ];
 
 const docTitle = (data: SafetyPolicyData, kind: PolicyDocKind): string => {
@@ -63,6 +77,7 @@ const cycleOptions = (current: string): string[] => {
 const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, siteManager }) => {
   const [policy, setPolicy] = useState<SafetyPolicyData>(() => getSafetyPolicy(siteId, siteName));
   const [docKind, setDocKind] = useState<PolicyDocKind>('policy');
+  const [view, setView] = useState<'doc' | 'board'>('doc');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<SafetyPolicyData | null>(null);
   const [error, setError] = useState('');
@@ -70,9 +85,17 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
   const [sealUploading, setSealUploading] = useState(false);
   const sealInputRef = useRef<HTMLInputElement>(null);
 
+  /* 게시판 업로드 */
+  const [boardTitle, setBoardTitle] = useState('');
+  const [boardFile, setBoardFile] = useState<File | null>(null);
+  const [boardUploading, setBoardUploading] = useState(false);
+  const boardFileRef = useRef<HTMLInputElement>(null);
+
   const canManage = isAuthenticated();
   const current = editing && draft ? draft : policy;
   const paper: PolicyPaper = current.paper[docKind];
+  const boardPosts = policy.boards[docKind];
+  const docLabel = DOC_TABS.find(tab => tab.kind === docKind)?.label ?? '';
 
   /* 현장 변경 시 다시 읽기 */
   useEffect(() => {
@@ -283,6 +306,36 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
     });
   };
 
+  /** 월별 실적 체크 토글 */
+  const toggleEvalMonth = (index: number, monthIndex: number) => {
+    setDraft(d => {
+      if (!d) return d;
+      return {
+        ...d,
+        evalItems: d.evalItems.map((item, i) => {
+          if (i !== index) return item;
+          const months = Array.from({ length: 12 }, (_, m) =>
+            m === monthIndex ? !item.months[m] : item.months[m] === true,
+          );
+          return { ...item, months };
+        }),
+      };
+    });
+  };
+
+  /** 한 항목의 실적을 12개월 전체 선택/해제 */
+  const toggleAllMonths = (index: number, checked: boolean) => {
+    setDraft(d => {
+      if (!d) return d;
+      return {
+        ...d,
+        evalItems: d.evalItems.map((item, i) =>
+          i === index ? { ...item, months: emptyMonths().map(() => checked) } : item,
+        ),
+      };
+    });
+  };
+
   /* ---------------- 도장 이미지 ---------------- */
   const handleSealUpload = async (fileList: FileList | null) => {
     const file = fileList && fileList[0];
@@ -319,6 +372,110 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
     if (!confirm('등록한 도장·서명 이미지를 삭제하시겠습니까?')) return;
     await deleteFile(draft.sealImageKey).catch(() => undefined);
     setDraft(d => (d ? { ...d, sealImageKey: undefined } : d));
+  };
+
+  /* ---------------- 게시판 (문서별 자료 올리기) ---------------- */
+  const handleBoardUpload = async () => {
+    if (!canManage) {
+      alert('게시판 자료 등록은 관리자 로그인 후 가능합니다.');
+      return;
+    }
+    if (!boardFile) {
+      setError('올릴 파일을 선택해주세요.');
+      return;
+    }
+    if (!isAllowedFile(boardFile.name)) {
+      setError('허용되지 않는 파일 형식입니다. (PDF · 한글 · 워드 · 엑셀 · 이미지 등)');
+      return;
+    }
+    if (boardFile.size > MAX_FILE_SIZE) {
+      setError('파일은 50MB 이하만 올릴 수 있습니다.');
+      return;
+    }
+
+    setBoardUploading(true);
+    setError('');
+    try {
+      const key = generateStorageKey(boardFile.name);
+      await putFile(key, boardFile);
+      const post: SiteSafetyPolicyBoardPost = {
+        id: `bd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+        title: boardTitle.trim() || boardFile.name,
+        fileName: boardFile.name,
+        storageKey: key,
+        size: boardFile.size,
+        author: '관리자',
+        createdAt: new Date().toISOString(),
+      };
+      const nextPolicy: SafetyPolicyData = {
+        ...policy,
+        boards: {
+          ...policy.boards,
+          [docKind]: [post, ...policy.boards[docKind]],
+        },
+      };
+      saveSafetyPolicy(nextPolicy);
+      setPolicy(getSafetyPolicy(siteId, siteName));
+      setDraft(d =>
+        d
+          ? {
+              ...d,
+              boards: { ...d.boards, [docKind]: [post, ...d.boards[docKind]] },
+            }
+          : d,
+      );
+      setBoardTitle('');
+      setBoardFile(null);
+      if (boardFileRef.current) boardFileRef.current.value = '';
+    } catch {
+      setError('파일을 올리지 못했습니다.');
+    } finally {
+      setBoardUploading(false);
+    }
+  };
+
+  /** 게시판 자료 내려받기 */
+  const handleBoardDownload = async (post: SiteSafetyPolicyBoardPost) => {
+    const blob = await getFile(post.storageKey);
+    if (!blob) {
+      setError('파일을 찾을 수 없습니다.');
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = post.fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  /** 게시판 자료 삭제 */
+  const handleBoardRemove = async (post: SiteSafetyPolicyBoardPost) => {
+    if (!canManage) {
+      alert('게시판 자료 삭제는 관리자 로그인 후 가능합니다.');
+      return;
+    }
+    if (!confirm(`"${post.title}" 자료를 삭제하시겠습니까?`)) return;
+    await deleteFile(post.storageKey).catch(() => undefined);
+    const nextPolicy: SafetyPolicyData = {
+      ...policy,
+      boards: {
+        ...policy.boards,
+        [docKind]: policy.boards[docKind].filter(p => p.id !== post.id),
+      },
+    };
+    saveSafetyPolicy(nextPolicy);
+    setPolicy(getSafetyPolicy(siteId, siteName));
+    setDraft(d =>
+      d
+        ? {
+            ...d,
+            boards: { ...d.boards, [docKind]: d.boards[docKind].filter(p => p.id !== post.id) },
+          }
+        : d,
+    );
   };
 
   /* ---------------- 인쇄 ---------------- */
@@ -468,7 +625,7 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
     );
   };
 
-  /* ---------------- 서식 3 : 성과평가표 ---------------- */
+  /* ---------------- 서식 3 : 성과평가표 (월별 실적 1~12월) ---------------- */
   const evalSheet = (data: SafetyPolicyData, seal: string) => {
     const items = data.evalItems;
     return (
@@ -486,31 +643,40 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
           <div className="sp-table-scroll">
             <table className="sp-table sp-table-eval">
               <colgroup>
-                <col style={{ width: '6%' }} />
-                <col style={{ width: '16%' }} />
-                <col style={{ width: '21%' }} />
+                <col style={{ width: '4%' }} />
+                <col style={{ width: '15%' }} />
                 <col style={{ width: '17%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '5%' }} />
+                {POLICY_MONTHS.map((_, index) => (
+                  <col key={index} style={{ width: '2.166%' }} />
+                ))}
                 <col style={{ width: '8%' }} />
-                <col style={{ width: '16%' }} />
-                <col style={{ width: '8%' }} />
-                <col style={{ width: '8%' }} />
+                <col style={{ width: '10%' }} />
               </colgroup>
               <thead>
                 <tr>
-                  <th>연번</th>
-                  <th>평가항목</th>
-                  <th>성과지표</th>
-                  <th>측정방법</th>
-                  <th>배점</th>
-                  <th>실적</th>
-                  <th>획득점수</th>
-                  <th>비고</th>
+                  <th rowSpan={2}>연번</th>
+                  <th rowSpan={2}>평가항목</th>
+                  <th rowSpan={2}>성과지표</th>
+                  <th rowSpan={2}>측정방법</th>
+                  <th rowSpan={2}>배점</th>
+                  <th colSpan={12}>월별 실적 (1 ~ 12월)</th>
+                  <th rowSpan={2}>획득점수</th>
+                  <th rowSpan={2}>비고</th>
+                </tr>
+                <tr>
+                  {POLICY_MONTHS.map(month => (
+                    <th key={month} className="sp-th-month">
+                      {month.replace('월', '')}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td className="sp-td-center" colSpan={8}>
+                    <td className="sp-td-center" colSpan={19}>
                       등록된 평가항목이 없습니다.
                     </td>
                   </tr>
@@ -522,7 +688,11 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
                       <td>{item.indicator}</td>
                       <td>{item.method}</td>
                       <td className="sp-td-center">{item.weight}</td>
-                      <td>{item.result}</td>
+                      {item.months.map((checked, monthIndex) => (
+                        <td key={monthIndex} className={`sp-td-month${checked ? ' is-on' : ''}`}>
+                          {checked ? '○' : ''}
+                        </td>
+                      ))}
                       <td className="sp-td-center">{item.score}</td>
                       <td className="sp-td-center">{item.note}</td>
                     </tr>
@@ -535,7 +705,11 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
                     합 계 (달성률 {evalRate(items)}%)
                   </td>
                   <td className="sp-td-center">{sumEvalWeight(items)}</td>
-                  <td className="sp-td-center">-</td>
+                  {POLICY_MONTHS.map((month, monthIndex) => (
+                    <td key={month} className="sp-td-month">
+                      {monthCheckCount(items, monthIndex)}
+                    </td>
+                  ))}
                   <td className="sp-td-center">{sumEvalScore(items)}</td>
                   <td className="sp-td-center">{evalRate(items)}%</td>
                 </tr>
@@ -844,18 +1018,27 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
   /* ---------------- 편집 : 성과평가표 ---------------- */
   const evalEditor = (d: SafetyPolicyData) => (
     <>
-      <div className="sp-field">
-        <label>평가기간</label>
-        <input
-          type="text"
-          value={d.evalTerm}
-          onChange={e => setField('evalTerm', e.target.value)}
-          placeholder="예) 2026년 상반기 (2026.01.01 ~ 2026.06.30)"
-        />
+      <div className="sp-field-row sp-field-row-2">
+        <div className="sp-field">
+          <label>평가기간</label>
+          <input
+            type="text"
+            value={d.evalTerm}
+            onChange={e => setField('evalTerm', e.target.value)}
+            placeholder="예) 2026년 (2026.01.01 ~ 2026.12.31)"
+          />
+        </div>
+        <div className="sp-field">
+          <label>월별 실적 입력 안내</label>
+          <p className="sp-hint sp-hint-box">
+            항목별로 실시한 달을 체크하세요. 체크한 달 수가 서식의 ○ 표시와 하단 월별 집계에 그대로
+            반영됩니다.
+          </p>
+        </div>
       </div>
 
       <div className="sp-table-scroll">
-        <table className="sp-table sp-table-edit">
+        <table className="sp-table sp-table-edit sp-table-eval-edit">
           <thead>
             <tr>
               <th className="sp-col-no">연번</th>
@@ -863,8 +1046,12 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
               <th>성과지표</th>
               <th>측정방법</th>
               <th className="sp-col-weight">배점</th>
-              <th>실적</th>
-              <th className="sp-col-weight">획득점수</th>
+              <th className="sp-col-months">월별 실적 (1 ~ 12월)</th>
+              <th className="sp-col-weight">
+                획득
+                <br />
+                점수
+              </th>
               <th className="sp-col-note">비고</th>
               <th className="sp-col-act">관리</th>
             </tr>
@@ -910,13 +1097,39 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
                   />
                 </td>
                 <td>
-                  <input
-                    className="sp-cell-input"
-                    type="text"
-                    value={item.result}
-                    onChange={e => updateEvalItem(index, { result: e.target.value })}
-                    placeholder="실적"
-                  />
+                  <div className="sp-months">
+                    {item.months.map((checked, monthIndex) => (
+                      <label
+                        key={monthIndex}
+                        className={`sp-month-chip${checked ? ' is-on' : ''}`}
+                        title={`${POLICY_MONTHS[monthIndex]} 실시`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleEvalMonth(index, monthIndex)}
+                        />
+                        <span>{monthIndex + 1}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="sp-months-foot">
+                    <span className="sp-months-count">{checkedMonthCount(item)}/12 개월</span>
+                    <button
+                      type="button"
+                      className="sp-months-all"
+                      onClick={() => toggleAllMonths(index, true)}
+                    >
+                      전체 선택
+                    </button>
+                    <button
+                      type="button"
+                      className="sp-months-all"
+                      onClick={() => toggleAllMonths(index, false)}
+                    >
+                      해제
+                    </button>
+                  </div>
                 </td>
                 <td>
                   <input
@@ -975,7 +1188,15 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
                 합 계
               </td>
               <td className="sp-td-center">{sumEvalWeight(d.evalItems)}</td>
-              <td className="sp-td-center">-</td>
+              <td>
+                <div className="sp-months sp-months-total">
+                  {POLICY_MONTHS.map((month, monthIndex) => (
+                    <span key={month} className="sp-month-total">
+                      {monthCheckCount(d.evalItems, monthIndex)}
+                    </span>
+                  ))}
+                </div>
+              </td>
               <td className="sp-td-center">{sumEvalScore(d.evalItems)}</td>
               <td className="sp-td-center">{evalRate(d.evalItems)}%</td>
               <td className="sp-td-center">-</td>
@@ -1007,6 +1228,120 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
     if (docKind === 'eval') return evalEditor(d);
     return policyEditor(d);
   };
+
+  /* ---------------- 게시판 화면 ---------------- */
+  const formatBoardDate = (iso: string): string => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+  };
+
+  const boardPanel = () => (
+    <div className="sp-board">
+      <div className="sp-board-head">
+        <div className="sp-board-head-text">
+          <strong>{docLabel} 게시판</strong>
+          <span>
+            출력한 문서(PDF) · 사진 · 서명본 등을 올려 함께 보관합니다. 등록 자료{' '}
+            {boardPosts.length}건
+          </span>
+        </div>
+      </div>
+
+      <div className="sp-board-form">
+        <div className="sp-board-field">
+          <label>제목</label>
+          <input
+            type="text"
+            value={boardTitle}
+            onChange={e => setBoardTitle(e.target.value)}
+            placeholder="예) 2026년 상반기 성과평가표 (서명본)"
+          />
+        </div>
+        <div className="sp-board-field sp-board-field-file">
+          <label>파일 선택</label>
+          <div className="sp-board-picker">
+            <label className={`sp-board-file${boardUploading ? ' is-busy' : ''}`}>
+              {boardFile ? '파일 변경' : '＋ 파일 선택'}
+              <input
+                ref={boardFileRef}
+                type="file"
+                disabled={boardUploading}
+                onChange={e => {
+                  setBoardFile(e.target.files && e.target.files[0] ? e.target.files[0] : null);
+                }}
+              />
+            </label>
+            <span className={`sp-board-filename${boardFile ? ' is-on' : ''}`}>
+              {boardFile
+                ? `${boardFile.name} (${formatFileSize(boardFile.size)})`
+                : '선택된 파일 없음'}
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm sp-board-submit"
+          onClick={() => void handleBoardUpload()}
+          disabled={boardUploading || !boardFile}
+        >
+          {boardUploading ? '올리는 중…' : '올리기'}
+        </button>
+      </div>
+
+      <p className="sp-hint sp-board-hint">
+        PDF · 한글 · 워드 · 엑셀 · 이미지 등 50MB 이하 파일을 올릴 수 있습니다. 파일은 이
+        브라우저(IndexedDB)에 저장됩니다.
+      </p>
+
+      {boardPosts.length === 0 ? (
+        <div className="sp-board-empty">
+          <strong>등록된 자료가 없습니다.</strong>
+          <span>문서를 인쇄·PDF 저장한 뒤 위에서 올리면 이 게시판에 쌓입니다.</span>
+        </div>
+      ) : (
+        <ul className="sp-board-list">
+          {boardPosts.map(post => {
+            const meta = getFileMeta(post.fileName);
+            return (
+              <li key={post.id} className="sp-board-item">
+                <span className="sp-board-badge" style={{ color: meta.color }}>
+                  {meta.label}
+                </span>
+                <div className="sp-board-item-body">
+                  <strong className="sp-board-item-title">{post.title}</strong>
+                  <span className="sp-board-item-meta">
+                    {post.fileName} · {formatFileSize(post.size)} · {post.author} ·{' '}
+                    {formatBoardDate(post.createdAt)}
+                  </span>
+                </div>
+                <div className="sp-board-item-actions">
+                  <button
+                    type="button"
+                    className="sp-board-btn"
+                    onClick={() => void handleBoardDownload(post)}
+                  >
+                    내려받기
+                  </button>
+                  {canManage && (
+                    <button
+                      type="button"
+                      className="sp-board-btn danger"
+                      onClick={() => void handleBoardRemove(post)}
+                    >
+                      삭제
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 
   /* ---------------- 렌더 ---------------- */
   return (
@@ -1062,31 +1397,68 @@ const SiteSafetyPolicy: React.FC<SiteSafetyPolicyProps> = ({ siteId, siteName, s
           ))}
         </div>
 
-        <div className="sp-paper">
-          <span className="sp-paper-label">출력 용지</span>
-          <div className="sp-paper-group">
-            {(['A4', 'A3'] as PolicyPaper[]).map(size => (
-              <button
-                key={size}
-                type="button"
-                className={`sp-paper-btn${paper === size ? ' is-active' : ''}`}
-                onClick={() => changePaper(size)}
-                aria-pressed={paper === size}
-              >
-                {size}
-              </button>
-            ))}
+        <div className="sp-docbar-right">
+          {/* 문서 / 게시판 전환 */}
+          <div className="sp-viewtabs" role="tablist" aria-label="보기 방식">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === 'doc'}
+              className={`sp-viewtab${view === 'doc' ? ' is-active' : ''}`}
+              onClick={() => {
+                setView('doc');
+                cancelEdit();
+              }}
+            >
+              서식
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === 'board'}
+              className={`sp-viewtab${view === 'board' ? ' is-active' : ''}`}
+              onClick={() => {
+                setView('board');
+                cancelEdit();
+              }}
+            >
+              게시판
+              {boardPosts.length > 0 && (
+                <span className="sp-viewtab-count">{boardPosts.length}</span>
+              )}
+            </button>
           </div>
+
+          {view === 'doc' && (
+            <div className="sp-paper">
+              <span className="sp-paper-label">출력 용지</span>
+              <div className="sp-paper-group">
+                {(['A4', 'A3'] as PolicyPaper[]).map(size => (
+                  <button
+                    key={size}
+                    type="button"
+                    className={`sp-paper-btn${paper === size ? ' is-active' : ''}`}
+                    onClick={() => changePaper(size)}
+                    aria-pressed={paper === size}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {error && <div className="sp-error">{error}</div>}
 
-      {!editing
-        ? sheet(policy, sealUrl)
-        : draft && <div className="sp-editor">{editor(draft)}</div>}
+      {view === 'board'
+        ? boardPanel()
+        : !editing
+          ? sheet(policy, sealUrl)
+          : draft && <div className="sp-editor">{editor(draft)}</div>}
 
-      {editing && (
+      {editing && view === 'doc' && (
         <div className="sp-editor-foot">
           <button className="btn btn-secondary btn-sm" onClick={cancelEdit}>
             취소

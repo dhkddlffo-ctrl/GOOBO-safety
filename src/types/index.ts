@@ -842,7 +842,7 @@ export interface SiteSafetyPolicyPlanRow {
   note: string;
 }
 
-/** 성과평가표 한 행 — 평가항목별 지표·측정방법·배점·실적·획득점수 */
+/** 성과평가표 한 행 — 평가항목별 지표·측정방법·배점·월별실적·획득점수 */
 export interface SiteSafetyPolicyEvalItem {
   id: string;
   /** 평가항목 */
@@ -853,12 +853,31 @@ export interface SiteSafetyPolicyEvalItem {
   method: string;
   /** 배점 */
   weight: number;
-  /** 실적 */
+  /** 실적 메모 */
   result: string;
+  /** 월별 실적 체크 (1월 ~ 12월, 길이 12) */
+  months: boolean[];
   /** 획득점수 */
   score: number;
   /** 비고 */
   note: string;
+}
+
+/** 문서별 게시판에 올린 자료 (파일 본문은 IndexedDB) */
+export interface SiteSafetyPolicyBoardPost {
+  id: string;
+  /** 게시글 제목 */
+  title: string;
+  /** 원본 파일명 */
+  fileName: string;
+  /** IndexedDB 파일 키 */
+  storageKey: string;
+  /** 파일 크기 (byte) */
+  size: number;
+  /** 작성자 */
+  author: string;
+  /** 등록일시 (ISO) */
+  createdAt: string;
 }
 
 /** 인쇄 용지 */
@@ -896,5 +915,7 @@ export interface SiteSafetyPolicy {
   sealImageKey?: string;
   /** 인쇄 용지 설정 (문서별 A4/A3) */
   paper: Record<PolicyDocKind, PolicyPaper>;
+  /** 문서별 게시판에 올린 자료 */
+  boards: Record<PolicyDocKind, SiteSafetyPolicyBoardPost[]>;
   updatedAt: string;
 }

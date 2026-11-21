@@ -2,6 +2,7 @@ import {
   SiteSafetyPolicy,
   SiteSafetyPolicyPlanRow,
   SiteSafetyPolicyEvalItem,
+  SiteSafetyPolicyBoardPost,
   PolicyPaper,
   PolicyDocKind,
 } from '../types';
@@ -45,6 +46,25 @@ export const createPlanRow = (plan = ''): SiteSafetyPolicyPlanRow => ({
   note: '',
 });
 
+/** 연중 월 목록 (1월 ~ 12월) */
+export const POLICY_MONTHS = [
+  '1월',
+  '2월',
+  '3월',
+  '4월',
+  '5월',
+  '6월',
+  '7월',
+  '8월',
+  '9월',
+  '10월',
+  '11월',
+  '12월',
+] as const;
+
+/** 12칸짜리 빈 월별 실적 */
+export const emptyMonths = (): boolean[] => new Array(12).fill(false);
+
 /** 성과평가표 빈 행 */
 export const createEvalItem = (): SiteSafetyPolicyEvalItem => ({
   id: generatePolicyRowId('ev'),
@@ -53,6 +73,7 @@ export const createEvalItem = (): SiteSafetyPolicyEvalItem => ({
   method: '',
   weight: 0,
   result: '',
+  months: emptyMonths(),
   score: 0,
   note: '',
 });
@@ -97,6 +118,7 @@ const DEFAULT_EVAL_ITEMS = (): SiteSafetyPolicyEvalItem[] => [
     method: '재해 발생 건수 확인',
     weight: 30,
     result: '',
+    months: emptyMonths(),
     score: 0,
     note: '',
   },
@@ -107,6 +129,7 @@ const DEFAULT_EVAL_ITEMS = (): SiteSafetyPolicyEvalItem[] => [
     method: '현장 순회점검 결과 확인',
     weight: 20,
     result: '',
+    months: emptyMonths(),
     score: 0,
     note: '',
   },
@@ -117,6 +140,7 @@ const DEFAULT_EVAL_ITEMS = (): SiteSafetyPolicyEvalItem[] => [
     method: 'TBM 기록부 확인',
     weight: 20,
     result: '',
+    months: emptyMonths(),
     score: 0,
     note: '',
   },
@@ -127,6 +151,7 @@ const DEFAULT_EVAL_ITEMS = (): SiteSafetyPolicyEvalItem[] => [
     method: '안전교육일지 확인',
     weight: 15,
     result: '',
+    months: emptyMonths(),
     score: 0,
     note: '',
   },
@@ -137,6 +162,7 @@ const DEFAULT_EVAL_ITEMS = (): SiteSafetyPolicyEvalItem[] => [
     method: '위험성평가 결과보고서 확인',
     weight: 15,
     result: '',
+    months: emptyMonths(),
     score: 0,
     note: '',
   },
@@ -147,6 +173,13 @@ const defaultPaper = (): Record<PolicyDocKind, PolicyPaper> => ({
   policy: 'A4',
   plan: 'A4',
   eval: 'A4',
+});
+
+/** 기본 게시판 (문서별 빈 목록) */
+export const defaultBoards = (): Record<PolicyDocKind, SiteSafetyPolicyBoardPost[]> => ({
+  policy: [],
+  plan: [],
+  eval: [],
 });
 
 /** 기본 서식 (회사양식 그대로 + 현장명만 미리 채움) */
@@ -170,6 +203,7 @@ export const createEmptySafetyPolicy = (
   signerName,
   sealImageKey: undefined,
   paper: defaultPaper(),
+  boards: defaultBoards(),
   updatedAt: '',
 });
 
@@ -207,6 +241,7 @@ const normalizePlanRow = (row: unknown): SiteSafetyPolicyPlanRow => {
 /** 성과평가표 행 보정 */
 const normalizeEvalItem = (item: unknown): SiteSafetyPolicyEvalItem => {
   const raw = (item ?? {}) as Partial<SiteSafetyPolicyEvalItem>;
+  const months = Array.isArray(raw.months) ? raw.months : [];
   return {
     id: asText(raw.id) || generatePolicyRowId('ev'),
     item: asText(raw.item),
@@ -214,6 +249,7 @@ const normalizeEvalItem = (item: unknown): SiteSafetyPolicyEvalItem => {
     method: asText(raw.method),
     weight: asNumber(raw.weight),
     result: asText(raw.result),
+    months: Array.from({ length: 12 }, (_, i) => months[i] === true),
     score: asNumber(raw.score),
     note: asText(raw.note),
   };
@@ -223,6 +259,28 @@ const normalizeEvalItem = (item: unknown): SiteSafetyPolicyEvalItem => {
 const normalizePaper = (paper: unknown): Record<PolicyDocKind, PolicyPaper> => {
   const raw = (paper ?? {}) as Partial<Record<PolicyDocKind, PolicyPaper>>;
   const pick = (value: unknown): PolicyPaper => (value === 'A3' ? 'A3' : 'A4');
+  return { policy: pick(raw.policy), plan: pick(raw.plan), eval: pick(raw.eval) };
+};
+
+/** 게시판 게시글 보정 */
+const normalizeBoardPost = (post: unknown): SiteSafetyPolicyBoardPost => {
+  const raw = (post ?? {}) as Partial<SiteSafetyPolicyBoardPost>;
+  return {
+    id: asText(raw.id) || generatePolicyRowId('bd'),
+    title: asText(raw.title),
+    fileName: asText(raw.fileName),
+    storageKey: asText(raw.storageKey),
+    size: asNumber(raw.size),
+    author: asText(raw.author),
+    createdAt: asText(raw.createdAt),
+  };
+};
+
+/** 게시판 목록 보정 (문서별로 누락된 목록은 빈 배열) */
+const normalizeBoards = (boards: unknown): Record<PolicyDocKind, SiteSafetyPolicyBoardPost[]> => {
+  const raw = (boards ?? {}) as Partial<Record<PolicyDocKind, unknown>>;
+  const pick = (value: unknown): SiteSafetyPolicyBoardPost[] =>
+    Array.isArray(value) ? value.map(normalizeBoardPost) : [];
   return { policy: pick(raw.policy), plan: pick(raw.plan), eval: pick(raw.eval) };
 };
 
@@ -273,6 +331,7 @@ const normalize = (
     evalTerm: asText(policy.evalTerm),
     evalNote: asText(policy.evalNote),
     paper: normalizePaper(policy.paper),
+    boards: normalizeBoards(policy.boards),
   };
 };
 
@@ -315,6 +374,14 @@ export const evalRate = (items: SiteSafetyPolicyEvalItem[]): number => {
   if (weight <= 0) return 0;
   return Math.round((sumEvalScore(items) / weight) * 1000) / 10;
 };
+
+/** 해당 월(0 = 1월)에 체크된 평가항목 수 — 표 하단 월별 집계 */
+export const monthCheckCount = (items: SiteSafetyPolicyEvalItem[], monthIndex: number): number =>
+  items.filter(item => item.months[monthIndex] === true).length;
+
+/** 한 항목의 체크된 월 수 */
+export const checkedMonthCount = (item: SiteSafetyPolicyEvalItem): number =>
+  item.months.filter(Boolean).length;
 
 /* ------------------------------------------------------------------ */
 /* 표시 도우미                                                          */
