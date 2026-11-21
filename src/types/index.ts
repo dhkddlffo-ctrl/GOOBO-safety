@@ -811,6 +811,62 @@ export interface HqAckSummary {
  * 회사 서식(표제 박스 + 안전보건 방침 / 목표 / 세부추진계획 + 서명)을
  * 그대로 재현해 A4 1장으로 출력하는 문서입니다.
  */
+/** 점검주기 선택지 */
+export const POLICY_CHECK_CYCLES = [
+  '수시',
+  '매일',
+  '매주',
+  '격주',
+  '매월',
+  '분기',
+  '반기',
+  '연간',
+] as const;
+
+export type PolicyCheckCycle = (typeof POLICY_CHECK_CYCLES)[number];
+
+/** 세부추진계획표 한 행 — 추진계획별 관리담당·점검주기·점검방법·목표 */
+export interface SiteSafetyPolicyPlanRow {
+  id: string;
+  /** 추진계획 */
+  plan: string;
+  /** 관리담당 */
+  owner: string;
+  /** 점검주기 (POLICY_CHECK_CYCLES 중 하나 또는 직접 입력) */
+  cycle: string;
+  /** 점검방법 */
+  method: string;
+  /** 목표 (성과지표) */
+  target: string;
+  /** 비고 */
+  note: string;
+}
+
+/** 성과평가표 한 행 — 평가항목별 지표·측정방법·배점·실적·획득점수 */
+export interface SiteSafetyPolicyEvalItem {
+  id: string;
+  /** 평가항목 */
+  item: string;
+  /** 성과지표 (목표) */
+  indicator: string;
+  /** 측정방법 */
+  method: string;
+  /** 배점 */
+  weight: number;
+  /** 실적 */
+  result: string;
+  /** 획득점수 */
+  score: number;
+  /** 비고 */
+  note: string;
+}
+
+/** 인쇄 용지 */
+export type PolicyPaper = 'A4' | 'A3';
+
+/** 경영방침 관련 문서 종류 */
+export type PolicyDocKind = 'policy' | 'plan' | 'eval';
+
 export interface SiteSafetyPolicy {
   siteId: number;
   siteName: string;
@@ -822,6 +878,14 @@ export interface SiteSafetyPolicy {
   goal: string;
   /** 세부추진계획 — 화면에서는 첫째·둘째·셋째 … 로 번호를 붙입니다 */
   actionPlans: string[];
+  /** 세부추진계획표 (관리담당·점검주기 포함) */
+  planRows: SiteSafetyPolicyPlanRow[];
+  /** 성과평가표 */
+  evalItems: SiteSafetyPolicyEvalItem[];
+  /** 성과평가 기간 (예: 2026년 상반기) */
+  evalTerm: string;
+  /** 성과평가 종합 의견 */
+  evalNote: string;
   /** 시행일 (YYYY-MM-DD) */
   declaredAt: string;
   /** 서명 직책 (기본값: 현장소장) */
@@ -830,5 +894,7 @@ export interface SiteSafetyPolicy {
   signerName: string;
   /** 도장·서명 이미지 (IndexedDB 키) — 선택 */
   sealImageKey?: string;
+  /** 인쇄 용지 설정 (문서별 A4/A3) */
+  paper: Record<PolicyDocKind, PolicyPaper>;
   updatedAt: string;
 }
