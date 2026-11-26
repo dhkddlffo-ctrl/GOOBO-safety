@@ -24,6 +24,7 @@ const SEVERITY_CLASS: Record<AccidentCase['severity'], string> = {
   경상: 'ar-sev-mild',
   중상: 'ar-sev-serious',
   사망: 'ar-sev-dead',
+  질병: 'ar-sev-none',
 };
 
 /** 회사 서식 번호 */

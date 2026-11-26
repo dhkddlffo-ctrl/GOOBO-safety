@@ -1,0 +1,339 @@
+/* ------------------------------------------------------------------ */
+/* 업무상 질병 작성 서식 — 보험가입자 의견서 (별지 제4호의2)             */
+/* 전사 '사고사례 제출' 페이지와 현장 게시판에서 공용                   */
+/* ------------------------------------------------------------------ */
+
+.dof {
+  width: 100%;
+}
+
+.dof-card {
+  background: #fff;
+  border: 1px solid var(--line, #ebeef2);
+  border-radius: 12px;
+  padding: 1.75rem 1.5rem;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+/* ---------------- 서식 표제 ---------------- */
+.dof-doc-head {
+  padding-bottom: 0.875rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 2px solid #0c2a4d;
+}
+
+.dof-doc-title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #0c2a4d;
+}
+
+.dof-doc-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--mute, #6b7280);
+}
+
+/* ---------------- 섹션 ---------------- */
+.dof-section {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--line2, #e5e7eb);
+  border-radius: 10px;
+  background: #fafbfc;
+}
+
+.dof-section-title {
+  margin: 0 0 0.875rem;
+  padding-bottom: 0.4375rem;
+  border-bottom: 1.5px solid var(--line2, #e5e7eb);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.dof-section-desc {
+  margin: -0.375rem 0 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--mute, #6b7280);
+}
+
+/* ---------------- 입력 그리드 ---------------- */
+.dof-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.875rem 1rem;
+}
+
+.dof-wide {
+  grid-column: 1 / -1;
+}
+
+.dof-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dof-field > label,
+.dof-label {
+  display: block;
+  margin-bottom: 0.3125rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.dof-field input[type='text'],
+.dof-field input[type='date'],
+.dof-field input[type='time'],
+.dof-field input[type='tel'],
+.dof-field input[type='email'],
+.dof-field select,
+.dof-field textarea,
+.dof-inline-input {
+  width: 100%;
+  padding: 0.5625rem 0.6875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--ink, #111827);
+  background: #fff;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.dof-field input:focus,
+.dof-field select:focus,
+.dof-field textarea:focus,
+.dof-inline-input:focus {
+  outline: none;
+  border-color: #0c2a4d;
+  box-shadow: 0 0 0 3px rgba(12, 42, 77, 0.12);
+}
+
+.dof-field textarea {
+  resize: vertical;
+  min-height: 84px;
+  line-height: 1.65;
+}
+
+.dof-field select {
+  cursor: pointer;
+}
+
+/* ---------------- 선택(라디오 · 체크) ---------------- */
+.dof-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.875rem;
+  padding: 0.375rem 0;
+}
+
+.dof-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-size: 0.8125rem;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dof-choice input {
+  width: 0.9375rem;
+  height: 0.9375rem;
+  accent-color: #0c2a4d;
+  cursor: pointer;
+  margin: 0;
+}
+
+.dof-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.25rem 1rem;
+}
+
+/* ---------------- 경고문 ---------------- */
+.dof-warning {
+  margin: 0.625rem 0 0;
+  padding: 0.625rem 0.875rem;
+  border-left: 3px solid #dc2626;
+  border-radius: 6px;
+  background: #fef2f2;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: #991b1b;
+}
+
+/* ---------------- 안내 표 ---------------- */
+.dof-notice-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  background: #fff;
+}
+
+.dof-notice-table th,
+.dof-notice-table td {
+  border: 1px solid #d5dae1;
+  padding: 0.5rem 0.625rem;
+  line-height: 1.55;
+  vertical-align: middle;
+  text-align: left;
+}
+
+.dof-notice-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+}
+
+/* ---------------- 반복 입력 (별지 항목 · 별첨) ---------------- */
+.dof-repeat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  margin-bottom: 0.625rem;
+}
+
+.dof-repeat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.625rem;
+  border: 1px solid var(--line2, #e5e7eb);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dof-repeat-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dof-repeat-del {
+  flex: 0 0 auto;
+  padding: 0.3125rem 0.5rem;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+.dof-repeat-del:hover {
+  background: #fef2f2;
+}
+
+.dof-add {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px dashed #93c5fd;
+  border-radius: 8px;
+  background: #f8fbff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  cursor: pointer;
+}
+
+.dof-add:hover {
+  background: #eff6ff;
+}
+
+.dof-appendix-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.dof-appendix-row .dof-inline-input:first-child {
+  flex: 1 1 auto;
+}
+
+.dof-appendix-copies {
+  flex: 0 0 30%;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: #374151;
+  white-space: nowrap;
+}
+
+/* ---------------- 하단 버튼 ---------------- */
+.dof-actions {
+  display: flex;
+  gap: 0.625rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line2, #e5e7eb);
+}
+
+.dof-actions button {
+  flex: 1;
+}
+
+.dof-btn-preview {
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dof-btn-preview:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+
+.dof-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--mute, #6b7280);
+}
+
+/* ---------------- 반응형 ---------------- */
+@media (max-width: 768px) {
+  .dof-card {
+    padding: 1.25rem 1rem;
+  }
+
+  .dof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dof-appendix-row {
+    flex-wrap: wrap;
+  }
+
+  .dof-appendix-copies {
+    flex: 1 1 100%;
+  }
+
+  .dof-actions {
+    flex-direction: column;
+  }
+}
+
+/* 인쇄 시 서식은 숨김 (보고서만 출력) */
+@media print {
+  .dof {
+    display: none !important;
+  }
+}

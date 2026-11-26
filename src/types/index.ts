@@ -343,6 +343,128 @@ export type DisasterReportStatus = '제출' | '미제출' | '제출대상 아님
 // 첨부서류 체크란
 export type AttachmentCheckKey = 'laborContract' | 'medicalOpinion';
 
+/**
+ * 사고사례 작성 유형
+ *
+ *  - '사고' : 업무상 사고 — 기존 회사 서식(사고원인 및 대책 보고서 등)으로 작성합니다.
+ *  - '질병' : 업무상 질병 — 근로복지공단 「보험가입자 의견서」(별지 제4호의2) 서식으로 작성합니다.
+ *
+ * 예전에 저장한 사고사례에는 이 값이 없으므로 **없으면 '사고'** 로 봅니다.
+ */
+export type AccidentCaseKind = '사고' | '질병';
+
+/** 별지 자유서술 항목 (번호 · 제목 · 내용) */
+export interface DiseaseOpinionClause {
+  id: string;
+  /** 소제목 (예: 당 현장에서의 실근로 기간 부족) */
+  title: string;
+  /** 서술 내용 */
+  body: string;
+}
+
+/** 별첨 서류 (서류명 + 매수) */
+export interface DiseaseOpinionAppendix {
+  id: string;
+  /** 서류명 (예: 근로계약서) */
+  name: string;
+  /** 매수 (예: 8매) */
+  copies: string;
+}
+
+/**
+ * 보험가입자 의견서 (근로복지공단 별지 제4호의2 서식)
+ *
+ * 업무상 질병을 주장하는 요양급여 신청에 대하여 **사업주(보험가입자)의 의견**을
+ * 서식 그대로 기록합니다. 1장은 서식 항목, 2장(별지)은 자유 서술입니다.
+ */
+export interface DiseaseOpinion {
+  /* ---------- 표제 ---------- */
+  /** 재해자(신청인) 성명 */
+  workerName: string;
+  /** 주민등록번호 */
+  workerResidentId: string;
+  /** 재해 발생일 (= 발병일) */
+  onsetDate: string;
+  /** 상병명 (예: 요추 2-3번 추간판장애) */
+  diseaseName: string;
+
+  /* ---------- 1. 신청인과 관련하여 아래사항을 구체적으로 기재 ---------- */
+  /** 채용일자 */
+  hireDate: string;
+  /** 국적 */
+  nationality: string;
+  /** 직종 */
+  jobType: string;
+  /** 출근시간 (HH:mm) */
+  workStartTime: string;
+  /** 퇴근시간 (HH:mm) */
+  workEndTime: string;
+  /** 작업개시시간 (HH:mm) */
+  taskStartTime: string;
+  /** 종사상 지위 */
+  employmentStatus: '' | '상용' | '임시' | '일용';
+  /** 고용형태 */
+  employmentType: '' | '정규직' | '비정규직';
+  /** 보험가입자(사업주)와의 관계 — 사업주 여부 */
+  ownerStatus: '' | '해당없음' | '실제사업주(동업자포함)' | '하수급사업주';
+  /** 보험가입자(사업주)와의 관계 — 친인척 여부 */
+  relativeStatus: '' | '해당 없음' | '배우자' | '부모' | '자녀' | '형제자매' | '기타 친인척';
+  /** 친인척 '기타' 선택 시 관계 */
+  relativeEtc: string;
+  /** 근로자 유형 (복수 선택) */
+  workerTypes: string[];
+  /** 근로자 유형 — 특수형태근로종사자 등 기타 기재 */
+  workerTypeEtc: string;
+  /** 담당업무 */
+  dutyDescription: string;
+  /** 임금 (월급 · 일급 · 시간급 등) */
+  wage: string;
+  /** 재해발생 이후 근무이력 */
+  workHistoryAfter: string;
+
+  /* ---------- 2. 재해사실 또는 발병사실에 대한 의견 ---------- */
+  /** 귀사는 신청인의 재해사실을 인정합니까? */
+  acknowledge: '' | '예' | '아니오' | '기타';
+  /** '기타' 선택 시 관련내용 */
+  acknowledgeEtc: string;
+  /** 재해사실을 인정하지 않는 경우 그 사유 */
+  rejectReason: string;
+
+  /* ---------- 3. 업무상 질병판정위원회 심의대상 안내 ---------- */
+  /** 통지받을 사업주(또는 사업장 담당자) 성명 */
+  noticeName: string;
+  /** 통지받을 휴대폰번호 */
+  noticePhone: string;
+  /** 개인정보 이용 동의 */
+  noticeAgreed: boolean;
+
+  /* ---------- 확인 및 사업장 정보 ---------- */
+  /** 작성일 */
+  writtenDate: string;
+  /** 사업장명 */
+  workplaceName: string;
+  /** 소재지 */
+  workplaceAddress: string;
+  /** 사업주 */
+  ownerName: string;
+  /** 전화번호 */
+  phoneNumber: string;
+  /** 휴대폰 */
+  mobileNumber: string;
+  /** E-Mail */
+  email: string;
+  /** 수신 (예: 근로복지공단 00000 귀하) */
+  recipient: string;
+
+  /* ---------- 별지 (2/2) ---------- */
+  /** 도입 문단 */
+  attachmentIntro: string;
+  /** 번호 항목 (1. ~ n.) */
+  attachmentClauses: DiseaseOpinionClause[];
+  /** 별첨 서류 목록 */
+  appendixes: DiseaseOpinionAppendix[];
+}
+
 /** 사고사례 첨부파일 (파일 본문은 IndexedDB, 목록에는 메타데이터만) */
 export interface AccidentAttachment {
   id: string;
@@ -408,6 +530,13 @@ export interface AccidentCase {
   id: string;
   siteId: number;
   siteName: string;
+  /**
+   * 작성 유형 — '사고'(업무상 사고) / '질병'(업무상 질병).
+   * 예전 자료에는 없으므로 **없으면 '사고'** 로 봅니다.
+   */
+  kind?: AccidentCaseKind;
+  /** 업무상 질병 사례일 때 보험가입자 의견서(별지 제4호의2) 내용 */
+  diseaseOpinion?: DiseaseOpinion;
   accidentDate: string; // 사고 발생 일시
   accidentType:
     | '추락'
@@ -421,7 +550,7 @@ export interface AccidentCase {
     | '넘어짐'
     | '질병'
     | '기타';
-  severity: '경상' | '중상' | '사망' | '무재해';
+  severity: '경상' | '중상' | '사망' | '무재해' | '질병';
   location: string; // 사고 발생 장소
   victimName?: string; // 피해자 성명 (선택)
   victimAge?: number; // 피해자 나이

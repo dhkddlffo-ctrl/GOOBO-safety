@@ -1,0 +1,617 @@
+/* ================================================================
+   보험가입자 의견서 (근로복지공단 별지 제4호의2) — A4 세로 2장
+   DiseaseOpinionReport.tsx 전용
+   ================================================================ */
+
+.disease-opinion-portal {
+  position: relative;
+  z-index: 3000;
+}
+
+.dro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+/* ---------------- 툴바 ---------------- */
+.dro-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: #111827;
+  color: #f9fafb;
+}
+
+.dro-toolbar-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.dro-toolbar-pages {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.dro-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.dro-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dro-btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.dro-btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.dro-btn-ghost {
+  background: transparent;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+.dro-btn-ghost:hover {
+  background: #1f2937;
+}
+
+/* ---------------- 스크롤 영역 ---------------- */
+.dro-scroll {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 1rem 3rem;
+  overflow: auto;
+}
+
+/* ---------------- A4 한 장 ---------------- */
+.dro-sheet {
+  position: relative;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 14mm 13mm 9mm;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: #111827;
+  font-size: 9.5pt;
+  line-height: 1.5;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.35);
+}
+
+.dro-page-tag {
+  position: absolute;
+  top: -1.05rem;
+  left: 0;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: #1f2937;
+  color: #e5e7eb;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+/* ---------------- 표제 ---------------- */
+.dro-titlebar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid #111827;
+  margin-bottom: 0.6rem;
+}
+
+.dro-title {
+  font-size: 17pt;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+}
+
+.dro-page-no {
+  font-size: 8.5pt;
+  font-weight: 700;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
+.dro-summary {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.75rem;
+}
+
+.dro-summary th,
+.dro-summary td {
+  border: 1px solid #4b5563;
+  padding: 0.3rem 0.45rem;
+  font-size: 8.5pt;
+  vertical-align: middle;
+}
+
+.dro-summary th {
+  background: #eef2f7;
+  font-weight: 700;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.dro-summary td {
+  text-align: center;
+}
+
+.dro-summary td.dro-strong {
+  font-weight: 700;
+}
+
+/* ---------------- 구획 ---------------- */
+.dro-section {
+  margin-bottom: 0.55rem;
+}
+
+.dro-section-title {
+  margin: 0 0 0.3rem;
+  font-size: 9.5pt;
+  font-weight: 800;
+  color: #111827;
+}
+
+.dro-section-title-sub {
+  margin: 0.15rem 0 0.35rem;
+  font-size: 8pt;
+  color: #4b5563;
+}
+
+/* ---------------- 값 표 ---------------- */
+.dro-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.dro-table th,
+.dro-table td {
+  border: 1px solid #4b5563;
+  padding: 0.28rem 0.45rem;
+  font-size: 8.5pt;
+  vertical-align: top;
+  text-align: left;
+  word-break: break-word;
+}
+
+.dro-table th {
+  background: #eef2f7;
+  font-weight: 700;
+  text-align: center;
+}
+
+.dro-table td.dro-center {
+  text-align: center;
+}
+
+.dro-table td.dro-empty {
+  color: #9ca3af;
+}
+
+.dro-sub-label {
+  display: block;
+  font-size: 7.5pt;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+/* ---------------- 선택지 (체크 표시) ---------------- */
+.dro-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.7rem;
+  font-size: 8.5pt;
+}
+
+.dro-choice {
+  white-space: nowrap;
+}
+
+.dro-choice-mark {
+  margin-right: 0.15rem;
+  font-size: 9pt;
+  font-weight: 700;
+}
+
+.dro-choice-on .dro-choice-mark {
+  color: #111827;
+}
+
+.dro-choice-off {
+  color: #6b7280;
+}
+
+/* ---------------- 경고문 ---------------- */
+.dro-warning {
+  margin: 0.35rem 0 0;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  font-size: 7.5pt;
+  line-height: 1.45;
+  color: #991b1b;
+}
+
+/* ---------------- 서술 칸 ---------------- */
+.dro-body-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 8.5pt;
+  line-height: 1.55;
+}
+
+.dro-body-text.dro-empty {
+  color: #9ca3af;
+}
+
+.dro-fill {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.dro-fill-body {
+  flex: 1 1 auto;
+  min-height: 3rem;
+  border: 1px solid #4b5563;
+  border-top: none;
+  padding: 0.35rem 0.45rem;
+}
+
+/* ---------------- 확인 · 사업장 정보 ---------------- */
+.dro-confirm {
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed #9ca3af;
+}
+
+.dro-confirm-text {
+  margin: 0;
+  font-size: 9pt;
+  font-weight: 700;
+  text-align: center;
+}
+
+.dro-confirm-date {
+  margin: 0.3rem 0 0.5rem;
+  font-size: 9pt;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.dro-sign-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.35rem;
+}
+
+.dro-sign-table th,
+.dro-sign-table td {
+  padding: 0.22rem 0.35rem;
+  font-size: 8.5pt;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.dro-sign-table th {
+  width: 4.6rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  white-space: nowrap;
+}
+
+.dro-sign-table td.dro-sign-stamp {
+  width: 6.5rem;
+  text-align: center;
+  font-size: 7.5pt;
+  color: #4b5563;
+}
+
+.dro-recipient {
+  margin: 0.7rem 0 0;
+  font-size: 9.5pt;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+
+/* ---------------- 서식 하단 푸터 ---------------- */
+.dro-form-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.4rem;
+  border-top: 1px solid #9ca3af;
+  font-size: 7.5pt;
+  color: #4b5563;
+}
+
+.dro-form-company {
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.dro-contact-foot {
+  margin-top: 0.35rem;
+  font-size: 7.5pt;
+  color: #374151;
+  text-align: center;
+}
+
+/* ---------------- 별지 (2/2) ---------------- */
+.dro-attach-intro {
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #9ca3af;
+  background: #f8fafc;
+  font-size: 8.5pt;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.dro-clause {
+  margin-bottom: 0.6rem;
+}
+
+.dro-clause-title {
+  margin: 0 0 0.2rem;
+  font-size: 9pt;
+  font-weight: 800;
+}
+
+.dro-clause-body {
+  margin: 0;
+  font-size: 8.5pt;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.dro-appendix {
+  margin-top: 0.6rem;
+}
+
+.dro-appendix-list {
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 8.5pt;
+}
+
+.dro-appendix-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.12rem 0;
+  border-bottom: 1px dotted #cbd5e1;
+}
+
+.dro-appendix-name {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.dro-appendix-copies {
+  flex: 0 0 auto;
+  color: #374151;
+}
+
+/* ---------------- 반응형 (좁은 화면에서 미리보기 축소) ---------------- */
+@media (max-width: 900px) {
+  .dro-scroll {
+    align-items: stretch;
+    padding: 1rem 0.5rem 2rem;
+  }
+
+  .dro-sheet {
+    width: 100%;
+    min-height: 0;
+    padding: 1rem 0.875rem 1.25rem;
+    font-size: 0.8125rem;
+  }
+
+  .dro-page-tag {
+    display: none;
+  }
+
+  .dro-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .dro-toolbar-actions {
+    width: 100%;
+  }
+
+  .dro-toolbar-actions .dro-btn {
+    flex: 1;
+  }
+}
+
+/* ================================================================
+   인쇄 — 이 서식 전용 명명 페이지 사용
+   ⚠️ 전역 @page 는 만들지 않습니다. (다른 서류의 @page 와 충돌)
+   ================================================================ */
+@page disease-opinion-page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+  /* 이 서식이 열려 있을 때만 앱 본체를 숨깁니다. */
+  body:has(.disease-opinion-portal) #root {
+    display: none !important;
+  }
+
+  .disease-opinion-portal {
+    display: block !important;
+  }
+
+  .dro-overlay {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    background: none !important;
+  }
+
+  .dro-toolbar {
+    display: none !important;
+  }
+
+  .dro-scroll {
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .dro-sheet {
+    width: auto !important;
+    min-height: 272mm !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    page: disease-opinion-page;
+    /* 내용이 길어지면 다음 장으로 이어지도록 auto 로 둡니다. */
+    break-inside: auto;
+    page-break-inside: auto;
+    /* 서식 1장에 담기도록 인쇄에서는 조금 더 촘촘하게 */
+    font-size: 8.5pt;
+    line-height: 1.35;
+  }
+
+  /* 인쇄 시 표 여백·글자 크기를 줄여 1장에 맞춥니다. */
+  .dro-table th,
+  .dro-table td,
+  .dro-summary th,
+  .dro-summary td,
+  .dro-sign-table th,
+  .dro-sign-table td {
+    padding: 0.14rem 0.3rem;
+    font-size: 7.6pt;
+    line-height: 1.3;
+  }
+
+  .dro-section {
+    margin-bottom: 0.3rem;
+  }
+
+  .dro-section-title {
+    margin-bottom: 0.15rem;
+    font-size: 8.6pt;
+  }
+
+  .dro-section-title-sub {
+    margin: 0.08rem 0 0.2rem;
+    font-size: 6.8pt;
+    line-height: 1.3;
+  }
+
+  .dro-warning {
+    margin-top: 0.2rem;
+    padding: 0.2rem 0.3rem;
+    font-size: 6.8pt;
+    line-height: 1.3;
+  }
+
+  .dro-body-text,
+  .dro-clause-body {
+    font-size: 7.6pt;
+    line-height: 1.4;
+  }
+
+  .dro-titlebar {
+    padding-bottom: 0.2rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .dro-title {
+    font-size: 14pt;
+  }
+
+  .dro-summary {
+    margin-bottom: 0.4rem;
+  }
+
+  .dro-confirm {
+    margin-top: 0.25rem;
+    padding-top: 0.25rem;
+  }
+
+  .dro-confirm-text,
+  .dro-confirm-date {
+    font-size: 8pt;
+  }
+
+  .dro-recipient {
+    margin-top: 0.4rem;
+    font-size: 8.5pt;
+  }
+
+  .dro-contact-foot {
+    font-size: 6.8pt;
+  }
+
+  /* 두 번째 장(별지)은 반드시 새 종이에서 시작 */
+  .dro-sheet + .dro-sheet {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .dro-page-tag {
+    display: none !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 작은 요소가 페이지 경계에서 쪼개지지 않도록 */
+  .dro-table tr,
+  .dro-summary tr,
+  .dro-sign-table tr,
+  .dro-clause,
+  .dro-appendix-list li,
+  .dro-form-footer,
+  .dro-confirm {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .dro-section-title,
+  .dro-clause-title {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+}

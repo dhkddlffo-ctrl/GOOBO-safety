@@ -49,6 +49,8 @@ import {
 } from '../utils/backupStorage';
 import './AdminPage.css';
 import AccidentReport from '../components/AccidentReport';
+import DiseaseOpinionReport from '../components/DiseaseOpinionReport';
+import { getCaseKind } from '../utils/diseaseOpinion';
 import { formatDateKo, formatTenure } from '../utils/accidentReport';
 
 type AdminTab =
@@ -1868,7 +1870,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
         )}
 
         {/* 사고보고서 출력 (A4) */}
-        {reportCase && <AccidentReport accident={reportCase} onClose={() => setReportCase(null)} />}
+        {reportCase &&
+          (getCaseKind(reportCase) === '질병' ? (
+            <DiseaseOpinionReport accident={reportCase} onClose={() => setReportCase(null)} />
+          ) : (
+            <AccidentReport accident={reportCase} onClose={() => setReportCase(null)} />
+          ))}
       </div>
     </div>
   );

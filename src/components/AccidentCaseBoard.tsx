@@ -3,7 +3,9 @@ import { AccidentCase } from '../types';
 import { deleteAccidentCase, getAccidentCases } from '../utils/storage';
 import { isAuthenticated } from '../utils/auth';
 import { getSubmissionBadge } from '../utils/accidentDeadline';
+import { getCaseKind } from '../utils/diseaseOpinion';
 import AccidentReport from './AccidentReport';
+import DiseaseOpinionReport from './DiseaseOpinionReport';
 import './AccidentCaseBoard.css';
 
 interface AccidentCaseBoardProps {
@@ -30,6 +32,7 @@ const severityClass = (severity: AccidentCase['severity']): string => {
   if (severity === '사망') return ' is-death';
   if (severity === '중상') return ' is-heavy';
   if (severity === '경상') return ' is-light';
+  if (severity === '질병') return ' is-disease';
   return ' is-none';
 };
 
@@ -65,16 +68,24 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
   }, [siteId]);
 
   const stats = useMemo(() => {
-    const counts = { 사망: 0, 중상: 0, 경상: 0, 무재해: 0 };
+    const counts = { 사망: 0, 중상: 0, 경상: 0, 무재해: 0, 질병: 0 };
     list.forEach(item => {
       counts[item.severity] += 1;
     });
     return counts;
   }, [list]);
 
-  /** 사업재해조사표 제출 현황 (D-day 경고 집계) */
+  /** 작성 유형별 건수 (사고 / 질병) */
+  const kinds = useMemo(() => {
+    const sick = list.filter(item => getCaseKind(item) === '질병').length;
+    return { accident: list.length - sick, disease: sick };
+  }, [list]);
+
+  /** 사업재해조사표 제출 현황 (D-day 경고 집계) — 질병은 제외 */
   const submission = useMemo(() => {
-    const badges = list.map(item => getSubmissionBadge(item));
+    const badges = list
+      .filter(item => getCaseKind(item) === '사고')
+      .map(item => getSubmissionBadge(item));
     return {
       done: badges.filter(b => b.className === 'is-done').length,
       na: badges.filter(b => b.className === 'is-na').length,
@@ -97,9 +108,15 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
     reload();
   };
 
-  /* ---------- 보고서 보기 ---------- */
+  /* ---------- 보고서 보기 (유형별 서류) ---------- */
   if (viewCase) {
-    /* AccidentReport 는 자체 포털 오버레이(사고보고서 A4)로 열립니다. */
+    /*
+     * 업무상 질병 사례는 「보험가입자 의견서」(별지 제4호의2)로,
+     * 업무상 사고 사례는 기존 사고 관련 서류로 엽니다.
+     */
+    if (getCaseKind(viewCase) === '질병') {
+      return <DiseaseOpinionReport accident={viewCase} onClose={() => setViewCase(null)} />;
+    }
     return <AccidentReport accident={viewCase} onClose={() => setViewCase(null)} />;
   }
 
@@ -110,8 +127,9 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
         <div className="acb-head-text">
           <h3 className="acb-title">⚠️ 사고사례 게시판</h3>
           <p className="acb-sub">
-            <b>{siteName}</b> 현장에서 발생한 사고사례를 등록·보관합니다. 등록한 사례는 회사 서식
-            사고보고서(A4)로 바로 인쇄할 수 있습니다.
+            <b>{siteName}</b> 현장의 <b>업무상 사고</b>와 <b>업무상 질병</b> 사례를 함께
+            등록·보관합니다. 사고는 회사 서식 사고보고서(A4), 질병은 근로복지공단 「보험가입자
+            의견서」(A4 2장)로 인쇄됩니다.
           </p>
         </div>
         <div className="acb-head-right">
@@ -124,6 +142,15 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
         </div>
       </div>
 
+      {/* ---------- 작성 유형 요약 ---------- */}
+      {list.length > 0 && (
+        <div className="acb-status">
+          <span className="acb-status-chip">구분</span>
+          <span className="acb-stat is-accident">업무상 사고 {kinds.accident}</span>
+          <span className="acb-stat is-disease">업무상 질병 {kinds.disease}</span>
+        </div>
+      )}
+
       {/* ---------- 심각도 요약 ---------- */}
       {list.length > 0 && (
         <div className="acb-status">
@@ -132,6 +159,7 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
           <span className="acb-stat is-heavy">중상 {stats.중상}</span>
           <span className="acb-stat is-light">경상 {stats.경상}</span>
           <span className="acb-stat is-none">무재해 {stats.무재해}</span>
+          <span className="acb-stat is-disease">질병 {stats.질병}</span>
         </div>
       )}
 
@@ -145,7 +173,7 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
           {submission.urgent > 0 && (
             <span className="acb-submit-stat is-urgent">⚠️ 기한 임박·경과 {submission.urgent}</span>
           )}
-          <span className="acb-submit-note">기한: 사고 발생일로부터 1개월 이내</span>
+          <span className="acb-submit-note">기한: 사고 발생일로부터 1개월 이내 (질병 제외)</span>
         </div>
       )}
 
@@ -154,9 +182,10 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
         <div className="acb-empty">
           <p className="acb-empty-title">아직 등록된 사고사례가 없습니다.</p>
           <p className="acb-empty-sub">
-            발생한 사고를 기록해 두면 재발 방지 대책 수립과 전 현장 공유에 활용됩니다.
+            발생한 사고·질병을 기록해 두면 재발 방지 대책 수립과 전 현장 공유에 활용됩니다.
             <br />
-            작성한 사고사례는 <b>사고보고서 · 목격자 진술서 · 재해 상황도</b> 서식으로 인쇄됩니다.
+            <b>업무상 사고</b>는 사고보고서 · 목격자 진술서 · 재해 상황도로, <b>업무상 질병</b>은
+            보험가입자 의견서로 인쇄됩니다.
           </p>
           {canManage ? (
             <div className="acb-empty-btns">
@@ -173,18 +202,20 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
           <table className="acb-table">
             <colgroup>
               <col style={{ width: '5%' }} />
-              <col style={{ width: '13%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '12%' }} />
               <col style={{ width: '8%' }} />
               <col style={{ width: '8%' }} />
-              <col style={{ width: '16%' }} />
-              <col style={{ width: '9%' }} />
-              <col style={{ width: '9%' }} />
               <col style={{ width: '14%' }} />
-              <col style={{ width: '18%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '14%' }} />
             </colgroup>
             <thead>
               <tr>
                 <th>번호</th>
+                <th>구분</th>
                 <th>발생일시</th>
                 <th>유형</th>
                 <th>심각도</th>
@@ -198,15 +229,32 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
             <tbody>
               {list.map((item, idx) => {
                 const badge = getSubmissionBadge(item);
+                const isSick = getCaseKind(item) === '질병';
                 return (
                   <tr
                     key={item.id}
                     className="acb-row"
                     onClick={() => setViewCase(item)}
-                    title="누르면 사고보고서가 열립니다."
+                    title={
+                      isSick
+                        ? '누르면 보험가입자 의견서(A4)가 열립니다.'
+                        : '누르면 사고보고서가 열립니다.'
+                    }
                   >
                     <td className="acb-c-no">{list.length - idx}</td>
-                    <td className="acb-c-date">{formatAccidentDate(item.accidentDate)}</td>
+                    <td className="acb-c-kind">
+                      <span className={`acb-kind-badge${isSick ? ' is-disease' : ' is-accident'}`}>
+                        {isSick ? '질병' : '사고'}
+                      </span>
+                    </td>
+                    <td className="acb-c-date">
+                      {formatAccidentDate(item.accidentDate)}
+                      {isSick ? (
+                        <span className="acb-kind-sub" title="재해(발병) 발생일">
+                          발병일
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="acb-c-type">{item.accidentType}</td>
                     <td className="acb-c-sev">
                       <span className={`acb-badge${severityClass(item.severity)}`}>
@@ -217,14 +265,22 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
                     <td className="acb-c-victim">{item.victimName || '-'}</td>
                     <td className="acb-c-result">{item.treatmentResult || '미처리'}</td>
 
-                    {/* ---------- 사업재해조사표 제출상태 + D-day ---------- */}
+                    {/* ---------- 사업재해조사표 제출상태 + D-day (질병은 대상 아님) ---------- */}
                     <td className="acb-c-submit">
-                      <span className={`acb-submit-badge ${badge.className}`}>{badge.status}</span>
-                      {badge.dday ? (
-                        <span className={`acb-dday ${badge.className}`} title={badge.message}>
-                          {badge.dday}
-                        </span>
-                      ) : null}
+                      {isSick ? (
+                        <span className="acb-submit-badge is-na">질병</span>
+                      ) : (
+                        <>
+                          <span className={`acb-submit-badge ${badge.className}`}>
+                            {badge.status}
+                          </span>
+                          {badge.dday ? (
+                            <span className={`acb-dday ${badge.className}`} title={badge.message}>
+                              {badge.dday}
+                            </span>
+                          ) : null}
+                        </>
+                      )}
                     </td>
 
                     <td className="acb-c-actions">

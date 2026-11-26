@@ -40,18 +40,111 @@
   color: #78350f;
 }
 
+.acp-write-head-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* ---------------- 작성 유형 선택 ---------------- */
+.acp-kinds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.acp-kind {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4575rem;
+  padding: 1.25rem 1.125rem;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #dbe3ec;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+.acp-kind:hover {
+  border-color: #0c2a4d;
+  box-shadow: 0 6px 18px rgba(12, 42, 77, 0.12);
+  transform: translateY(-2px);
+}
+
+.acp-kind-badge {
+  display: inline-block;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.acp-kind-badge.is-accident {
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.acp-kind-badge.is-disease {
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+}
+
+.acp-kind-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.acp-kind-desc {
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: #475569;
+}
+
+.acp-kind-go {
+  margin-top: 0.1875rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0c2a4d;
+}
+
+@media (max-width: 768px) {
+  .acp-kinds {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
   .acp-write-head {
     padding: 0.75rem 0.875rem;
   }
 
-  .acp-write-head .btn {
+  .acp-write-head .btn,
+  .acp-write-head-btns {
     width: 100%;
+  }
+
+  .acp-write-head-btns .btn {
+    flex: 1;
   }
 }
 
 @media print {
   .acp-write-head {
+    display: none !important;
+  }
+
+  .acp-kinds {
     display: none !important;
   }
 }

@@ -117,6 +117,60 @@
   border: 1px solid #a7f3d0;
 }
 
+/* 작성 유형(사고 / 질병) 요약 칩 */
+.acb-stat.is-accident {
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.acb-stat.is-disease {
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+}
+
+/* ---------------- 구분 열 (사고 / 질병) ---------------- */
+.acb-c-kind {
+  text-align: center;
+}
+
+.acb-kind-badge {
+  display: inline-block;
+  min-width: 2.375rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.acb-kind-badge.is-accident {
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.acb-kind-badge.is-disease {
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+}
+
+.acb-kind-sub {
+  display: block;
+  margin-top: 0.0625rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.acb-badge.is-disease {
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+}
+
 /* ---------------- 사업재해조사표 제출 현황 ---------------- */
 .acb-submit-bar {
   display: flex;
