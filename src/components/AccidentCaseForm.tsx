@@ -88,6 +88,8 @@ const toFormData = (base: AccidentCase) => ({
   relatedEtc: base.relatedEtc ?? '',
   safetyManagerName: base.safetyManagerName ?? '',
   siteManagerName: base.siteManagerName ?? '',
+  hqSafetyTeamLeaderName: base.hqSafetyTeamLeaderName ?? '',
+  hqSafetyExecutiveName: base.hqSafetyExecutiveName ?? '',
   reporterName: base.reporterName,
   reporterPhone: base.reporterPhone,
   disasterReportSubmitted: (base.disasterReportSubmitted ?? '미제출') as DisasterReportStatus,
@@ -149,6 +151,8 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
           relatedEtc: '',
           safetyManagerName: '',
           siteManagerName: '',
+          hqSafetyTeamLeaderName: '',
+          hqSafetyExecutiveName: '',
           reporterName: '',
           reporterPhone: '',
           disasterReportSubmitted: '미제출' as DisasterReportStatus,
@@ -262,6 +266,8 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       relatedEtc: formData.relatedEtc.trim() || undefined,
       safetyManagerName: formData.safetyManagerName.trim() || undefined,
       siteManagerName: formData.siteManagerName.trim() || undefined,
+      hqSafetyTeamLeaderName: formData.hqSafetyTeamLeaderName.trim() || undefined,
+      hqSafetyExecutiveName: formData.hqSafetyExecutiveName.trim() || undefined,
       /* 산재(원청) 선택 시에만 원청사를 보관합니다. */
       primeContractor:
         formData.treatmentResult === '산재(원청)'
@@ -898,6 +904,37 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
                 placeholder="예: 한구현"
               />
               <p className="field-hint">종전 서식의 ‘현장소장대리인’ 자리입니다.</p>
+            </div>
+          </div>
+
+          {/* 본사 서명란 */}
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="hqSafetyTeamLeaderName">본사 안전팀장 (선택)</label>
+              <input
+                type="text"
+                id="hqSafetyTeamLeaderName"
+                name="hqSafetyTeamLeaderName"
+                value={formData.hqSafetyTeamLeaderName}
+                onChange={handleInputChange}
+                placeholder="예: 김본사"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="hqSafetyExecutiveName">본사 안전임원 (선택)</label>
+              <input
+                type="text"
+                id="hqSafetyExecutiveName"
+                name="hqSafetyExecutiveName"
+                value={formData.hqSafetyExecutiveName}
+                onChange={handleInputChange}
+                placeholder="예: 박임원"
+              />
+              <p className="field-hint">
+                위 4명(안전관리자 · 안전보건관리책임자 · 본사 안전팀장 · 본사 안전임원)은 보고서
+                서명란에 2줄로 함께 인쇄됩니다.
+              </p>
             </div>
           </div>
         </div>

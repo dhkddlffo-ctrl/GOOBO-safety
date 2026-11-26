@@ -328,7 +328,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
             </div>
           </div>
 
-          {/* ---------- 서명 ---------- */}
+          {/* ---------- 서명 (2줄 × 2명 = 4명) ---------- */}
           <div className="ar-signers">
             <div className="ar-signer">
               <span className="ar-signer-label">안전관리자</span>
@@ -340,6 +340,18 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
               <span className="ar-signer-label">안전보건관리책임자</span>
               <span className="ar-signer-colon">:</span>
               <span className="ar-signer-name">{accident.siteManagerName || ''}</span>
+              <span className="ar-signer-stamp">(서명)</span>
+            </div>
+            <div className="ar-signer">
+              <span className="ar-signer-label">본사 안전팀장</span>
+              <span className="ar-signer-colon">:</span>
+              <span className="ar-signer-name">{accident.hqSafetyTeamLeaderName || ''}</span>
+              <span className="ar-signer-stamp">(서명)</span>
+            </div>
+            <div className="ar-signer">
+              <span className="ar-signer-label">본사 안전임원</span>
+              <span className="ar-signer-colon">:</span>
+              <span className="ar-signer-name">{accident.hqSafetyExecutiveName || ''}</span>
               <span className="ar-signer-stamp">(서명)</span>
             </div>
           </div>
