@@ -140,14 +140,27 @@ export interface ContractAttachment {
 /* 관리자(안전인력)                                                     */
 /* ------------------------------------------------------------------ */
 
-export type StaffRole = '현장소장' | '안전보건관리책임자' | '안전관리자' | '관리감독자';
+export type StaffRole =
+  '현장소장' | '안전보건관리책임자' | '안전관리자' | '관리감독자' | '안전담당자';
 
 export const STAFF_ROLES: StaffRole[] = [
   '현장소장',
   '안전보건관리책임자',
   '안전관리자',
   '관리감독자',
+  '안전담당자',
 ];
+
+/**
+ * 직무교육(2년 주기 재이수) 대상이 아닌 역할.
+ *
+ * 관리감독자 · 안전담당자는 직무교육이 아니라 **신규교육(8시간)** 이수 여부로 관리하고,
+ * 선임일 대신 **지정일**을 기록합니다. 화면 입력란도 이 두 역할이 동일합니다.
+ */
+export const NEW_TRAINING_ROLES: StaffRole[] = ['관리감독자', '안전담당자'];
+
+/** 해당 역할이 신규교육(8시간) 방식으로 관리되는지 (관리감독자 · 안전담당자) */
+export const usesNewTraining = (role: StaffRole): boolean => NEW_TRAINING_ROLES.includes(role);
 
 /** 관리자별 첨부자료 종류 */
 export type StaffDocKind = '지정서' | '교육이수증';
@@ -161,6 +174,7 @@ export const STAFF_DOC_KINDS: StaffDocKind[] = ['지정서', '교육이수증'];
  * - 안전관리자        : 안전관리자 지정서 · 교육이수증
  * - 관리감독자        : 관리감독자 지정서 · 신규교육이수증
  *   (관리감독자는 직무교육이 아니라 신규교육 8시간이므로 이름이 다릅니다)
+ * - 안전담당자        : 안전담당자 지정서 · 신규교육이수증 (관리감독자와 동일)
  * - 현장소장          : 지정서 · 교육이수증
  */
 export const STAFF_DOC_REQUIREMENTS: Record<StaffRole, StaffDocKind[]> = {
@@ -168,12 +182,13 @@ export const STAFF_DOC_REQUIREMENTS: Record<StaffRole, StaffDocKind[]> = {
   안전보건관리책임자: ['지정서', '교육이수증'],
   안전관리자: ['지정서', '교육이수증'],
   관리감독자: ['지정서', '교육이수증'],
+  안전담당자: ['지정서', '교육이수증'],
 };
 
-/** 관리감독자의 '교육이수증'은 화면에서 '신규교육이수증'으로 표시합니다. */
+/** 신규교육(8시간) 방식 역할의 '교육이수증'은 화면에서 '신규교육이수증'으로 표시합니다. */
 export const staffDocLabel = (role: StaffRole, kind: StaffDocKind): string => {
   if (!STAFF_DOC_REQUIREMENTS[role].includes(kind)) return kind;
-  if (role === '관리감독자' && kind === '교육이수증') return '신규교육이수증';
+  if (usesNewTraining(role) && kind === '교육이수증') return '신규교육이수증';
   return kind;
 };
 

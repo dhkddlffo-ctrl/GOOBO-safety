@@ -1,5 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { getSuggestions, getWorkStops, updateSuggestion, updateWorkStop, deleteSuggestion, deleteWorkStop, clearAllSuggestions, clearAllWorkStops, formatDate, getSites, addSite, updateSite, deleteSite, generateSiteId, getCompletedSites, moveSiteToCompleted, restoreSiteFromCompleted, deleteCompletedSite, getAccidentCases, updateAccidentCase, deleteAccidentCase, saveAccidentCase } from '../utils/storage';
+import {
+  getSuggestions,
+  getWorkStops,
+  updateSuggestion,
+  updateWorkStop,
+  deleteSuggestion,
+  deleteWorkStop,
+  clearAllSuggestions,
+  clearAllWorkStops,
+  formatDate,
+  getSites,
+  addSite,
+  updateSite,
+  deleteSite,
+  generateSiteId,
+  getCompletedSites,
+  moveSiteToCompleted,
+  restoreSiteFromCompleted,
+  deleteCompletedSite,
+  getAccidentCases,
+  updateAccidentCase,
+  deleteAccidentCase,
+  saveAccidentCase,
+} from '../utils/storage';
 import { createSampleAccidentCase, SAMPLE_ACCIDENT_ID } from '../data/sampleAccidentCase';
 import { Suggestion, WorkStopRequest, Site, AccidentCase } from '../types';
 import {
@@ -28,7 +51,8 @@ import './AdminPage.css';
 import AccidentReport from '../components/AccidentReport';
 import { formatDateKo, formatTenure } from '../utils/accidentReport';
 
-type AdminTab = 'workstops' | 'suggestions' | 'accidents' | 'staff' | 'sites' | 'completed' | 'backup';
+type AdminTab =
+  'workstops' | 'suggestions' | 'accidents' | 'staff' | 'sites' | 'completed' | 'backup';
 
 interface AdminPageProps {
   /** 현장 상세로 바로 이동할 수 있도록 siteId/tab 까지 받습니다. */
@@ -58,13 +82,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
   const [siteFormData, setSiteFormData] = useState({
     name: '',
     location: '',
-    status: 'active' as 'active' | 'inactive' | 'completed'
+    status: 'active' as 'active' | 'inactive' | 'completed',
   });
   const [completionData, setCompletionData] = useState<CompletionModalData>({
     type: 'suggestion',
     id: '',
     response: '',
-    images: []
+    images: [],
   });
   const [uploading, setUploading] = useState(false);
   const [selectedSiteIds, setSelectedSiteIds] = useState<number[]>([]);
@@ -114,7 +138,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
         `${buildBackupFileName()} 파일을 저장했습니다. ` +
           `(데이터 ${s.counts.length}종` +
           (payload.includeFiles ? `, 첨부파일 ${s.fileCount}개 ${formatBytes(s.fileBytes)}` : '') +
-          ')'
+          ')',
       );
     } catch (err) {
       setBackupError(err instanceof Error ? err.message : '백업 파일을 만들지 못했습니다.');
@@ -152,7 +176,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
         `복원을 완료했습니다. 데이터 ${result.appliedKeys}종` +
           (result.restoredFiles > 0 ? `, 첨부파일 ${result.restoredFiles}개` : '') +
           (result.skipped > 0 ? ` (중복 ${result.skipped}건 제외)` : '') +
-          '. 화면을 새로고침하면 전체에 반영됩니다.'
+          '. 화면을 새로고침하면 전체에 반영됩니다.',
       );
     } catch (err) {
       setBackupError(err instanceof Error ? err.message : '복원에 실패했습니다.');
@@ -173,10 +197,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     setUploading(true);
 
     const newImages: string[] = [];
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
+
       if (file.size > 5 * 1024 * 1024) {
         alert(`${file.name}은(는) 5MB를 초과합니다.`);
         continue;
@@ -198,10 +222,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
     setCompletionData(prev => ({
       ...prev,
-      images: [...prev.images, ...newImages]
+      images: [...prev.images, ...newImages],
     }));
     setUploading(false);
-    
+
     e.target.value = '';
   };
 
@@ -217,7 +241,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
   const removeImage = (index: number) => {
     setCompletionData(prev => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: prev.images.filter((_, i) => i !== index),
     }));
   };
 
@@ -226,7 +250,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
       type,
       id,
       response: '',
-      images: []
+      images: [],
     });
     setShowCompletionModal(true);
   };
@@ -237,7 +261,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
       type: 'suggestion',
       id: '',
       response: '',
-      images: []
+      images: [],
     });
   };
 
@@ -254,14 +278,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
         status: '완료',
         response: completionData.response,
         respondedAt: now,
-        responseImages: completionData.images.length > 0 ? completionData.images : undefined
+        responseImages: completionData.images.length > 0 ? completionData.images : undefined,
       });
     } else {
       updateWorkStop(completionData.id, {
         status: '작업재개',
         resumedAt: now,
         remarks: completionData.response,
-        resumeImages: completionData.images.length > 0 ? completionData.images : undefined
+        resumeImages: completionData.images.length > 0 ? completionData.images : undefined,
       });
     }
 
@@ -270,9 +294,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     alert('처리가 완료되었습니다.');
   };
 
-  const handleDelete = (type: 'suggestion' | 'workstop' | 'accident', id: string, title: string) => {
+  const handleDelete = (
+    type: 'suggestion' | 'workstop' | 'accident',
+    id: string,
+    title: string,
+  ) => {
     const confirmMessage = `정말로 삭제하시겠습니까?\n\n"${title}"\n\n이 작업은 취소할 수 없습니다.`;
-    
+
     if (window.confirm(confirmMessage)) {
       if (type === 'suggestion') {
         deleteSuggestion(id);
@@ -287,9 +315,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
   };
 
   const handleAccidentStatusChange = (id: string, status: AccidentCase['status']) => {
-    updateAccidentCase(id, { 
+    updateAccidentCase(id, {
       status,
-      completedAt: status === '완료' ? new Date().toISOString() : undefined
+      completedAt: status === '완료' ? new Date().toISOString() : undefined,
     });
     loadData();
   };
@@ -307,7 +335,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
           '· 사고 유형: 추락 (중상)\n' +
           '· 목격자 진술서 2매 · 재해 상황도 포함\n\n' +
           '사고원인 및 대책 보고서 / 목격자 진술서 / 재해(사고) 상황도 3종 서류를\n' +
-          '바로 출력해 확인할 수 있습니다.'
+          '바로 출력해 확인할 수 있습니다.',
       )
     ) {
       return;
@@ -319,9 +347,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
   const handleClearAll = (type: 'suggestion' | 'workstop' | 'all') => {
     let confirmMessage = '';
-    
+
     if (type === 'all') {
-      confirmMessage = '⚠️ 모든 데이터를 삭제하시겠습니까?\n\n• 모든 건의사항\n• 모든 작업중지 요청\n\n이 작업은 취소할 수 없습니다!';
+      confirmMessage =
+        '⚠️ 모든 데이터를 삭제하시겠습니까?\n\n• 모든 건의사항\n• 모든 작업중지 요청\n\n이 작업은 취소할 수 없습니다!';
     } else if (type === 'suggestion') {
       confirmMessage = '⚠️ 모든 건의사항을 삭제하시겠습니까?\n\n이 작업은 취소할 수 없습니다!';
     } else {
@@ -330,7 +359,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
     if (window.confirm(confirmMessage)) {
       const doubleConfirm = window.confirm('정말로 삭제하시겠습니까? 마지막 확인입니다.');
-      
+
       if (doubleConfirm) {
         if (type === 'all') {
           clearAllSuggestions();
@@ -352,14 +381,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
       setSiteFormData({
         name: site.name,
         location: site.location,
-        status: site.status
+        status: site.status,
       });
     } else {
       setEditingSite(null);
       setSiteFormData({
         name: '',
         location: '',
-        status: 'active'
+        status: 'active',
       });
     }
     setShowSiteModal(true);
@@ -371,13 +400,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
     setSiteFormData({
       name: '',
       location: '',
-      status: 'active'
+      status: 'active',
     });
   };
 
   const handleSiteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!siteFormData.name.trim() || !siteFormData.location.trim()) {
       alert('현장명과 위치를 입력해주세요.');
       return;
@@ -391,7 +420,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
       // 추가
       const newSite: Site = {
         id: generateSiteId(),
-        ...siteFormData
+        ...siteFormData,
       };
       addSite(newSite);
       alert('새 현장이 추가되었습니다.');
@@ -403,7 +432,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
   const handleDeleteSite = (id: number, name: string) => {
     const confirmMessage = `정말로 "${name}" 현장을 삭제하시겠습니까?\n\n이 작업은 취소할 수 없습니다.`;
-    
+
     if (window.confirm(confirmMessage)) {
       deleteSite(id);
       loadData();
@@ -413,7 +442,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
   const handleCompleteSite = (id: number, name: string) => {
     const confirmMessage = `"${name}" 현장을 준공 처리하시겠습니까?\n\n준공된 현장은 보관함으로 이동됩니다.\n이후 필요시 다시 복원할 수 있습니다.`;
-    
+
     if (window.confirm(confirmMessage)) {
       moveSiteToCompleted(id);
       loadData();
@@ -427,12 +456,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
       alert('준공 처리할 현장을 선택해주세요.');
       return;
     }
-    
+
     const selectedSites = sites.filter(s => selectedSiteIds.includes(s.id));
     const siteNames = selectedSites.map(s => s.name).join('\n- ');
-    
+
     const confirmMessage = `다음 ${selectedSiteIds.length}개 현장을 준공 처리하시겠습니까?\n\n- ${siteNames}\n\n준공된 현장은 '준공 현장' 탭에서 확인할 수 있습니다.`;
-    
+
     if (window.confirm(confirmMessage)) {
       selectedSiteIds.forEach(id => moveSiteToCompleted(id));
       loadData();
@@ -442,10 +471,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
   };
 
   const toggleSiteSelection = (id: number) => {
-    setSelectedSiteIds(prev => 
-      prev.includes(id) 
-        ? prev.filter(sId => sId !== id)
-        : [...prev, id]
+    setSelectedSiteIds(prev =>
+      prev.includes(id) ? prev.filter(sId => sId !== id) : [...prev, id],
     );
   };
 
@@ -459,7 +486,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
   const handleRestoreSite = (id: number, name: string) => {
     const confirmMessage = `"${name}" 현장을 다시 운영 현장으로 복원하시겠습니까?`;
-    
+
     if (window.confirm(confirmMessage)) {
       restoreSiteFromCompleted(id);
       loadData();
@@ -469,7 +496,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
   const handleDeleteCompletedSite = (id: number, name: string) => {
     const confirmMessage = `정말로 "${name}" 준공 현장을 영구 삭제하시겠습니까?\n\n이 작업은 취소할 수 없습니다.`;
-    
+
     if (window.confirm(confirmMessage)) {
       deleteCompletedSite(id);
       loadData();
@@ -521,18 +548,20 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
   const stats = {
     totalSuggestions: suggestions.length,
-    pendingSuggestions: suggestions.filter(s => s.status === '접수' || s.status === '검토중').length,
+    pendingSuggestions: suggestions.filter(s => s.status === '접수' || s.status === '검토중')
+      .length,
     totalWorkStops: workStops.length,
     activeWorkStops: workStops.filter(w => w.status === '요청' || w.status === '승인').length,
     totalSites: sites.length,
     activeSites: sites.filter(s => s.status === 'active').length,
     completedSites: completedSites.length,
     totalAccidents: accidentCases.length,
-    pendingAccidents: accidentCases.filter(a => a.status === '접수' || a.status === '조사중').length,
+    pendingAccidents: accidentCases.filter(a => a.status === '접수' || a.status === '조사중')
+      .length,
     staffIssues: staffIssues.length,
     staffExpired: staffIssues.filter(i => i.compliance.level === 'expired').length,
     staffSoon: staffIssues.filter(i => i.compliance.level === 'soon').length,
-    staffDocs: staffIssues.filter(i => i.appointmentMissing || i.supervisorTrainingMissing).length,
+    staffDocs: staffIssues.filter(i => i.appointmentMissing || i.newTrainingMissing).length,
   };
 
   // 로그인하지 않은 경우
@@ -690,41 +719,38 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
         {/* Management Actions */}
         <div className="management-actions">
           {activeTab === 'sites' && (
-            <button 
-              className="btn-manage btn-add-site"
-              onClick={() => openSiteModal()}
-            >
+            <button className="btn-manage btn-add-site" onClick={() => openSiteModal()}>
               ➕ 새 현장 추가
             </button>
           )}
           {activeTab === 'completed' && (
-            <button 
+            <button
               className="btn-manage btn-info"
-              onClick={() => alert('준공된 현장은 보관 상태입니다.\n필요시 개별적으로 복원하거나 삭제할 수 있습니다.')}
+              onClick={() =>
+                alert(
+                  '준공된 현장은 보관 상태입니다.\n필요시 개별적으로 복원하거나 삭제할 수 있습니다.',
+                )
+              }
             >
               ℹ️ 준공 현장 안내
             </button>
           )}
           {activeTab === 'accidents' && (
-            <button
-              className="btn-manage btn-add-sample"
-              onClick={handleAddSampleAccident}
-            >
+            <button className="btn-manage btn-add-sample" onClick={handleAddSampleAccident}>
               🧪 테스트 사고사례 추가
             </button>
           )}
           {(activeTab === 'workstops' || activeTab === 'suggestions') && (
             <>
-              <button 
+              <button
                 className="btn-manage btn-clear-current"
-                onClick={() => handleClearAll(activeTab === 'workstops' ? 'workstop' : 'suggestion')}
+                onClick={() =>
+                  handleClearAll(activeTab === 'workstops' ? 'workstop' : 'suggestion')
+                }
               >
                 🗑️ {activeTab === 'workstops' ? '작업중지 전체 삭제' : '건의사항 전체 삭제'}
               </button>
-              <button 
-                className="btn-manage btn-clear-all"
-                onClick={() => handleClearAll('all')}
-              >
+              <button className="btn-manage btn-clear-all" onClick={() => handleClearAll('all')}>
                 ⚠️ 모든 데이터 삭제
               </button>
             </>
@@ -741,7 +767,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               </div>
             ) : (
               <div className="items-list">
-                {workStops.map((workStop) => (
+                {workStops.map(workStop => (
                   <div key={workStop.id} className="item-card danger-item">
                     <div className="item-header">
                       <div>
@@ -777,10 +803,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                           <strong>첨부 사진:</strong>
                           <div className="admin-image-grid">
                             {workStop.images.map((img, idx) => (
-                              <a 
-                                key={idx} 
-                                href={img} 
-                                target="_blank" 
+                              <a
+                                key={idx}
+                                href={img}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="admin-image-item"
                               >
@@ -802,10 +828,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                               <strong>조치 사진:</strong>
                               <div className="admin-image-grid">
                                 {workStop.resumeImages.map((img, idx) => (
-                                  <a 
-                                    key={idx} 
-                                    href={img} 
-                                    target="_blank" 
+                                  <a
+                                    key={idx}
+                                    href={img}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="admin-image-item"
                                   >
@@ -869,13 +895,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               </div>
             ) : (
               <div className="items-list">
-                {suggestions.map((suggestion) => (
+                {suggestions.map(suggestion => (
                   <div key={suggestion.id} className="item-card">
                     <div className="item-header">
                       <div>
                         <h3>{suggestion.title}</h3>
                         <p className="item-meta">
-                          {suggestion.siteName} · {suggestion.workerName} · {formatDate(suggestion.createdAt)}
+                          {suggestion.siteName} · {suggestion.workerName} ·{' '}
+                          {formatDate(suggestion.createdAt)}
                         </p>
                       </div>
                       <span className={`badge ${getStatusBadgeClass(suggestion.status)}`}>
@@ -901,10 +928,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                           <strong>첨부 사진:</strong>
                           <div className="admin-image-grid">
                             {suggestion.images.map((img, idx) => (
-                              <a 
-                                key={idx} 
-                                href={img} 
-                                target="_blank" 
+                              <a
+                                key={idx}
+                                href={img}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="admin-image-item"
                               >
@@ -926,10 +953,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                               <strong>처리 사진:</strong>
                               <div className="admin-image-grid">
                                 {suggestion.responseImages.map((img, idx) => (
-                                  <a 
-                                    key={idx} 
-                                    href={img} 
-                                    target="_blank" 
+                                  <a
+                                    key={idx}
+                                    href={img}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="admin-image-item"
                                   >
@@ -1008,71 +1035,71 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                     </label>
                   </div>
                   {selectedSiteIds.length > 0 && (
-                    <button
-                      className="btn btn-success"
-                      onClick={handleBatchCompleteSites}
-                    >
+                    <button className="btn btn-success" onClick={handleBatchCompleteSites}>
                       ✅ 선택한 현장 준공 처리 ({selectedSiteIds.length})
                     </button>
                   )}
                 </div>
                 <div className="sites-management-list">
-                {sites.map((site) => (
-                  <div key={site.id} className={`site-management-card ${selectedSiteIds.includes(site.id) ? 'selected' : ''}`}>
-                    <div className="site-management-header">
-                      <label className="site-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={selectedSiteIds.includes(site.id)}
-                          onChange={() => toggleSiteSelection(site.id)}
-                        />
-                      </label>
-                      <div>
-                        <h3>{site.name}</h3>
-                        <p className="site-meta">
-                          📍 {site.location}
-                        </p>
+                  {sites.map(site => (
+                    <div
+                      key={site.id}
+                      className={`site-management-card ${selectedSiteIds.includes(site.id) ? 'selected' : ''}`}
+                    >
+                      <div className="site-management-header">
+                        <label className="site-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={selectedSiteIds.includes(site.id)}
+                            onChange={() => toggleSiteSelection(site.id)}
+                          />
+                        </label>
+                        <div>
+                          <h3>{site.name}</h3>
+                          <p className="site-meta">📍 {site.location}</p>
+                        </div>
+                        <span
+                          className={`badge ${site.status === 'active' ? 'badge-success' : 'badge-secondary'}`}
+                        >
+                          {site.status === 'active' ? '운영중' : '중단'}
+                        </span>
                       </div>
-                      <span className={`badge ${site.status === 'active' ? 'badge-success' : 'badge-secondary'}`}>
-                        {site.status === 'active' ? '운영중' : '중단'}
-                      </span>
-                    </div>
 
-                    <div className="site-management-actions">
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => openSiteModal(site)}
-                      >
-                        ✏️ 수정
-                      </button>
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => {
-                          const newStatus = site.status === 'active' ? 'inactive' : 'active';
-                          updateSite(site.id, { status: newStatus });
-                          loadData();
-                        }}
-                      >
-                        {site.status === 'active' ? '⏸️ 중단' : '▶️ 재개'}
-                      </button>
-                      <button
-                        className="btn btn-sm btn-success"
-                        onClick={() => handleCompleteSite(site.id, site.name)}
-                        title="준공 처리"
-                      >
-                        ✅ 준공
-                      </button>
-                      <button
-                        className="btn btn-sm btn-delete"
-                        onClick={() => handleDeleteSite(site.id, site.name)}
-                        title="삭제"
-                      >
-                        🗑️ 삭제
-                      </button>
+                      <div className="site-management-actions">
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => openSiteModal(site)}
+                        >
+                          ✏️ 수정
+                        </button>
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => {
+                            const newStatus = site.status === 'active' ? 'inactive' : 'active';
+                            updateSite(site.id, { status: newStatus });
+                            loadData();
+                          }}
+                        >
+                          {site.status === 'active' ? '⏸️ 중단' : '▶️ 재개'}
+                        </button>
+                        <button
+                          className="btn btn-sm btn-success"
+                          onClick={() => handleCompleteSite(site.id, site.name)}
+                          title="준공 처리"
+                        >
+                          ✅ 준공
+                        </button>
+                        <button
+                          className="btn btn-sm btn-delete"
+                          onClick={() => handleDeleteSite(site.id, site.name)}
+                          title="삭제"
+                        >
+                          🗑️ 삭제
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
               </>
             )}
           </div>
@@ -1088,11 +1115,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               </div>
             ) : (
               <div className="items-list">
-                {accidentCases.map((accident) => (
+                {accidentCases.map(accident => (
                   <div key={accident.id} className="item-card">
                     <div className="item-header">
                       <div className="item-title-section">
-                        <h3>{accident.siteName} - {accident.accidentType}</h3>
+                        <h3>
+                          {accident.siteName} - {accident.accidentType}
+                        </h3>
                         <span className={`badge ${getStatusBadgeClass(accident.status)}`}>
                           {accident.status}
                         </span>
@@ -1110,12 +1139,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                       <div className="accident-info-grid">
                         <div className="info-item">
                           <strong>피해자:</strong>
-                          <p>{accident.victimName}{accident.victimAge ? ` (${accident.victimAge}세)` : ''}</p>
+                          <p>
+                            {accident.victimName}
+                            {accident.victimAge ? ` (${accident.victimAge}세)` : ''}
+                          </p>
                         </div>
                         <div className="info-item">
                           <strong>입사일:</strong>
                           <p>
-                            {accident.victimHireDate ? formatDateKo(accident.victimHireDate) : '미입력'}
+                            {accident.victimHireDate
+                              ? formatDateKo(accident.victimHireDate)
+                              : '미입력'}
                             {accident.victimHireDate && (
                               <span className="accident-tenure">
                                 근속 {formatTenure(accident.victimHireDate, accident.accidentDate)}
@@ -1125,7 +1159,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                         </div>
                         <div className="info-item">
                           <strong>보고자:</strong>
-                          <p>{accident.reporterName} ({accident.reporterPhone})</p>
+                          <p>
+                            {accident.reporterName} ({accident.reporterPhone})
+                          </p>
                         </div>
                         <div className="info-item">
                           <strong>재해조사표:</strong>
@@ -1159,7 +1195,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                         </div>
                         <div className="info-item">
                           <strong>목격자 진술:</strong>
-                          <p>{accident.witnesses?.length ? `${accident.witnesses.length}건` : '미등록'}</p>
+                          <p>
+                            {accident.witnesses?.length
+                              ? `${accident.witnesses.length}건`
+                              : '미등록'}
+                          </p>
                         </div>
                       </div>
 
@@ -1191,7 +1231,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                               <li key={w.id}>
                                 <span className="accident-witness-no">{wi + 1}</span>
                                 <strong>{w.name}</strong>
-                                {w.relation && <span className="accident-witness-meta"> ({w.relation})</span>}
+                                {w.relation && (
+                                  <span className="accident-witness-meta"> ({w.relation})</span>
+                                )}
                                 <p className="accident-witness-text">{w.statement}</p>
                               </li>
                             ))}
@@ -1217,10 +1259,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                           <strong>사고 현장 사진:</strong>
                           <div className="admin-image-grid">
                             {accident.images.map((img, idx) => (
-                              <a 
-                                key={idx} 
-                                href={img} 
-                                target="_blank" 
+                              <a
+                                key={idx}
+                                href={img}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="admin-image-item"
                               >
@@ -1238,30 +1280,29 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                           <div className="completion-meta">
                             조사 완료: {formatDate(accident.completedAt!)}
                           </div>
-                          {accident.investigationImages && accident.investigationImages.length > 0 && (
-                            <div className="item-images">
-                              <strong>조사 결과 사진:</strong>
-                              <div className="admin-image-grid">
-                                {accident.investigationImages.map((img, idx) => (
-                                  <a 
-                                    key={idx} 
-                                    href={img} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="admin-image-item"
-                                  >
-                                    <img src={img} alt={`조사 결과 ${idx + 1}`} />
-                                  </a>
-                                ))}
+                          {accident.investigationImages &&
+                            accident.investigationImages.length > 0 && (
+                              <div className="item-images">
+                                <strong>조사 결과 사진:</strong>
+                                <div className="admin-image-grid">
+                                  {accident.investigationImages.map((img, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={img}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="admin-image-item"
+                                    >
+                                      <img src={img} alt={`조사 결과 ${idx + 1}`} />
+                                    </a>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
                         </div>
                       )}
 
-                      <p className="item-date">
-                        제출일: {formatDate(accident.createdAt)}
-                      </p>
+                      <p className="item-date">제출일: {formatDate(accident.createdAt)}</p>
                     </div>
 
                     <div className="item-actions">
@@ -1290,7 +1331,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                       )}
                       <button
                         className="btn btn-sm btn-delete"
-                        onClick={() => handleDelete('accident', accident.id, `${accident.siteName} - ${accident.accidentType}`)}
+                        onClick={() =>
+                          handleDelete(
+                            'accident',
+                            accident.id,
+                            `${accident.siteName} - ${accident.accidentType}`,
+                          )
+                        }
                         title="삭제"
                       >
                         🗑️ 삭제
@@ -1308,8 +1355,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
           <div className="content-section">
             <div className="staff-check-note">
               <p>
-                <strong>점검 기준</strong> — 직무교육 <strong>이수일</strong>을 기준으로 유효기간 만료일을
-                계산합니다. 만료 {SOON_DAYS}일 전부터 ‘만료임박’으로 표시됩니다.
+                <strong>점검 기준</strong> — 직무교육 <strong>이수일</strong>을 기준으로 유효기간
+                만료일을 계산합니다. 만료 {SOON_DAYS}일 전부터 ‘만료임박’으로 표시됩니다.
               </p>
               <ul className="staff-rule-list">
                 {TRAINING_ROLES.map(role => {
@@ -1322,7 +1369,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                     </li>
                   );
                 })}
-                <li className="staff-rule-excluded">관리감독자 — 직무교육 대상 아님 (신규교육 8시간만 확인)</li>
+                <li className="staff-rule-excluded">
+                  관리감독자 · 안전담당자 — 직무교육 대상 아님 (신규교육 8시간만 확인)
+                </li>
               </ul>
             </div>
 
@@ -1362,8 +1411,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                 <div className="empty-icon">✅</div>
                 <p>조치가 필요한 안전인력이 없습니다.</p>
                 <p className="empty-hint">
-                  현장 상세 &gt; 관리자(안전인력)에서 선임일과 직무교육 이수일을 등록하면
-                  여기에서 자동으로 점검됩니다.
+                  현장 상세 &gt; 관리자(안전인력)에서 선임일과 직무교육 이수일을 등록하면 여기에서
+                  자동으로 점검됩니다.
                 </p>
               </div>
             ) : (
@@ -1410,11 +1459,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                       </div>
 
                       {issue.appointmentMissing && (
-                        <p className="staff-issue-extra">⚠️ 선임일(지정일)이 입력되지 않았습니다.</p>
-                      )}
-                      {issue.supervisorTrainingMissing && (
                         <p className="staff-issue-extra">
-                          ⚠️ 관리감독자 신규교육(8시간)을 이수하지 않았습니다.
+                          ⚠️ 선임일(지정일)이 입력되지 않았습니다.
+                        </p>
+                      )}
+                      {issue.newTrainingMissing && (
+                        <p className="staff-issue-extra">
+                          ⚠️ {issue.staff.role} 신규교육(8시간)을 이수하지 않았습니다.
                         </p>
                       )}
                     </div>
@@ -1477,9 +1528,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                 >
                   {backupBusy ? '만드는 중…' : '⬇️ 백업 파일 저장'}
                 </button>
-                <p className="backup-hint">
-                  파일명: {buildBackupFileName()}
-                </p>
+                <p className="backup-hint">파일명: {buildBackupFileName()}</p>
               </section>
 
               {/* 가져오기 */}
@@ -1520,13 +1569,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                 </div>
 
                 <label className="backup-file-pick">
-                  <input type="file" accept="application/json,.json" onChange={handleBackupFilePick} />
+                  <input
+                    type="file"
+                    accept="application/json,.json"
+                    onChange={handleBackupFilePick}
+                  />
                   <span>📂 백업 파일 선택</span>
                 </label>
 
-                <p className="backup-hint">
-                  파일을 선택하면 복원 전에 내용을 먼저 확인합니다.
-                </p>
+                <p className="backup-hint">파일을 선택하면 복원 전에 내용을 먼저 확인합니다.</p>
               </section>
             </div>
 
@@ -1553,7 +1604,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                   </div>
                   <div>
                     <dt>복원 방식</dt>
-                    <dd>{restoreMode === 'replace' ? '덮어쓰기 (현재 자료 삭제)' : '병합 (기존 자료 유지)'}</dd>
+                    <dd>
+                      {restoreMode === 'replace'
+                        ? '덮어쓰기 (현재 자료 삭제)'
+                        : '병합 (기존 자료 유지)'}
+                    </dd>
                   </div>
                 </dl>
 
@@ -1571,7 +1626,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
                 {restoreMode === 'replace' && (
                   <p className="backup-confirm-danger">
-                    ⚠️ 덮어쓰기를 선택했습니다. 현재 저장된 자료가 백업 시점으로 대체되며 되돌릴 수 없습니다.
+                    ⚠️ 덮어쓰기를 선택했습니다. 현재 저장된 자료가 백업 시점으로 대체되며 되돌릴 수
+                    없습니다.
                   </p>
                 )}
 
@@ -1588,7 +1644,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                     onClick={confirmRestore}
                     disabled={backupBusy}
                   >
-                    {backupBusy ? '복원 중…' : restoreMode === 'replace' ? '덮어쓰기 실행' : '병합 복원 실행'}
+                    {backupBusy
+                      ? '복원 중…'
+                      : restoreMode === 'replace'
+                        ? '덮어쓰기 실행'
+                        : '병합 복원 실행'}
                   </button>
                 </div>
               </div>
@@ -1606,23 +1666,19 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               </div>
             ) : (
               <div className="sites-management-list">
-                {completedSites.map((site) => (
+                {completedSites.map(site => (
                   <div key={site.id} className="site-management-card completed-site-card">
                     <div className="site-management-header">
                       <div>
                         <h3>{site.name}</h3>
-                        <p className="site-meta">
-                          📍 {site.location}
-                        </p>
+                        <p className="site-meta">📍 {site.location}</p>
                         {site.completedAt && (
                           <p className="completed-date">
                             ✅ 준공일: {formatDate(site.completedAt)}
                           </p>
                         )}
                       </div>
-                      <span className="badge badge-completed">
-                        준공
-                      </span>
+                      <span className="badge badge-completed">준공</span>
                     </div>
 
                     <div className="site-management-actions">
@@ -1651,12 +1707,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
         {/* Completion Modal */}
         {showCompletionModal && (
           <div className="modal-overlay" onClick={closeCompletionModal}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
               <div className="modal-header">
                 <h2>
                   {completionData.type === 'suggestion' ? '건의사항 완료 처리' : '작업 재개 승인'}
                 </h2>
-                <button className="modal-close" onClick={closeCompletionModal}>✕</button>
+                <button className="modal-close" onClick={closeCompletionModal}>
+                  ✕
+                </button>
               </div>
 
               <div className="modal-body">
@@ -1667,10 +1725,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                   <textarea
                     id="response"
                     value={completionData.response}
-                    onChange={(e) => setCompletionData(prev => ({ ...prev, response: e.target.value }))}
-                    placeholder={completionData.type === 'suggestion' 
-                      ? '건의사항에 대한 처리 내용을 입력하세요' 
-                      : '위험 요소 제거 및 조치 내용을 입력하세요'}
+                    onChange={e =>
+                      setCompletionData(prev => ({ ...prev, response: e.target.value }))
+                    }
+                    placeholder={
+                      completionData.type === 'suggestion'
+                        ? '건의사항에 대한 처리 내용을 입력하세요'
+                        : '위험 요소 제거 및 조치 내용을 입력하세요'
+                    }
                     rows={6}
                     required
                   />
@@ -1678,7 +1740,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
 
                 <div className="form-group">
                   <label htmlFor="completionImages">
-                    {completionData.type === 'suggestion' ? '처리 사진' : '조치 사진'} (선택, 최대 5개)
+                    {completionData.type === 'suggestion' ? '처리 사진' : '조치 사진'} (선택, 최대
+                    5개)
                   </label>
                   <div className="image-upload-container">
                     <label htmlFor="completionImageInput" className="image-upload-button">
@@ -1723,14 +1786,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
               </div>
 
               <div className="modal-actions">
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={closeCompletionModal}
-                >
+                <button className="btn btn-secondary" onClick={closeCompletionModal}>
                   취소
                 </button>
-                <button 
-                  className="btn btn-primary" 
+                <button
+                  className="btn btn-primary"
                   onClick={handleCompletion}
                   disabled={uploading || !completionData.response.trim()}
                 >
@@ -1744,10 +1804,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
         {/* Site Modal */}
         {showSiteModal && (
           <div className="modal-overlay" onClick={closeSiteModal}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
               <div className="modal-header">
                 <h2>{editingSite ? '현장 수정' : '새 현장 추가'}</h2>
-                <button className="modal-close" onClick={closeSiteModal}>✕</button>
+                <button className="modal-close" onClick={closeSiteModal}>
+                  ✕
+                </button>
               </div>
 
               <form className="modal-body" onSubmit={handleSiteSubmit}>
@@ -1757,7 +1819,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                     type="text"
                     id="siteName"
                     value={siteFormData.name}
-                    onChange={(e) => setSiteFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={e => setSiteFormData(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="예: 용인시 에코타운 조성 민자사업 현장"
                     required
                   />
@@ -1769,7 +1831,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                     type="text"
                     id="siteLocation"
                     value={siteFormData.location}
-                    onChange={(e) => setSiteFormData(prev => ({ ...prev, location: e.target.value }))}
+                    onChange={e => setSiteFormData(prev => ({ ...prev, location: e.target.value }))}
                     placeholder="예: 용인시"
                     required
                   />
@@ -1780,7 +1842,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
                   <select
                     id="siteStatus"
                     value={siteFormData.status}
-                    onChange={(e) => setSiteFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                    onChange={e =>
+                      setSiteFormData(prev => ({
+                        ...prev,
+                        status: e.target.value as 'active' | 'inactive',
+                      }))
+                    }
                   >
                     <option value="active">운영중</option>
                     <option value="inactive">중단</option>
@@ -1801,9 +1868,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, isLoggedIn }) => {
         )}
 
         {/* 사고보고서 출력 (A4) */}
-        {reportCase && (
-          <AccidentReport accident={reportCase} onClose={() => setReportCase(null)} />
-        )}
+        {reportCase && <AccidentReport accident={reportCase} onClose={() => setReportCase(null)} />}
       </div>
     </div>
   );

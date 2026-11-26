@@ -10,7 +10,7 @@
  * 을 계산해 화면에서 바로 확인할 수 있게 합니다.
  */
 
-import { Site, SiteStaff, StaffRole } from '../types';
+import { Site, SiteStaff, StaffRole, usesNewTraining } from '../types';
 import { getSites } from './storage';
 import { getSiteInfo } from './siteInfoStorage';
 
@@ -40,7 +40,7 @@ export const TRAINING_RULE: Partial<Record<StaffRole, TrainingRule>> = {
   안전관리자: { years: 2 },
 };
 
-/** 직무교육 대상 역할 (관리감독자 제외) */
+/** 직무교육 대상 역할 (관리감독자 · 안전담당자 제외 — 신규교육 8시간으로 관리) */
 export const TRAINING_ROLES: StaffRole[] = ['현장소장', '안전보건관리책임자', '안전관리자'];
 
 /** 해당 역할이 직무교육 대상인지 */
@@ -82,8 +82,7 @@ export const addYears = (base: Date, years: number): Date => {
 };
 
 /** 날짜 차이(일). b - a */
-const diffDays = (a: Date, b: Date): number =>
-  Math.round((b.getTime() - a.getTime()) / 86_400_000);
+const diffDays = (a: Date, b: Date): number => Math.round((b.getTime() - a.getTime()) / 86_400_000);
 
 /* ------------------------------------------------------------------ */
 /* 판정                                                                */
@@ -95,7 +94,7 @@ const diffDays = (a: Date, b: Date): number =>
  * - soon    : 만료 임박
  * - expired : 유효기간 만료
  * - missing : 직무교육 이수일 미입력
- * - none    : 직무교육 대상 아님 (관리감독자 등)
+ * - none    : 직무교육 대상 아님 (관리감독자 · 안전담당자 등)
  * - 해임자는 level 'ok' 로 반환하고 message 로 안내합니다.
  */
 export type ComplianceLevel = 'ok' | 'soon' | 'expired' | 'missing' | 'none';
@@ -119,7 +118,7 @@ export interface StaffCompliance {
 /**
  * 안전인력 1명의 교육 이수 상태를 판정합니다.
  * - 해임된 인력은 점검 대상에서 제외합니다(level 'ok', message 안내).
- * - 관리감독자처럼 직무교육 대상이 아닌 역할은 level 'none'.
+ * - 관리감독자 · 안전담당자처럼 직무교육 대상이 아닌 역할은 level 'none'.
  * - 직무교육 이수일이 없으면 'missing'.
  * - 기준일은 '직무교육 이수일'이고, 이수일 + 주기(년)가 유효기간 만료일입니다.
  */
@@ -139,7 +138,7 @@ export const evaluateStaff = (staff: SiteStaff, today: Date = startOfToday()): S
 
   const rule = TRAINING_RULE[staff.role];
 
-  // 직무교육 대상이 아닌 역할 (관리감독자 등)
+  // 직무교육 대상이 아닌 역할 (관리감독자 · 안전담당자 등)
   if (!rule) {
     return {
       level: 'none',
@@ -212,11 +211,11 @@ export const isAppointmentMissing = (staff: SiteStaff): boolean =>
   !staff.dismissedAt && !parseDateOnly(staff.appointedAt);
 
 /**
- * 관리감독자 신규교육(8시간) 미이수 여부.
- * 관리감독자로 지정되었으나 신규교육을 이수하지 않은 경우 경고 대상입니다.
+ * 신규교육(8시간) 미이수 여부 — 관리감독자 · 안전담당자.
+ * 지정되었으나 신규교육을 이수하지 않은 경우 경고 대상입니다.
  */
-export const isSupervisorTrainingMissing = (staff: SiteStaff): boolean =>
-  staff.role === '관리감독자' &&
+export const isNewTrainingMissing = (staff: SiteStaff): boolean =>
+  usesNewTraining(staff.role) &&
   !staff.dismissedAt &&
   Boolean(parseDateOnly(staff.appointedAt)) &&
   !staff.newTraining8h;
@@ -232,8 +231,8 @@ export interface StaffIssue {
   compliance: StaffCompliance;
   /** 선임일 누락 */
   appointmentMissing: boolean;
-  /** 관리감독자 신규교육 미이수 */
-  supervisorTrainingMissing: boolean;
+  /** 신규교육(8시간) 미이수 (관리감독자 · 안전담당자) */
+  newTrainingMissing: boolean;
 }
 
 /** 점검이 필요한 항목인지 (정상/해임 제외) */
@@ -251,8 +250,8 @@ export interface SiteComplianceSummary {
   issues: number;
   /** 선임일 누락 건수 */
   appointmentMissing: number;
-  /** 관리감독자 신규교육 미이수 건수 */
-  supervisorMissing: number;
+  /** 신규교육(8시간) 미이수 건수 (관리감독자 · 안전담당자) */
+  newTrainingMissing: number;
 }
 
 /** 현장 1곳의 인력 점검 요약 */
@@ -260,7 +259,7 @@ export const summarizeSite = (
   siteId: number,
   siteName: string,
   staffList: SiteStaff[],
-  today: Date = startOfToday()
+  today: Date = startOfToday(),
 ): SiteComplianceSummary => {
   const active = staffList.filter(s => !s.dismissedAt);
   let expired = 0;
@@ -283,7 +282,7 @@ export const summarizeSite = (
     missing,
     issues: expired + soon + missing,
     appointmentMissing: active.filter(isAppointmentMissing).length,
-    supervisorMissing: active.filter(isSupervisorTrainingMissing).length,
+    newTrainingMissing: active.filter(isNewTrainingMissing).length,
   };
 };
 
@@ -307,9 +306,9 @@ export const collectIssues = (today: Date = startOfToday()): StaffIssue[] => {
       if (staff.dismissedAt) return;
       const compliance = evaluateStaff(staff, today);
       const appointmentMissing = isAppointmentMissing(staff);
-      const supervisorTrainingMissing = isSupervisorTrainingMissing(staff);
+      const newTrainingMissing = isNewTrainingMissing(staff);
 
-      if (!needsAttention(compliance) && !appointmentMissing && !supervisorTrainingMissing) {
+      if (!needsAttention(compliance) && !appointmentMissing && !newTrainingMissing) {
         return;
       }
 
@@ -319,7 +318,7 @@ export const collectIssues = (today: Date = startOfToday()): StaffIssue[] => {
         staff,
         compliance,
         appointmentMissing,
-        supervisorTrainingMissing,
+        newTrainingMissing,
       });
     });
   });

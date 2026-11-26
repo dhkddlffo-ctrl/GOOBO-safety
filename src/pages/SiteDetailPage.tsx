@@ -12,6 +12,7 @@ import {
   STAFF_ROLES,
   STAFF_DOC_KINDS,
   staffDocLabel,
+  usesNewTraining,
 } from '../types';
 import {
   getSites,
@@ -54,7 +55,7 @@ import { isAuthenticated } from '../utils/auth';
 import {
   evaluateStaff,
   isAppointmentMissing,
-  isSupervisorTrainingMissing,
+  isNewTrainingMissing,
   summarizeSite,
 } from '../utils/staffCompliance';
 import { useCategories } from '../hooks/useCategories';
@@ -767,6 +768,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                   <InfoRow label="안전보건관리책임자" value={staffDisplay('안전보건관리책임자')} />
                   <InfoRow label="안전관리자" value={staffDisplay('안전관리자')} />
                   <InfoRow label="관리감독자" value={staffDisplay('관리감독자')} />
+                  <InfoRow label="안전담당자" value={staffDisplay('안전담당자')} />
                 </div>
                 <p className="sd-contact-hint">
                   담당자 정보는 아래 <b>관리자 (안전인력)</b>에 입력한 내용이 그대로 표시됩니다.
@@ -789,7 +791,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                     <div>
                       <h3>👷 관리자 (안전인력)</h3>
                       <p className="sd-staff-sub">
-                        현장소장 · 안전보건관리책임자 · 안전관리자 · 관리감독자
+                        현장소장 · 안전보건관리책임자 · 안전관리자 · 관리감독자 · 안전담당자
                       </p>
                     </div>
                     <button
@@ -819,7 +821,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                     </div>
                   )}
 
-                  {(staffSummary.appointmentMissing > 0 || staffSummary.supervisorMissing > 0) && (
+                  {(staffSummary.appointmentMissing > 0 || staffSummary.newTrainingMissing > 0) && (
                     <div className="sd-dd-summary is-warn">
                       <span className="sd-dd-summary-icon">📋</span>
                       <div className="sd-dd-summary-body">
@@ -828,10 +830,10 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                           {staffSummary.appointmentMissing > 0 &&
                             `선임일 미입력 ${staffSummary.appointmentMissing}명`}
                           {staffSummary.appointmentMissing > 0 &&
-                            staffSummary.supervisorMissing > 0 &&
+                            staffSummary.newTrainingMissing > 0 &&
                             ' · '}
-                          {staffSummary.supervisorMissing > 0 &&
-                            `관리감독자 신규교육 미이수 ${staffSummary.supervisorMissing}명`}
+                          {staffSummary.newTrainingMissing > 0 &&
+                            `신규교육 미이수 ${staffSummary.newTrainingMissing}명`}
                         </span>
                       </div>
                     </div>
@@ -843,7 +845,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                     <div className="sd-staff-list">
                       {STAFF_ROLES.map(role => {
                         const members = staffList.filter(s => s.role === role);
-                        const isSupervisor = role === '관리감독자';
+                        const isNewTrainingRole = usesNewTraining(role);
                         return (
                           <div key={role} className="sd-staff-group">
                             <div className="sd-staff-group-head">
@@ -864,7 +866,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                               members.map(staff => {
                                 const dc = evaluateStaff(staff);
                                 const apptMissing = isAppointmentMissing(staff);
-                                const supMissing = isSupervisorTrainingMissing(staff);
+                                const newMissing = isNewTrainingMissing(staff);
                                 return (
                                   <div key={staff.id} className={`sd-staff-row is-${dc.level}`}>
                                     <div className="sd-staff-main">
@@ -874,7 +876,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                                       {staff.phone && (
                                         <span className="sd-staff-phone">☎ {staff.phone}</span>
                                       )}
-                                      {isSupervisor && (
+                                      {isNewTrainingRole && (
                                         <span
                                           className={`sd-staff-badge ${
                                             staff.newTraining8h ? 'on' : 'off'
@@ -900,10 +902,10 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                                           선임일 미입력
                                         </span>
                                       )}
-                                      {supMissing && (
+                                      {newMissing && (
                                         <span
                                           className="sd-dd sd-dd-expired"
-                                          title="관리감독자 신규교육(8시간) 미이수"
+                                          title={`${role} 신규교육(8시간) 미이수`}
                                         >
                                           신규교육 미이수
                                         </span>
@@ -912,14 +914,14 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
 
                                     <div className="sd-staff-dates">
                                       <span className="sd-staff-date">
-                                        {isSupervisor ? '지정일' : '선임일'}{' '}
+                                        {isNewTrainingRole ? '지정일' : '선임일'}{' '}
                                         <strong>{staff.appointedAt || '-'}</strong>
                                       </span>
                                       <span className="sd-staff-date">
                                         해임일 <strong>{staff.dismissedAt || '-'}</strong>
                                       </span>
-                                      {/* 관리감독자는 직무교육 대상이 아니므로 표시하지 않습니다 */}
-                                      {!isSupervisor && (
+                                      {/* 관리감독자 · 안전담당자는 직무교육 대상이 아니므로 표시하지 않습니다 */}
+                                      {!isNewTrainingRole && (
                                         <span className="sd-staff-date">
                                           직무교육 <strong>{staff.trainingDate || '-'}</strong>
                                         </span>
@@ -1198,7 +1200,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                   </div>
 
                   <div className="sd-manager-hint">
-                    현장소장 · 안전보건관리책임자 · 안전관리자 · 관리감독자 정보는 아래{' '}
+                    현장소장 · 안전보건관리책임자 · 안전관리자 · 관리감독자 · 안전담당자 정보는 아래{' '}
                     <b>관리자 (안전인력)</b>에서 입력합니다. 입력한 내용은 현장 기본정보에 자동으로
                     표시됩니다.
                   </div>
@@ -1435,7 +1437,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
 
               <div className="sd-form-row">
                 <FormField
-                  label={staffDraft.role === '관리감독자' ? '관리감독자 지정일' : '선임일'}
+                  label={usesNewTraining(staffDraft.role) ? `${staffDraft.role} 지정일` : '선임일'}
                 >
                   <input
                     type="date"
@@ -1452,8 +1454,8 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                 </FormField>
               </div>
 
-              {/* 관리감독자는 직무교육 대상이 아니므로 입력받지 않습니다 */}
-              {staffDraft.role !== '관리감독자' && (
+              {/* 관리감독자 · 안전담당자는 직무교육 대상이 아니므로 입력받지 않습니다 */}
+              {!usesNewTraining(staffDraft.role) && (
                 <FormField label="직무교육 이수일">
                   <input
                     type="date"
@@ -1463,14 +1465,14 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                 </FormField>
               )}
 
-              {staffDraft.role === '관리감독자' && (
+              {usesNewTraining(staffDraft.role) && (
                 <label className="sd-staff-check">
                   <input
                     type="checkbox"
                     checked={Boolean(staffDraft.newTraining8h)}
                     onChange={e => setStaffField('newTraining8h', e.target.checked)}
                   />
-                  <span>관리감독자 신규교육(8시간) 이수</span>
+                  <span>{staffDraft.role} 신규교육(8시간) 이수</span>
                   <span className={`sd-staff-badge ${staffDraft.newTraining8h ? 'on' : 'off'}`}>
                     {staffDraft.newTraining8h ? 'O' : 'X'}
                   </span>
@@ -1482,8 +1484,8 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                 <div className="sd-doc-block-head">
                   <strong>📎 증빙자료</strong>
                   <span className="sd-doc-block-sub">
-                    {staffDraft.role === '관리감독자'
-                      ? '관리감독자 지정서와 신규교육이수증을 올려두면 서류 점검 때 바로 확인할 수 있습니다.'
+                    {usesNewTraining(staffDraft.role)
+                      ? `${staffDraft.role} 지정서와 신규교육이수증을 올려두면 서류 점검 때 바로 확인할 수 있습니다.`
                       : '지정서 · 교육이수증을 올려두면 서류 점검 때 바로 확인할 수 있습니다.'}{' '}
                     (1건당 20MB)
                   </span>
