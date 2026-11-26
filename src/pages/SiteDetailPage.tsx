@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
+  ContractAmount,
+  ContractAttachment,
   Site,
   SiteInfo,
   SiteDocument,
@@ -24,7 +26,18 @@ import {
   createEmptySiteInfo,
   createEmptyStaff,
   generateStaffId,
+  createContractAmount,
+  nextContractLabel,
 } from '../utils/siteInfoStorage';
+import {
+  CONTRACT_DOC_ACCEPT,
+  createContractAttachment,
+  deleteContractFile,
+  downloadContractDoc,
+  getContractFile,
+  isContractDocImage,
+  isContractDocPreviewable,
+} from '../utils/contractDocsStorage';
 import {
   STAFF_DOC_ACCEPT,
   createStaffAttachment,
@@ -101,6 +114,16 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
     ownerName: string;
   } | null>(null);
 
+  /* ---------------- 계약서 첨부 상태 ---------------- */
+  const [contractUploading, setContractUploading] = useState(false);
+  const [contractError, setContractError] = useState('');
+  const [contractPreview, setContractPreview] = useState<{
+    attachment: ContractAttachment;
+    url: string;
+  } | null>(null);
+  /** 편집 시작 시점의 계약서 목록 — 취소하면 이번에 올린 파일만 지웁니다. */
+  const [contractBase, setContractBase] = useState<ContractAttachment[]>([]);
+
   const [activity, setActivity] = useState({
     suggestions: 0,
     workStops: 0,
@@ -162,21 +185,42 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
       alert('현장정보 수정은 관리자 로그인 후 가능합니다.');
       return;
     }
-    setDraft(siteInfo ? { ...siteInfo } : createEmptySiteInfo(site.id, site.name));
+    const base = siteInfo ? { ...siteInfo } : createEmptySiteInfo(site.id, site.name);
+    setDraft(base);
+    /* 취소 시 '이번에 올린 계약서'만 지우기 위해 시작 시점 목록을 기억합니다. */
+    setContractBase(base.contractFiles ?? []);
+    setContractError('');
     setEditing(true);
   };
 
   const cancelEdit = () => {
+    /* 저장하지 않고 취소하면, 이번에 새로 올린 계약서 파일은 IndexedDB 에서 정리합니다. */
+    const kept = new Set(contractBase.map(a => a.storageKey));
+    (draft?.contractFiles ?? [])
+      .filter(a => !kept.has(a.storageKey))
+      .forEach(a => void deleteContractFile(a.storageKey).catch(() => undefined));
+
     setDraft(siteInfo);
+    setContractBase([]);
+    setContractError('');
     setEditing(false);
   };
 
   const saveEdit = () => {
     if (!draft) return;
-    saveSiteInfo({ ...draft, siteId: site.id, siteName: site.name });
+    /* 저장하지 않은 빈 계약금액 행은 버리고 저장합니다. */
+    const amounts = (draft.contractAmounts ?? []).filter(a => a.label.trim() || a.amount.trim());
+    saveSiteInfo({
+      ...draft,
+      siteId: site.id,
+      siteName: site.name,
+      contractAmounts: amounts.length > 0 ? amounts : [createContractAmount('최초')],
+    });
     const updated = getSiteInfo(site.id, site.name);
     setSiteInfo(updated);
     setDraft(updated);
+    setContractBase([]);
+    setContractError('');
     setEditing(false);
   };
 
@@ -184,8 +228,116 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
     setDraft(d => (d ? { ...d, [key]: value } : d));
   };
 
+  /* ---------------- 계약금액 (최초 · 변경1 · 변경2 …) ---------------- */
+  const setContractAmounts = (next: ContractAmount[]) => setField('contractAmounts', next);
+
+  const addContractAmount = () => {
+    setDraft(d => {
+      if (!d) return d;
+      const list = d.contractAmounts ?? [];
+      return {
+        ...d,
+        contractAmounts: [...list, createContractAmount(nextContractLabel(list))],
+      };
+    });
+  };
+
+  const updateContractAmount = (id: string, patch: Partial<ContractAmount>) => {
+    setDraft(d =>
+      d
+        ? {
+            ...d,
+            contractAmounts: (d.contractAmounts ?? []).map(a =>
+              a.id === id ? { ...a, ...patch } : a,
+            ),
+          }
+        : d,
+    );
+  };
+
+  const removeContractAmount = (id: string) => {
+    setContractAmounts((draft?.contractAmounts ?? []).filter(a => a.id !== id));
+  };
+
+  /* ---------------- 계약서 첨부 ---------------- */
+  const handleContractUpload = async (fileList: FileList | null): Promise<void> => {
+    const file = fileList && fileList[0];
+    if (!file) return;
+
+    setContractUploading(true);
+    setContractError('');
+    try {
+      const attachment = await createContractAttachment(file, '현장정보');
+      setDraft(d => (d ? { ...d, contractFiles: [...(d.contractFiles ?? []), attachment] } : d));
+    } catch (error) {
+      setContractError(error instanceof Error ? error.message : '계약서를 올리지 못했습니다.');
+    } finally {
+      setContractUploading(false);
+    }
+  };
+
+  const removeContractDoc = (attachment: ContractAttachment) => {
+    if (!confirm(`"${attachment.fileName}" 계약서를 빼시겠습니까?`)) return;
+    /* 빼기로 했으니 파일 본문도 바로 정리합니다. (저장 전 이탈해도 남지 않도록) */
+    void deleteContractFile(attachment.storageKey).catch(() => undefined);
+    setDraft(d =>
+      d
+        ? {
+            ...d,
+            contractFiles: (d.contractFiles ?? []).filter(a => a.id !== attachment.id),
+          }
+        : d,
+    );
+  };
+
+  const openContractPreview = async (attachment: ContractAttachment) => {
+    try {
+      const blob = await getContractFile(attachment.storageKey);
+      if (!blob) return alert('계약서 파일을 찾을 수 없습니다.');
+      const url = URL.createObjectURL(blob);
+      setContractPreview(prev => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return { attachment, url };
+      });
+    } catch {
+      alert('계약서를 열지 못했습니다.');
+    }
+  };
+
+  const closeContractPreview = () => {
+    setContractPreview(prev => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  };
+
+  const handleContractDownload = async (attachment: ContractAttachment) => {
+    try {
+      await downloadContractDoc(attachment);
+    } catch {
+      alert('계약서를 내려받지 못했습니다.');
+    }
+  };
+
   /* ---------------- 관리자(안전인력) 관리 ---------------- */
   const staffList: SiteStaff[] = siteInfo?.staff ?? [];
+
+  /* 관리자(안전인력)에 입력한 내용을 현장 기본정보에 그대로 보여주기 위한 파생값.
+     → 담당자 정보는 '관리자' 한 곳에서만 입력합니다. */
+  const staffDisplay = (role: StaffRole): string =>
+    staffList
+      .filter(s => s.role === role && (s.name.trim() || (s.phone ?? '').trim()))
+      .map(s => {
+        const name = s.name.trim();
+        const phone = (s.phone ?? '').trim();
+        if (name && phone) return `${name} (${phone})`;
+        return name || phone;
+      })
+      .join(', ');
+
+  /** 현장소장 성명 (경영방침·안전조직도 서명 기본값) */
+  const siteManagerName =
+    staffList.find(s => s.role === '현장소장' && s.name.trim())?.name.trim() ?? '';
 
   const openStaffAddFor = (role: StaffRole) => {
     if (!canManage) {
@@ -372,8 +524,8 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               <span className="sd-hstat-label">안전인력</span>
             </div>
             <div className="sd-hstat">
-              <span className="sd-hstat-value">{siteInfo?.workerCount ?? 0}</span>
-              <span className="sd-hstat-label">현재 인원</span>
+              <span className="sd-hstat-value">{siteInfo?.contractFiles?.length ?? 0}</span>
+              <span className="sd-hstat-label">계약서</span>
             </div>
           </div>
         </div>
@@ -518,22 +670,107 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                   <InfoRow label="공사분류" value={siteInfo?.constructionType} />
                   <InfoRow label="규모" value={siteInfo?.scale} />
                   <InfoRow label="공사기간" value={siteInfo?.contractPeriod} />
-                  <InfoRow label="계약금액" value={siteInfo?.contractAmount} />
                   <InfoRow label="착공일" value={siteInfo?.startDate} />
+                  <InfoRow label="준공일" value={siteInfo?.completionDate} />
                   <InfoRow label="실제착공일" value={siteInfo?.actualStartDate} />
                   <InfoRow label="발주처" value={siteInfo?.clientName} />
-                  <InfoRow label="시행사" value={siteInfo?.developerName} />
                   <InfoRow label="시공사" value={siteInfo?.contractorName || '구보공영(주)'} />
-                  <InfoRow label="현장소장" value={siteInfo?.siteManager} />
-                  <InfoRow label="현장공무" value={siteInfo?.siteOfficer} />
                   <InfoRow label="현장주소" value={siteInfo?.siteAddress} />
-                  <InfoRow label="현장 사무실 연락처" value={siteInfo?.officePhone} />
-                  <InfoRow label="안전관리자 연락처" value={siteInfo?.safetyManagerPhone} />
-                  <InfoRow
-                    label="현재 인원"
-                    value={siteInfo?.workerCount ? `${siteInfo.workerCount}명` : ''}
-                  />
                 </div>
+
+                {/* ---------- 계약금액 (최초 · 변경1 · 변경2 …) ---------- */}
+                {(() => {
+                  const amounts = siteInfo?.contractAmounts ?? [];
+                  return (
+                    <div className="sd-amounts">
+                      <div className="sd-amounts-head">
+                        <strong>계약금액</strong>
+                        <span className="sd-amounts-sub">
+                          변경계약이 있으면 항목을 나누어 관리합니다.
+                        </span>
+                      </div>
+                      {amounts.length === 0 ? (
+                        <p className="sd-amounts-empty">등록된 계약금액이 없습니다.</p>
+                      ) : (
+                        <ul className="sd-amounts-list">
+                          {amounts.map(a => (
+                            <li key={a.id} className="sd-amounts-item">
+                              <span className="sd-amounts-label">{a.label || '계약금액'}</span>
+                              <span className={`sd-amounts-value ${!a.amount ? 'empty' : ''}`}>
+                                {a.amount || '미입력'}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* ---------- 계약서 첨부 ---------- */}
+                <div className="sd-contracts">
+                  <div className="sd-amounts-head">
+                    <strong>계약서</strong>
+                    <span className="sd-amounts-sub">
+                      계약서 사본을 올려두면 언제든 다시 확인할 수 있습니다.
+                    </span>
+                  </div>
+                  {(siteInfo?.contractFiles ?? []).length === 0 ? (
+                    <p className="sd-amounts-empty">첨부된 계약서가 없습니다.</p>
+                  ) : (
+                    <ul className="sd-doc-list">
+                      {(siteInfo?.contractFiles ?? []).map(a => (
+                        <li key={a.id} className="sd-doc-item">
+                          <span className="sd-doc-icon">
+                            {isContractDocImage(a.fileName)
+                              ? '🖼️'
+                              : a.fileName.toLowerCase().endsWith('.pdf')
+                                ? '📕'
+                                : '📄'}
+                          </span>
+                          <span className="sd-doc-info">
+                            <span className="sd-doc-name" title={a.fileName}>
+                              {a.fileName}
+                            </span>
+                            <span className="sd-doc-meta">
+                              {formatStaffDocSize(a.fileSize)}
+                              {a.uploadedAt && ` · ${formatStaffDocDate(a.uploadedAt)}`}
+                            </span>
+                          </span>
+                          <span className="sd-doc-actions">
+                            {isContractDocPreviewable(a.fileName) && (
+                              <button
+                                type="button"
+                                className="sd-doc-btn"
+                                onClick={() => void openContractPreview(a)}
+                              >
+                                보기
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="sd-doc-btn"
+                              onClick={() => void handleContractDownload(a)}
+                            >
+                              내려받기
+                            </button>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* ---------- 담당자 (관리자 · 안전인력에서 자동 반영) ---------- */}
+                <div className="sd-info-grid sd-contact-grid">
+                  <InfoRow label="현장소장" value={staffDisplay('현장소장')} />
+                  <InfoRow label="안전보건관리책임자" value={staffDisplay('안전보건관리책임자')} />
+                  <InfoRow label="안전관리자" value={staffDisplay('안전관리자')} />
+                  <InfoRow label="관리감독자" value={staffDisplay('관리감독자')} />
+                </div>
+                <p className="sd-contact-hint">
+                  담당자 정보는 아래 <b>관리자 (안전인력)</b>에 입력한 내용이 그대로 표시됩니다.
+                </p>
 
                 {siteInfo?.notes && (
                   <div className="sd-notes">
@@ -792,19 +1029,18 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                   </div>
 
                   <div className="sd-form-row">
-                    <FormField label="계약금액">
-                      <input
-                        type="text"
-                        value={draft.contractAmount}
-                        onChange={e => setField('contractAmount', e.target.value)}
-                        placeholder="예: 1,250억원"
-                      />
-                    </FormField>
                     <FormField label="착공일">
                       <input
                         type="date"
                         value={draft.startDate}
                         onChange={e => setField('startDate', e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="준공일">
+                      <input
+                        type="date"
+                        value={draft.completionDate}
+                        onChange={e => setField('completionDate', e.target.value)}
                       />
                     </FormField>
                   </div>
@@ -827,43 +1063,14 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                     </FormField>
                   </div>
 
-                  <div className="sd-form-row">
-                    <FormField label="시행사">
-                      <input
-                        type="text"
-                        value={draft.developerName}
-                        onChange={e => setField('developerName', e.target.value)}
-                        placeholder="예: OO개발(주)"
-                      />
-                    </FormField>
-                    <FormField label="시공사">
-                      <input
-                        type="text"
-                        value={draft.contractorName}
-                        onChange={e => setField('contractorName', e.target.value)}
-                        placeholder="예: 구보공영(주)"
-                      />
-                    </FormField>
-                  </div>
-
-                  <div className="sd-form-row">
-                    <FormField label="현장소장">
-                      <input
-                        type="text"
-                        value={draft.siteManager}
-                        onChange={e => setField('siteManager', e.target.value)}
-                        placeholder="예: 홍길동"
-                      />
-                    </FormField>
-                    <FormField label="현장공무">
-                      <input
-                        type="text"
-                        value={draft.siteOfficer}
-                        onChange={e => setField('siteOfficer', e.target.value)}
-                        placeholder="예: 이공무"
-                      />
-                    </FormField>
-                  </div>
+                  <FormField label="시공사">
+                    <input
+                      type="text"
+                      value={draft.contractorName}
+                      onChange={e => setField('contractorName', e.target.value)}
+                      placeholder="예: 구보공영(주)"
+                    />
+                  </FormField>
 
                   <FormField label="현장주소">
                     <input
@@ -874,34 +1081,126 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                     />
                   </FormField>
 
-                  <div className="sd-form-row">
-                    <FormField label="현장 사무실 연락처">
-                      <input
-                        type="tel"
-                        value={draft.officePhone}
-                        onChange={e => setField('officePhone', e.target.value)}
-                        placeholder="예: 031-123-4567"
-                      />
-                    </FormField>
-                    <FormField label="안전관리자 연락처">
-                      <input
-                        type="tel"
-                        value={draft.safetyManagerPhone}
-                        onChange={e => setField('safetyManagerPhone', e.target.value)}
-                        placeholder="예: 010-1234-5678"
-                      />
-                    </FormField>
+                  {/* ---------- 계약금액 (최초 · 변경1 · 변경2 …) ---------- */}
+                  <div className="sd-field">
+                    <label>계약금액</label>
+                    <p className="sd-field-hint">
+                      변경계약이 있으면 항목을 추가해 나누어 기록합니다. (예: 최초, 변경1, 변경2)
+                    </p>
+                    <div className="sd-amount-editor">
+                      {(draft.contractAmounts ?? []).length === 0 && (
+                        <p className="sd-amount-editor-empty">등록된 계약금액이 없습니다.</p>
+                      )}
+                      {(draft.contractAmounts ?? []).map((a, index) => (
+                        <div key={a.id} className="sd-amount-editor-row">
+                          <input
+                            type="text"
+                            className="sd-amount-editor-label"
+                            value={a.label}
+                            onChange={e => updateContractAmount(a.id, { label: e.target.value })}
+                            placeholder={`예: ${index === 0 ? '최초' : `변경${index}`}`}
+                            aria-label="항목명"
+                          />
+                          <input
+                            type="text"
+                            className="sd-amount-editor-value"
+                            value={a.amount}
+                            onChange={e => updateContractAmount(a.id, { amount: e.target.value })}
+                            placeholder="예: 1,250억원"
+                            aria-label="금액"
+                          />
+                          <button
+                            type="button"
+                            className="sd-amount-editor-del"
+                            onClick={() => removeContractAmount(a.id)}
+                            title="이 항목 삭제"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className="sd-amount-editor-add"
+                        onClick={addContractAmount}
+                      >
+                        ＋ 계약금액 항목 추가
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="sd-form-row">
-                    <FormField label="현재 인원 (명)">
-                      <input
-                        type="number"
-                        min={0}
-                        value={draft.workerCount}
-                        onChange={e => setField('workerCount', Number(e.target.value))}
-                      />
-                    </FormField>
+                  {/* ---------- 계약서 첨부 ---------- */}
+                  <div className="sd-field">
+                    <label>계약서 첨부</label>
+                    <p className="sd-field-hint">
+                      계약서 사본(PDF · 이미지 · 한글 · 워드)을 올려둘 수 있습니다. (1건당 50MB)
+                    </p>
+                    <div className="sd-contract-editor">
+                      {(draft.contractFiles ?? []).length === 0 ? (
+                        <p className="sd-doc-empty">아직 올린 계약서가 없습니다.</p>
+                      ) : (
+                        <ul className="sd-doc-list">
+                          {(draft.contractFiles ?? []).map(a => (
+                            <li key={a.id} className="sd-doc-item">
+                              <span className="sd-doc-icon">
+                                {isContractDocImage(a.fileName)
+                                  ? '🖼️'
+                                  : a.fileName.toLowerCase().endsWith('.pdf')
+                                    ? '📕'
+                                    : '📄'}
+                              </span>
+                              <span className="sd-doc-info">
+                                <span className="sd-doc-name" title={a.fileName}>
+                                  {a.fileName}
+                                </span>
+                                <span className="sd-doc-meta">
+                                  {formatStaffDocSize(a.fileSize)}
+                                  {a.uploadedAt && ` · ${formatStaffDocDate(a.uploadedAt)}`}
+                                </span>
+                              </span>
+                              <span className="sd-doc-actions">
+                                {isContractDocPreviewable(a.fileName) && (
+                                  <button
+                                    type="button"
+                                    className="sd-doc-btn"
+                                    onClick={() => void openContractPreview(a)}
+                                  >
+                                    보기
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  className="sd-doc-btn danger"
+                                  onClick={() => removeContractDoc(a)}
+                                >
+                                  빼기
+                                </button>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <label className={`sd-doc-add ${contractUploading ? 'is-busy' : ''}`}>
+                        {contractUploading ? '올리는 중…' : '＋ 계약서 올리기'}
+                        <input
+                          type="file"
+                          accept={CONTRACT_DOC_ACCEPT}
+                          disabled={contractUploading}
+                          onChange={e => {
+                            void handleContractUpload(e.target.files);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                      {contractError && <p className="sd-staff-error">{contractError}</p>}
+                    </div>
+                  </div>
+
+                  <div className="sd-manager-hint">
+                    현장소장 · 안전보건관리책임자 · 안전관리자 · 관리감독자 정보는 아래{' '}
+                    <b>관리자 (안전인력)</b>에서 입력합니다. 입력한 내용은 현장 기본정보에 자동으로
+                    표시됩니다.
                   </div>
 
                   <FormField label="비고">
@@ -959,11 +1258,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               </div>
             </div>
 
-            <SiteSafetyPolicy
-              siteId={site.id}
-              siteName={site.name}
-              siteManager={siteInfo?.siteManager}
-            />
+            <SiteSafetyPolicy siteId={site.id} siteName={site.name} siteManager={siteManagerName} />
           </div>
         )}
 
@@ -1000,11 +1295,7 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
               </div>
             </div>
 
-            <SafetyOrgChart
-              siteId={site.id}
-              siteName={site.name}
-              siteManager={siteInfo?.siteManager}
-            />
+            <SafetyOrgChart siteId={site.id} siteName={site.name} siteManager={siteManagerName} />
           </div>
         )}
 
@@ -1348,6 +1639,61 @@ const SiteDetailPage: React.FC<SiteDetailPageProps> = ({ onNavigate, siteId, ini
                 <iframe
                   src={docPreview.url}
                   title={docPreview.attachment.fileName}
+                  className="sd-doc-preview-pdf"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ 계약서 미리보기 (이미지 · PDF) ============ */}
+      {contractPreview && (
+        <div className="sd-doc-preview-backdrop" onClick={closeContractPreview}>
+          <div
+            className="sd-doc-preview"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="계약서 미리보기"
+          >
+            <div className="sd-doc-preview-head">
+              <div className="sd-doc-preview-title">
+                <span className="sd-doc-preview-kind">계약서</span>
+                <strong>{contractPreview.attachment.fileName}</strong>
+                <span className="sd-doc-preview-owner">
+                  {formatStaffDocSize(contractPreview.attachment.fileSize)}
+                </span>
+              </div>
+              <div className="sd-doc-preview-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => void handleContractDownload(contractPreview.attachment)}
+                >
+                  ⬇️ 내려받기
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={closeContractPreview}
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+
+            <div className="sd-doc-preview-body">
+              {isContractDocImage(contractPreview.attachment.fileName) ? (
+                <img
+                  src={contractPreview.url}
+                  alt={contractPreview.attachment.fileName}
+                  className="sd-doc-preview-img"
+                />
+              ) : (
+                <iframe
+                  src={contractPreview.url}
+                  title={contractPreview.attachment.fileName}
                   className="sd-doc-preview-pdf"
                 />
               )}

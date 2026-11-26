@@ -393,6 +393,207 @@
   text-align: right;
 }
 
+/* ---------------- 계약금액 · 계약서 ---------------- */
+.sd-amounts,
+.sd-contracts {
+  margin-bottom: 1rem;
+  padding: 0.75rem 0.875rem;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  border-radius: 0.625rem;
+}
+
+.sd-amounts-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sd-amounts-head strong {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.sd-amounts-sub {
+  font-size: 0.6875rem;
+  color: #9ca3af;
+}
+
+.sd-amounts-empty {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+}
+
+.sd-amounts-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+}
+
+.sd-amounts-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0.625rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #0c2a4d;
+  border-radius: 0.375rem;
+}
+
+.sd-amounts-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0c2a4d;
+  flex-shrink: 0;
+}
+
+.sd-amounts-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: right;
+  word-break: break-all;
+}
+
+.sd-amounts-value.empty {
+  color: #d1d5db;
+  font-weight: 400;
+}
+
+/* 담당자(관리자) 정보 — 현장 기본정보 안에 자동 반영 */
+.sd-contact-grid {
+  margin-top: 0.25rem;
+}
+
+.sd-contact-hint {
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.6875rem;
+  color: #9ca3af;
+}
+
+/* 계약금액 편집기 */
+.sd-field-hint {
+  margin-bottom: 0.375rem;
+  font-size: 0.6875rem;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+
+.sd-amount-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  border-radius: 0.625rem;
+}
+
+.sd-amount-editor-empty {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+}
+
+.sd-amount-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.sd-amount-editor-row input {
+  min-width: 0;
+  padding: 0.4375rem 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1f2937;
+}
+
+.sd-amount-editor-row input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.sd-amount-editor-label {
+  flex: 0 0 32%;
+}
+
+.sd-amount-editor-value {
+  flex: 1 1 auto;
+}
+
+.sd-amount-editor-del {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  background: #fff;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sd-amount-editor-del:hover {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.sd-amount-editor-add {
+  align-self: flex-start;
+  margin-top: 0.125rem;
+  padding: 0.4375rem 0.75rem;
+  border: 1px dashed #93c5fd;
+  border-radius: 0.5rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sd-amount-editor-add:hover {
+  background: #dbeafe;
+  border-color: #60a5fa;
+}
+
+/* 계약서 편집기 */
+.sd-contract-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  border-radius: 0.625rem;
+}
+
+.sd-manager-hint {
+  padding: 0.625rem 0.75rem;
+  background: #eff6ff;
+  border-left: 3px solid #2563eb;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  color: #1e40af;
+  line-height: 1.6;
+}
+
 /* ---------------- 편집 폼 ---------------- */
 .sd-edit-form {
   display: flex;

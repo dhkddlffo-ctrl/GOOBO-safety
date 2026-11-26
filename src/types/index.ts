@@ -84,6 +84,14 @@ export interface SiteDocument {
 }
 
 // 현장 기본정보 타입
+//
+// ※ 삭제된 항목 (2026-11 개편)
+//   - developerName(시행사)  : 시공사와 중복되어 삭제
+//   - siteManager(현장소장) · siteOfficer(현장공무) · workerCount(현재 인원)
+//   - officePhone(현장 사무실 연락처) · safetyManagerPhone(안전관리자 연락처)
+//     → 현장소장 · 안전관리자 등 담당자 정보는 관리자(안전인력, staff)로 일원화했습니다.
+//   - contractAmount(단일 계약금액) → contractAmounts(최초 · 변경1 · 변경2 …)
+//   기존 저장 데이터는 siteInfoStorage 의 normalize 에서 자동으로 옮겨집니다.
 export interface SiteInfo {
   siteId: number;
   siteName: string;
@@ -93,21 +101,39 @@ export interface SiteInfo {
   constructionType: string; // 공사분류 (예: 공동주택 신축)
   scale: string; // 규모 (예: 지하 3층 ~ 지상 25층, 3개동)
   contractPeriod: string; // 공사기간 (예: 2024-03 ~ 2027-02)
-  contractAmount: string; // 계약금액 (예: 1,250억원)
   startDate: string; // 착공일 (계약상)
+  completionDate: string; // 준공일 (계약상)
   actualStartDate: string; // 실제착공일
   clientName: string; // 발주처
-  developerName: string; // 시행사
   contractorName: string; // 시공사
-  siteManager: string; // 현장소장
-  siteOfficer: string; // 현장공무
   siteAddress: string; // 현장주소
-  officePhone: string; // 현장 사무실 연락처
-  safetyManagerPhone: string; // 안전관리자 연락처
-  workerCount: number; // 현재 인원
+  /** 계약금액 목록 (최초 · 변경1 · 변경2 …) */
+  contractAmounts: ContractAmount[];
+  /** 계약서 사본 (파일 본문은 IndexedDB, 없으면 undefined) */
+  contractFiles?: ContractAttachment[];
   staff: SiteStaff[]; // 관리자(안전인력) 목록
   notes: string; // 비고
   updatedAt: string;
+}
+
+/** 계약금액 1건 (최초 계약 · 변경 계약) */
+export interface ContractAmount {
+  id: string;
+  /** 항목명 (예: 최초, 변경1, 변경2) */
+  label: string;
+  /** 금액 (예: 1,250억원) */
+  amount: string;
+}
+
+/** 현장 계약서 1건 (파일 본문은 IndexedDB, 여기에는 정보만 저장) */
+export interface ContractAttachment {
+  id: string;
+  fileName: string;
+  fileSize: number; // bytes
+  fileType: string; // MIME type 또는 확장자
+  storageKey: string; // IndexedDB 파일 키
+  uploadedAt: string; // ISO
+  uploadedBy?: string;
 }
 
 /* ------------------------------------------------------------------ */
