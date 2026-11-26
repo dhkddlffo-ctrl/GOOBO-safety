@@ -564,6 +564,117 @@
   color: #374151;
 }
 
+/* ---------------- 첨부서류 체크란 (①) ---------------- */
+.ar-attach-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.9rem;
+  margin-top: -1.5px;
+  padding: 0.32rem 0.5rem;
+  border: 1.5px solid #111827;
+  font-size: 8.5pt;
+  color: #111827;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-attach-check-title {
+  font-weight: 700;
+  color: #374151;
+}
+
+.ar-attach-check-item {
+  color: #6b7280;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ar-attach-check-item.is-on {
+  color: #111827;
+  font-weight: 800;
+}
+
+.ar-attach-check-files {
+  flex: 1 1 100%;
+  font-size: 7.5pt;
+  color: #4b5563;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+/* ---------------- 사업재해조사표 제출 기한 (①) ---------------- */
+.ar-deadline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  margin-top: -1.5px;
+  padding: 0.32rem 0.5rem;
+  border: 1.5px solid #111827;
+  background: #fafafa;
+  font-size: 8.5pt;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ar-deadline-title {
+  font-weight: 700;
+  color: #374151;
+}
+
+.ar-deadline-body {
+  color: #111827;
+}
+
+.ar-deadline-status {
+  margin-left: auto;
+  padding: 0.02rem 0.45rem;
+  border: 1px solid #9ca3af;
+  border-radius: 0.4rem;
+  font-size: 8pt;
+  font-weight: 800;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.ar-deadline-status.is-done {
+  color: #047857;
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+}
+
+.ar-deadline-status.is-na {
+  color: #6b7280;
+  border-color: #d1d5db;
+  background: #f3f4f6;
+}
+
+.ar-deadline-status.is-warn,
+.ar-deadline-status.is-safe {
+  color: #b45309;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.ar-deadline-status.is-danger {
+  color: #b91c1c;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.ar-deadline-status.is-expired {
+  color: #fff;
+  border-color: #991b1b;
+  background: #991b1b;
+}
+
+.ar-deadline-status.is-far {
+  color: #334155;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
 /* ---------------- 심각도 배지 ---------------- */
 .ar-sev {
   display: inline-block;

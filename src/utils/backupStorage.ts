@@ -26,6 +26,7 @@ export const BACKUP_DATA_KEYS = [
   { key: 'gubo_suggestions', label: '건의사항' },
   { key: 'gubo_work_stops', label: '작업중지권' },
   { key: 'gubo_accident_cases', label: '사고사례' },
+  { key: 'gubo_accident_drafts', label: '사고사례 임시저장' },
   { key: 'gubo_site_documents', label: '현장문서 (목록)' },
   { key: 'gubo_doc_categories', label: '문서 분류' },
   { key: 'gubo_emergency_plans', label: '비상연락망' },

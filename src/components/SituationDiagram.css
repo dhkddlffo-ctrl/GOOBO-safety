@@ -51,7 +51,10 @@
   font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .sd-tool:hover {
@@ -68,6 +71,22 @@
   font-size: 0.75rem;
 }
 
+/* 사진·도면 첨부 (label 이 버튼 역할) */
+.sd-tool-attach {
+  border: 1px dashed #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.sd-tool-attach:hover {
+  background: #dbeafe;
+  border-color: #60a5fa;
+}
+
+.sd-tool-attach input[type='file'] {
+  display: none;
+}
+
 .sd-color {
   width: 1.35rem;
   height: 1.35rem;
@@ -76,7 +95,9 @@
   box-shadow: 0 0 0 1px #cbd5e1;
   cursor: pointer;
   padding: 0;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
 .sd-color:hover {

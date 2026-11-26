@@ -1,0 +1,241 @@
+/* ================================================================
+   사고사례 임시저장 불러오기 (AccidentDraftDialog)
+   ================================================================ */
+
+.acd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.acd-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 640px;
+  max-height: min(88vh, 720px);
+  background: #fff;
+  border-radius: 0.875rem;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+}
+
+/* ---------------- 머리글 ---------------- */
+.acd-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.125rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.acd-title {
+  margin: 0 0 0.3125rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.acd-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.acd-sub b {
+  color: #1d4ed8;
+}
+
+.acd-close {
+  flex: 0 0 auto;
+  width: 1.875rem;
+  height: 1.875rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #64748b;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.acd-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* ---------------- 목록 ---------------- */
+.acd-list {
+  flex: 1 1 auto;
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.acd-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  width: 100%;
+  padding: 0.6875rem 0.8125rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.625rem;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.acd-item:hover {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.acd-item.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.acd-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.acd-item-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acd-item-site {
+  flex: 0 0 auto;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  padding: 0.0625rem 0.4375rem;
+  white-space: nowrap;
+}
+
+.acd-item-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.acd-item-meta b {
+  color: #334155;
+}
+
+/* ---------------- 비어 있음 ---------------- */
+.acd-empty {
+  padding: 3rem 1.25rem;
+  text-align: center;
+}
+
+.acd-empty-title {
+  margin: 0 0 0.375rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.acd-empty-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.acd-empty-sub b {
+  color: #334155;
+}
+
+/* ---------------- 하단 ---------------- */
+.acd-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.acd-foot-note {
+  font-size: 0.75rem;
+  color: #64748b;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acd-foot-right {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: auto;
+}
+
+.acd-btn-del {
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  background: #fff;
+}
+
+.acd-btn-del:hover {
+  background: #fef2f2;
+}
+
+@media (max-width: 640px) {
+  .acd-overlay {
+    padding: 0.625rem;
+  }
+
+  .acd-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .acd-foot-note {
+    white-space: normal;
+  }
+
+  .acd-foot-right {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .acd-foot-right .btn {
+    flex: 1;
+  }
+}
+
+@media print {
+  .acd-overlay {
+    display: none !important;
+  }
+}

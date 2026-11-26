@@ -100,8 +100,18 @@ export const getSites = (): Site[] => {
     const defaultSites: Site[] = [
       { id: 1, name: '용인시 에코타운 조성 민자사업 현장', location: '용인시', status: 'active' },
       { id: 2, name: '운정3지구A-8BL민간임대주택신축공사', location: '파주시', status: 'active' },
-      { id: 3, name: '장위6구역 주택재개발 정비사업파트 신축공사', location: '서울시 성북구', status: 'active' },
-      { id: 4, name: '용인 은화삼지구 A1BL 공동주택 신축공사', location: '용인시', status: 'active' },
+      {
+        id: 3,
+        name: '장위6구역 주택재개발 정비사업파트 신축공사',
+        location: '서울시 성북구',
+        status: 'active',
+      },
+      {
+        id: 4,
+        name: '용인 은화삼지구 A1BL 공동주택 신축공사',
+        location: '용인시',
+        status: 'active',
+      },
       { id: 5, name: '학익3구역 주택재개발정비사업', location: '인천시', status: 'active' },
       { id: 6, name: '송도 역세권 2블럭 신축공사', location: '인천시 연수구', status: 'active' },
       { id: 7, name: '양주역세권5 공동주택 신축공사', location: '양주시', status: 'active' },
@@ -161,20 +171,20 @@ export const saveCompletedSites = (sites: Site[]): void => {
 export const moveSiteToCompleted = (id: number): void => {
   const sites = getSites();
   const siteIndex = sites.findIndex(s => s.id === id);
-  
+
   if (siteIndex !== -1) {
     const site = sites[siteIndex];
     const completedSite: Site = {
       ...site,
       status: 'completed',
-      completedAt: new Date().toISOString()
+      completedAt: new Date().toISOString(),
     };
-    
+
     // 완료 현장에 추가
     const completedSites = getCompletedSites();
     completedSites.unshift(completedSite);
     saveCompletedSites(completedSites);
-    
+
     // 현재 현장에서 제거
     sites.splice(siteIndex, 1);
     saveSites(sites);
@@ -184,20 +194,20 @@ export const moveSiteToCompleted = (id: number): void => {
 export const restoreSiteFromCompleted = (id: number): void => {
   const completedSites = getCompletedSites();
   const siteIndex = completedSites.findIndex(s => s.id === id);
-  
+
   if (siteIndex !== -1) {
     const site = completedSites[siteIndex];
     const restoredSite: Site = {
       ...site,
       status: 'active',
-      completedAt: undefined
+      completedAt: undefined,
     };
-    
+
     // 현재 현장에 추가
     const sites = getSites();
     sites.push(restoredSite);
     saveSites(sites);
-    
+
     // 완료 현장에서 제거
     completedSites.splice(siteIndex, 1);
     saveCompletedSites(completedSites);
@@ -239,4 +249,54 @@ export const deleteAccidentCase = (id: string): void => {
 
 export const clearAllAccidentCases = (): void => {
   localStorage.removeItem(ACCIDENT_CASES_KEY);
+};
+
+/* ------------------------------------------------------------------ */
+/* 사고사례 임시저장 (게시판에 올리기 전 작성 중인 글)                    */
+/* ------------------------------------------------------------------ */
+
+const ACCIDENT_DRAFTS_KEY = 'gubo_accident_drafts';
+
+/** 임시저장본 목록 */
+export const getAccidentDrafts = (): AccidentCase[] => {
+  const data = localStorage.getItem(ACCIDENT_DRAFTS_KEY);
+  if (!data) return [];
+  try {
+    const parsed = JSON.parse(data) as AccidentCase[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+/** 특정 현장의 임시저장본 (siteId 미지정 시 전체) */
+export const getAccidentDraftsForSite = (siteId?: number): AccidentCase[] => {
+  const drafts = getAccidentDrafts().sort((a, b) =>
+    (b.draftUpdatedAt || '').localeCompare(a.draftUpdatedAt || ''),
+  );
+  if (siteId === undefined) return drafts;
+  return drafts.filter(d => d.siteId === siteId);
+};
+
+/** 임시저장 — 같은 id 가 있으면 덮어씁니다. */
+export const saveAccidentDraft = (draft: AccidentCase): void => {
+  const drafts = getAccidentDrafts();
+  const index = drafts.findIndex(d => d.id === draft.id);
+  const next = { ...draft, isDraft: true, draftUpdatedAt: new Date().toISOString() };
+  if (index === -1) drafts.unshift(next);
+  else drafts[index] = next;
+  localStorage.setItem(ACCIDENT_DRAFTS_KEY, JSON.stringify(drafts));
+};
+
+export const getAccidentDraft = (id: string): AccidentCase | undefined =>
+  getAccidentDrafts().find(d => d.id === id);
+
+/** 임시저장본 삭제 (게시글로 등록하면 호출) */
+export const deleteAccidentDraft = (id: string): void => {
+  const filtered = getAccidentDrafts().filter(d => d.id !== id);
+  localStorage.setItem(ACCIDENT_DRAFTS_KEY, JSON.stringify(filtered));
+};
+
+export const clearAllAccidentDrafts = (): void => {
+  localStorage.removeItem(ACCIDENT_DRAFTS_KEY);
 };

@@ -7,6 +7,7 @@ import {
   formatReportNo,
   formatTenure,
 } from '../utils/accidentReport';
+import { getDeadlineInfo } from '../utils/accidentDeadline';
 import './AccidentReport.css';
 
 interface AccidentReportProps {
@@ -149,6 +150,8 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
   const witnesses = accident.witnesses ?? [];
   const docNo = formatReportNo(accident);
   const victimAge = accident.victimAge ?? calcAge(accident.victimBirthDate, accident.accidentDate);
+  /** 사업재해조사표 제출 기한 (사고 발생일 + 1개월) */
+  const deadline = getDeadlineInfo(accident.accidentDate);
 
   const docLabels = [
     '사고원인 및 대책 보고서',
@@ -211,15 +214,15 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
                   <th className="ar-approval-cell">승인</th>
                 </tr>
                 <tr>
-                  <td className="ar-approval-sign">
-                    <span className="ar-approval-name">{accident.reporterName || ''}</span>
-                  </td>
+                  {/*
+                   * 결재란은 인쇄 후 실제 서명을 받는 자리이므로
+                   * 이름을 자동으로 채우지 않습니다. (수기 서명용 빈칸)
+                   */}
                   <td className="ar-approval-sign" />
                   <td className="ar-approval-sign" />
                   <td className="ar-approval-sign" />
-                  <td className="ar-approval-sign">
-                    <span className="ar-approval-name">{accident.siteManagerName || ''}</span>
-                  </td>
+                  <td className="ar-approval-sign" />
+                  <td className="ar-approval-sign" />
                 </tr>
               </tbody>
             </table>
@@ -269,8 +272,55 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
                 <th>직종</th>
                 <td>{accident.victimJobType || '-'}</td>
               </tr>
+              <tr>
+                <th>국적</th>
+                <td>{accident.victimNationality || '-'}</td>
+                <th>처리결과</th>
+                <td>
+                  {accident.treatmentResult || '미처리'}
+                  {accident.primeContractor ? ` (${accident.primeContractor})` : ''}
+                </td>
+                <th>사업재해조사표</th>
+                <td>{accident.disasterReportSubmitted || '미제출'}</td>
+              </tr>
             </tbody>
           </table>
+
+          {/* ---------- 첨부서류 체크란 ---------- */}
+          <div className="ar-attach-check">
+            <span className="ar-attach-check-title">첨부서류</span>
+            <span className={`ar-attach-check-item${accident.docLaborContract ? ' is-on' : ''}`}>
+              {accident.docLaborContract ? '☑' : '☐'} 근로계약서
+            </span>
+            <span className={`ar-attach-check-item${accident.docMedicalOpinion ? ' is-on' : ''}`}>
+              {accident.docMedicalOpinion ? '☑' : '☐'} 진단서 및 의사소견서
+            </span>
+            {accident.attachments && accident.attachments.length > 0 ? (
+              <span className="ar-attach-check-files">
+                첨부파일 {accident.attachments.length}건:{' '}
+                {accident.attachments.map(a => a.name).join(', ')}
+              </span>
+            ) : null}
+          </div>
+
+          {/* ---------- 사업재해조사표 제출 기한 (사고 발생일 + 1개월) ---------- */}
+          {deadline ? (
+            <div className="ar-deadline">
+              <span className="ar-deadline-title">사업재해조사표 제출 기한</span>
+              <span className="ar-deadline-body">
+                사고 발생일로부터 1개월 이내 ({deadline.deadlineLabel})
+              </span>
+              <span
+                className={`ar-deadline-status${deadline.className ? ` ${deadline.className}` : ''}`}
+              >
+                {accident.disasterReportSubmitted === '제출'
+                  ? '제출 완료'
+                  : accident.disasterReportSubmitted === '제출대상 아님'
+                    ? '제출대상 아님'
+                    : deadline.ddayLabel}
+              </span>
+            </div>
+          ) : null}
 
           {/* ---------- 사고발생경위 ---------- */}
           <div className="ar-field" data-field="description">
@@ -336,9 +386,21 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
               <span className="ar-signer-stamp">(서명)</span>
             </div>
             <div className="ar-signer">
-              <span className="ar-signer-label">현장소장대리인(代)</span>
+              <span className="ar-signer-label">안전보건관리책임자</span>
               <span className="ar-signer-colon">:</span>
               <span className="ar-signer-name">{accident.siteManagerName || ''}</span>
+              <span className="ar-signer-stamp">(서명)</span>
+            </div>
+            <div className="ar-signer">
+              <span className="ar-signer-label">본사 안전팀장</span>
+              <span className="ar-signer-colon">:</span>
+              <span className="ar-signer-name">{accident.hqSafetyTeamLeaderName || ''}</span>
+              <span className="ar-signer-stamp">(서명)</span>
+            </div>
+            <div className="ar-signer">
+              <span className="ar-signer-label">본사 안전임원</span>
+              <span className="ar-signer-colon">:</span>
+              <span className="ar-signer-name">{accident.hqSafetyExecutiveName || ''}</span>
               <span className="ar-signer-stamp">(서명)</span>
             </div>
           </div>

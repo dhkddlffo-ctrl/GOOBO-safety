@@ -290,6 +290,34 @@ export interface SiteOrgChart {
 // 피해자 결혼여부
 export type MaritalStatus = '미혼' | '기혼' | '기타';
 
+// 피해자 국적 구분
+export type NationalityType = '내국인' | '외국인';
+
+// 사고 처리결과 (산재(원청) = 원청사 산재 처리)
+export type TreatmentResult = '공상' | '산재' | '산재(원청)' | '질병성' | '미처리';
+
+// 사업(산업)재해조사표 제출 여부
+export type DisasterReportStatus = '제출' | '미제출' | '제출대상 아님';
+
+// 첨부서류 체크란
+export type AttachmentCheckKey = 'laborContract' | 'medicalOpinion';
+
+/** 사고사례 첨부파일 (파일 본문은 IndexedDB, 목록에는 메타데이터만) */
+export interface AccidentAttachment {
+  id: string;
+  /** 원본 파일명 */
+  name: string;
+  /** 파일 크기 (bytes) */
+  size: number;
+  /** MIME 타입 */
+  type: string;
+  /** IndexedDB 저장 키 (documentStorage.putFile) */
+  storageKey: string;
+  /** 첨부서류 구분 (체크란과 연결) */
+  kind?: '근로계약서' | '진단서 및 의사소견서' | '기타';
+  uploadedAt: string;
+}
+
 // 목격자 진술서 (회사 서식 FWP-006-3.01)
 export interface WitnessStatement {
   id: string;
@@ -355,12 +383,15 @@ export interface AccidentCase {
   victimMaritalStatus?: MaritalStatus; // 결혼여부
   victimFamily?: string; // 가족관계
   victimPhone?: string; // 연락처
+  victimNationality?: NationalityType; // 국적 구분 (내국인/외국인)
   /* ---- 사고원인 및 대책 보고서 (서식 FWP-006) ---- */
   actionTaken?: string; // 조치 사항
   relatedNotes?: string; // 관련원부 — 안전관리팀장 현장방문 확인내용
   relatedEtc?: string; // 관련원부 — 기타
   safetyManagerName?: string; // 안전관리자
-  siteManagerName?: string; // 현장소장대리인
+  siteManagerName?: string; // 안전보건관리책임자 (구 '현장소장대리인')
+  hqSafetyTeamLeaderName?: string; // 본사 안전팀장 (서명란)
+  hqSafetyExecutiveName?: string; // 본사 안전임원 (서명란)
   /* ---- 재해(사고) 상황 ---- */
   disasterDate?: string; // 재해 발생일 (yyyy-mm-dd)
   disasterPlace?: string; // 재해 발생 장소
@@ -379,8 +410,21 @@ export interface AccidentCase {
   investigationResult?: string; // 조사 결과
   investigationImages?: string[];
   // 새로 추가되는 필드
-  disasterReportSubmitted?: '제출' | '미제출'; // 사업재해조사표 제출 여부
-  treatmentResult?: '공상' | '산재' | '질병성' | '미처리'; // 사고 처리결과
+  disasterReportSubmitted?: DisasterReportStatus; // 사업(산업)재해조사표 제출 여부
+  treatmentResult?: TreatmentResult; // 사고 처리결과
+  /** 산재(원청) 선택 시 원청사명 */
+  primeContractor?: string;
+  /* ---- 첨부서류 및 체크란 ---- */
+  /** 근로계약서 확보 여부 */
+  docLaborContract?: boolean;
+  /** 진단서 및 의사소견서 확보 여부 */
+  docMedicalOpinion?: boolean;
+  /** 첨부파일 목록 */
+  attachments?: AccidentAttachment[];
+  /** 임시저장본 여부 (게시판에는 올리지 않음) */
+  isDraft?: boolean;
+  /** 마지막 임시저장 시각 */
+  draftUpdatedAt?: string;
 }
 
 /* ------------------------------------------------------------------ */

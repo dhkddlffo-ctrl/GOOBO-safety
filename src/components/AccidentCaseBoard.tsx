@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { AccidentCase } from '../types';
 import { deleteAccidentCase, getAccidentCases } from '../utils/storage';
 import { isAuthenticated } from '../utils/auth';
+import { getSubmissionBadge } from '../utils/accidentDeadline';
 import AccidentReport from './AccidentReport';
 import './AccidentCaseBoard.css';
 
@@ -71,6 +72,18 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
     return counts;
   }, [list]);
 
+  /** 사업재해조사표 제출 현황 (D-day 경고 집계) */
+  const submission = useMemo(() => {
+    const badges = list.map(item => getSubmissionBadge(item));
+    return {
+      done: badges.filter(b => b.className === 'is-done').length,
+      na: badges.filter(b => b.className === 'is-na').length,
+      pending: badges.filter(b => b.status === '미제출').length,
+      urgent: badges.filter(b => b.className === 'is-danger' || b.className === 'is-expired')
+        .length,
+    };
+  }, [list]);
+
   const removeCase = (target: AccidentCase) => {
     if (
       !window.confirm(
@@ -122,6 +135,20 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
         </div>
       )}
 
+      {/* ---------- 사업재해조사표 제출 현황 (D-day 경고) ---------- */}
+      {list.length > 0 && (
+        <div className="acb-submit-bar">
+          <span className="acb-submit-chip">사업재해조사표</span>
+          <span className="acb-submit-stat is-done">제출 {submission.done}</span>
+          <span className="acb-submit-stat is-pending">미제출 {submission.pending}</span>
+          <span className="acb-submit-stat is-na">제출대상 아님 {submission.na}</span>
+          {submission.urgent > 0 && (
+            <span className="acb-submit-stat is-urgent">⚠️ 기한 임박·경과 {submission.urgent}</span>
+          )}
+          <span className="acb-submit-note">기한: 사고 발생일로부터 1개월 이내</span>
+        </div>
+      )}
+
       {/* ---------- 비어 있음 ---------- */}
       {list.length === 0 ? (
         <div className="acb-empty">
@@ -145,14 +172,15 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
         <div className="acb-table-wrap">
           <table className="acb-table">
             <colgroup>
-              <col style={{ width: '6%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '10%' }} />
+              <col style={{ width: '5%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '16%' }} />
               <col style={{ width: '9%' }} />
-              <col style={{ width: '20%' }} />
-              <col style={{ width: '11%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '19%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '18%' }} />
             </colgroup>
             <thead>
               <tr>
@@ -163,63 +191,78 @@ const AccidentCaseBoard: React.FC<AccidentCaseBoardProps> = ({
                 <th>발생장소</th>
                 <th>피해자</th>
                 <th>처리결과</th>
+                <th>사업재해조사표</th>
                 <th>관리</th>
               </tr>
             </thead>
             <tbody>
-              {list.map((item, idx) => (
-                <tr
-                  key={item.id}
-                  className="acb-row"
-                  onClick={() => setViewCase(item)}
-                  title="누르면 사고보고서가 열립니다."
-                >
-                  <td className="acb-c-no">{list.length - idx}</td>
-                  <td className="acb-c-date">{formatAccidentDate(item.accidentDate)}</td>
-                  <td className="acb-c-type">{item.accidentType}</td>
-                  <td className="acb-c-sev">
-                    <span className={`acb-badge${severityClass(item.severity)}`}>
-                      {item.severity}
-                    </span>
-                  </td>
-                  <td className="acb-c-place">{item.location || '-'}</td>
-                  <td className="acb-c-victim">{item.victimName || '-'}</td>
-                  <td className="acb-c-result">{item.treatmentResult || '미처리'}</td>
-                  <td className="acb-c-actions">
-                    <button
-                      className="btn btn-xs"
-                      onClick={e => {
-                        e.stopPropagation();
-                        setViewCase(item);
-                      }}
-                    >
-                      열기
-                    </button>
-                    {canManage && (
+              {list.map((item, idx) => {
+                const badge = getSubmissionBadge(item);
+                return (
+                  <tr
+                    key={item.id}
+                    className="acb-row"
+                    onClick={() => setViewCase(item)}
+                    title="누르면 사고보고서가 열립니다."
+                  >
+                    <td className="acb-c-no">{list.length - idx}</td>
+                    <td className="acb-c-date">{formatAccidentDate(item.accidentDate)}</td>
+                    <td className="acb-c-type">{item.accidentType}</td>
+                    <td className="acb-c-sev">
+                      <span className={`acb-badge${severityClass(item.severity)}`}>
+                        {item.severity}
+                      </span>
+                    </td>
+                    <td className="acb-c-place">{item.location || '-'}</td>
+                    <td className="acb-c-victim">{item.victimName || '-'}</td>
+                    <td className="acb-c-result">{item.treatmentResult || '미처리'}</td>
+
+                    {/* ---------- 사업재해조사표 제출상태 + D-day ---------- */}
+                    <td className="acb-c-submit">
+                      <span className={`acb-submit-badge ${badge.className}`}>{badge.status}</span>
+                      {badge.dday ? (
+                        <span className={`acb-dday ${badge.className}`} title={badge.message}>
+                          {badge.dday}
+                        </span>
+                      ) : null}
+                    </td>
+
+                    <td className="acb-c-actions">
                       <button
                         className="btn btn-xs"
                         onClick={e => {
                           e.stopPropagation();
-                          onEdit(item);
+                          setViewCase(item);
                         }}
                       >
-                        수정
+                        열기
                       </button>
-                    )}
-                    {canManage && (
-                      <button
-                        className="btn btn-xs acb-btn-del"
-                        onClick={e => {
-                          e.stopPropagation();
-                          removeCase(item);
-                        }}
-                      >
-                        삭제
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      {canManage && (
+                        <button
+                          className="btn btn-xs"
+                          onClick={e => {
+                            e.stopPropagation();
+                            onEdit(item);
+                          }}
+                        >
+                          수정
+                        </button>
+                      )}
+                      {canManage && (
+                        <button
+                          className="btn btn-xs acb-btn-del"
+                          onClick={e => {
+                            e.stopPropagation();
+                            removeCase(item);
+                          }}
+                        >
+                          삭제
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

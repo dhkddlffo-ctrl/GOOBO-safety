@@ -319,3 +319,288 @@
     width: 100%;
   }
 }
+
+/* 임시저장 / 불러오기 버튼 — 작성 흐름을 방해하지 않는 보조 색 */
+.acf .btn-draft {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.acf .btn-draft:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.acf .btn-draft-load {
+  background: #fff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.acf .btn-draft-load:hover {
+  background: #f1f5f9;
+}
+
+@media (max-width: 768px) {
+  .acf .btn-draft,
+  .acf .btn-draft-load {
+    width: 100%;
+  }
+}
+
+.acf-draft-notice {
+  margin: 0.625rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* 산재(원청) 선택 시 나타나는 입력란 */
+.acf-reveal {
+  padding: 0.75rem 0.875rem;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  background: #fffbeb;
+}
+
+/* 사업재해조사표 제출 기한 안내 */
+.acf-deadline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.125rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #cbd5e1;
+  border-left: 3px solid #64748b;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 0.8125rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.acf-deadline-title {
+  font-weight: 800;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.acf-deadline-body b {
+  color: #0f172a;
+}
+
+.acf-deadline-dday {
+  margin-left: 0.375rem;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.acf-deadline.is-safe,
+.acf-deadline.is-warn {
+  border-color: #fde68a;
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.acf-deadline.is-safe .acf-deadline-dday,
+.acf-deadline.is-warn .acf-deadline-dday {
+  color: #92400e;
+  background: #fde68a;
+}
+
+.acf-deadline.is-danger {
+  border-color: #fecaca;
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+
+.acf-deadline.is-danger .acf-deadline-dday {
+  color: #fff;
+  background: #dc2626;
+}
+
+.acf-deadline.is-expired {
+  border-color: #991b1b;
+  border-left-color: #991b1b;
+  background: #fee2e2;
+}
+
+.acf-deadline.is-expired .acf-deadline-dday {
+  color: #fff;
+  background: #991b1b;
+}
+
+/* 첨부서류 체크란 */
+.acf-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-bottom: 0.875rem;
+}
+
+.acf-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.acf-check:hover {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.acf-check:has(input:checked) {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.acf-check input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2563eb;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* 첨부파일 목록 */
+.acf-files-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.5rem;
+}
+
+.acf-files-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.acf-file-add {
+  margin-left: auto;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  font-weight: 700;
+}
+
+.acf-file-add:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.acf-file-input {
+  display: none;
+}
+
+.acf-files-empty {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  background: #fafbfc;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.acf-file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.acf-file-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.625rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.75rem;
+}
+
+.acf-file-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.acf-file-size {
+  flex: 0 0 auto;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.acf .acf-file-dl,
+.acf .acf-file-del {
+  flex: 0 0 auto;
+  padding: 0.1875rem 0.4375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.acf .acf-file-dl:hover {
+  background: #f1f5f9;
+}
+
+.acf .acf-file-del {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.acf .acf-file-del:hover {
+  background: #fef2f2;
+}
+
+@media (max-width: 768px) {
+  .acf-file-item {
+    flex-wrap: wrap;
+  }
+
+  .acf-file-name {
+    flex: 1 1 100%;
+    white-space: normal;
+    word-break: break-all;
+  }
+}

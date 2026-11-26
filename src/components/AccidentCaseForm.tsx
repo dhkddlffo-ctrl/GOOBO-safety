@@ -1,10 +1,33 @@
-import React, { useState } from 'react';
-import { AccidentCase, Site, WitnessStatement } from '../types';
-import { generateId } from '../utils/storage';
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  AccidentAttachment,
+  AccidentCase,
+  DisasterReportStatus,
+  NationalityType,
+  Site,
+  TreatmentResult,
+  WitnessStatement,
+} from '../types';
+import {
+  deleteAccidentDraft,
+  generateId,
+  getAccidentDraftsForSite,
+  saveAccidentDraft,
+} from '../utils/storage';
 import { formatTenure } from '../utils/accidentReport';
+import { getDeadlineInfo } from '../utils/accidentDeadline';
+import {
+  MAX_FILE_SIZE,
+  formatFileSize,
+  generateStorageKey,
+  getFile,
+  putFile,
+  deleteFile,
+} from '../utils/documentStorage';
 import SituationDiagram from './SituationDiagram';
 import WitnessEditor from './WitnessEditor';
 import AccidentReport from './AccidentReport';
+import AccidentDraftDialog from './AccidentDraftDialog';
 import './AccidentCaseForm.css';
 
 /**
@@ -51,6 +74,7 @@ const toFormData = (base: AccidentCase) => ({
   victimMaritalStatus: (base.victimMaritalStatus ?? '') as '' | '미혼' | '기혼' | '기타',
   victimFamily: base.victimFamily ?? '',
   victimPhone: base.victimPhone ?? '',
+  victimNationality: (base.victimNationality ?? '내국인') as NationalityType,
   /* 재해(사고) 상황 */
   disasterDate: base.disasterDate ?? '',
   disasterPlace: base.disasterPlace ?? '',
@@ -64,10 +88,13 @@ const toFormData = (base: AccidentCase) => ({
   relatedEtc: base.relatedEtc ?? '',
   safetyManagerName: base.safetyManagerName ?? '',
   siteManagerName: base.siteManagerName ?? '',
+  hqSafetyTeamLeaderName: base.hqSafetyTeamLeaderName ?? '',
+  hqSafetyExecutiveName: base.hqSafetyExecutiveName ?? '',
   reporterName: base.reporterName,
   reporterPhone: base.reporterPhone,
-  disasterReportSubmitted: base.disasterReportSubmitted ?? '미제출',
-  treatmentResult: base.treatmentResult ?? '미처리',
+  disasterReportSubmitted: (base.disasterReportSubmitted ?? '미제출') as DisasterReportStatus,
+  treatmentResult: (base.treatmentResult ?? '미처리') as TreatmentResult,
+  primeContractor: base.primeContractor ?? '',
 });
 
 const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
@@ -110,6 +137,7 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
           victimMaritalStatus: '' as '' | '미혼' | '기혼' | '기타',
           victimFamily: '',
           victimPhone: '',
+          victimNationality: '내국인' as NationalityType,
           /* 재해(사고) 상황 */
           disasterDate: '',
           disasterPlace: '',
@@ -123,10 +151,13 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
           relatedEtc: '',
           safetyManagerName: '',
           siteManagerName: '',
+          hqSafetyTeamLeaderName: '',
+          hqSafetyExecutiveName: '',
           reporterName: '',
           reporterPhone: '',
-          disasterReportSubmitted: '미제출' as '제출' | '미제출',
-          treatmentResult: '미처리' as '공상' | '산재' | '질병성' | '미처리',
+          disasterReportSubmitted: '미제출' as DisasterReportStatus,
+          treatmentResult: '미처리' as TreatmentResult,
+          primeContractor: '',
         },
   );
 
@@ -142,8 +173,38 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
   );
   /** 미리보기로 띄울 사고사례 (null 이면 닫힘) */
   const [previewCase, setPreviewCase] = useState<AccidentCase | null>(null);
+  /** 첨부서류 체크란 */
+  const [docLaborContract, setDocLaborContract] = useState(() => !!initialCase?.docLaborContract);
+  const [docMedicalOpinion, setDocMedicalOpinion] = useState(
+    () => !!initialCase?.docMedicalOpinion,
+  );
+  /** 첨부파일 (본문은 IndexedDB) */
+  const [attachments, setAttachments] = useState<AccidentAttachment[]>(
+    () => initialCase?.attachments ?? [],
+  );
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  /** 임시저장 불러오기 다이얼로그 */
+  const [draftOpen, setDraftOpen] = useState(false);
+  /** 임시저장본에서 이어서 작성 중인지 (id 유지) */
+  const [draftId, setDraftId] = useState<string | null>(() =>
+    initialCase?.isDraft ? initialCase.id : null,
+  );
+  /** 임시저장 안내 문구 */
+  const [draftNotice, setDraftNotice] = useState('');
   /** 저장 버튼 문구 — 수정 모드면 '수정 저장' */
   const buttonLabel = submitLabel ?? (initialCase ? '수정 저장' : '사고사례 등록');
+  /** 사업재해조사표 제출 기한 (사고 발생일 + 1개월) */
+  const deadline = useMemo(
+    () => getDeadlineInfo(formData.accidentDate || undefined),
+    [formData.accidentDate],
+  );
+  /** 저장해 둔 임시저장본 개수 */
+  const draftCount = useMemo(
+    () => getAccidentDraftsForSite(lockSite ? formData.siteId : undefined).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lockSite, formData.siteId, draftNotice, draftOpen],
+  );
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -217,7 +278,7 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
     }));
   };
 
-  /** 현재 입력값으로 사고사례 객체를 만듭니다. (미리보기·저장 공용) */
+  /** 현재 입력값으로 사고사례 객체를 만듭니다. (미리보기·저장·임시저장 공용) */
   const collectCase = (): AccidentCase => {
     /*
      * 현장 고정 모드(현장 상세 게시판)에서는 sites 목록을 넘기지 않으므로
@@ -225,10 +286,12 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
      */
     const selectedSite = sites.find(s => s.id === formData.siteId);
     const resolvedSiteName = selectedSite?.name ?? (lockSite ? lockSiteName : '') ?? '현장 미지정';
+    /* 임시저장본에서 이어 쓸 때는 임시저장 id 를 그대로 유지합니다. */
+    const keepId = initialCase?.id ?? draftId ?? generateId();
 
     return {
       /* 수정 모드에서는 id · 작성일 · 진행상태를 그대로 유지합니다. */
-      id: initialCase?.id ?? generateId(),
+      id: keepId,
       siteId: formData.siteId,
       siteName: resolvedSiteName || '현장 미지정',
       accidentDate: formData.accidentDate,
@@ -245,6 +308,7 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       victimMaritalStatus: formData.victimMaritalStatus || undefined,
       victimFamily: formData.victimFamily.trim() || undefined,
       victimPhone: formData.victimPhone.trim() || undefined,
+      victimNationality: formData.victimNationality || undefined,
       /* 재해(사고) 상황 */
       disasterDate: formData.disasterDate || undefined,
       disasterPlace: formData.disasterPlace.trim() || undefined,
@@ -260,6 +324,17 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       relatedEtc: formData.relatedEtc.trim() || undefined,
       safetyManagerName: formData.safetyManagerName.trim() || undefined,
       siteManagerName: formData.siteManagerName.trim() || undefined,
+      hqSafetyTeamLeaderName: formData.hqSafetyTeamLeaderName.trim() || undefined,
+      hqSafetyExecutiveName: formData.hqSafetyExecutiveName.trim() || undefined,
+      /* 산재(원청) 선택 시에만 원청사를 보관합니다. */
+      primeContractor:
+        formData.treatmentResult === '산재(원청)'
+          ? formData.primeContractor.trim() || undefined
+          : undefined,
+      /* 첨부서류 체크란 + 첨부파일 */
+      docLaborContract: docLaborContract || undefined,
+      docMedicalOpinion: docMedicalOpinion || undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
       images: images.length > 0 ? images : undefined,
       status: initialCase?.status ?? '접수',
       createdAt: initialCase?.createdAt ?? new Date().toISOString(),
@@ -268,6 +343,104 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       disasterReportSubmitted: formData.disasterReportSubmitted,
       treatmentResult: formData.treatmentResult,
     };
+  };
+
+  /* ---------------- 첨부파일 (item 3) ---------------- */
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingFile(true);
+
+    const added: AccidentAttachment[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`${file.name}은(는) ${formatFileSize(MAX_FILE_SIZE)}를 초과합니다.`);
+        continue;
+      }
+      try {
+        const storageKey = generateStorageKey(file.name);
+        await putFile(storageKey, file);
+        added.push({
+          id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream',
+          storageKey,
+          kind: '기타',
+          uploadedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error('첨부파일 저장 실패:', error);
+        alert(`${file.name} 첨부에 실패했습니다.`);
+      }
+    }
+
+    if (added.length > 0) setAttachments(prev => [...prev, ...added]);
+    setUploadingFile(false);
+    e.target.value = '';
+  };
+
+  const removeAttachment = async (target: AccidentAttachment) => {
+    if (!window.confirm(`'${target.name}' 첨부파일을 삭제할까요?`)) return;
+    try {
+      await deleteFile(target.storageKey);
+    } catch (error) {
+      console.warn('첨부파일 본문 삭제 실패:', error);
+    }
+    setAttachments(prev => prev.filter(a => a.id !== target.id));
+  };
+
+  /** 첨부파일 내려받기 (IndexedDB → 브라우저 저장) */
+  const downloadAttachment = async (target: AccidentAttachment) => {
+    try {
+      const blob = await getFile(target.storageKey);
+      if (!blob) {
+        alert('첨부파일 본문을 찾을 수 없습니다.');
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = target.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error('첨부파일 내려받기 실패:', error);
+      alert('첨부파일을 열지 못했습니다.');
+    }
+  };
+
+  /* ---------------- 임시저장 (item 4) ---------------- */
+  const handleSaveDraft = () => {
+    if (formData.siteId === 0) {
+      alert('현장을 선택해야 임시저장할 수 있습니다.');
+      return;
+    }
+    const draft = collectCase();
+    saveAccidentDraft(draft);
+    setDraftId(draft.id);
+    const stamp = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    setDraftNotice(
+      `${pad(stamp.getHours())}:${pad(stamp.getMinutes())} 에 임시저장했습니다. 게시판에는 아직 올라가지 않았습니다.`,
+    );
+  };
+
+  /** 임시저장본 불러오기 → 폼 전체를 그 내용으로 채웁니다. */
+  const openDraft = (draft: AccidentCase) => {
+    setFormData(toFormData(draft));
+    setImages(draft.images ?? []);
+    setSituationDiagram(draft.situationDiagram ?? '');
+    setWitnesses(draft.witnesses ?? []);
+    setDocLaborContract(!!draft.docLaborContract);
+    setDocMedicalOpinion(!!draft.docMedicalOpinion);
+    setAttachments(draft.attachments ?? []);
+    setDraftId(draft.id);
+    setDraftOpen(false);
+    setDraftNotice('임시저장본을 불러왔습니다. 이어서 작성해 주세요.');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -290,6 +463,8 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       return;
     }
 
+    /* 등록하면 임시저장본은 정리합니다. (게시판에만 남도록) */
+    if (draftId) deleteAccidentDraft(draftId);
     onSaved(collectCase());
   };
 
@@ -397,6 +572,7 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
             >
               <option value="미제출">미제출</option>
               <option value="제출">제출</option>
+              <option value="제출대상 아님">제출대상 아님</option>
             </select>
           </div>
 
@@ -411,10 +587,46 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
               <option value="미처리">미처리</option>
               <option value="공상">공상</option>
               <option value="산재">산재</option>
+              <option value="산재(원청)">산재(원청)</option>
               <option value="질병성">질병성</option>
             </select>
           </div>
         </div>
+
+        {/* 산재(원청) 선택 시 원청사 입력 */}
+        {formData.treatmentResult === '산재(원청)' && (
+          <div className="form-group acf-reveal">
+            <label htmlFor="primeContractor">원청사 *</label>
+            <input
+              type="text"
+              id="primeContractor"
+              name="primeContractor"
+              value={formData.primeContractor}
+              onChange={handleInputChange}
+              placeholder="예: 삼성물산(주), 현대건설(주)"
+            />
+            <p className="field-hint">
+              산재(원청) 처리 시 원청사명이 사고원인 및 대책 보고서에 함께 출력됩니다.
+            </p>
+          </div>
+        )}
+
+        {/* 사업재해조사표 제출 기한 (사고 발생일 + 1개월) */}
+        {formData.accidentDate && formData.disasterReportSubmitted === '미제출' && (
+          <div className={`acf-deadline${deadline ? ` ${deadline.className}` : ''}`}>
+            <strong className="acf-deadline-title">⏰ 사업재해조사표 제출 기한</strong>
+            <span className="acf-deadline-body">
+              사고 발생일로부터 <b>1개월 이내</b> 제출해야 합니다.
+              {deadline ? (
+                <>
+                  {' '}
+                  기한 <b>{deadline.deadlineLabel}</b>
+                  <span className="acf-deadline-dday">{deadline.ddayLabel}</span>
+                </>
+              ) : null}
+            </span>
+          </div>
+        )}
 
         {/* 발생 장소 */}
         <div className="form-group">
@@ -474,6 +686,19 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
                 : '사고보고서에 근속기간이 함께 출력됩니다.'}
             </p>
           </div>
+
+          <div className="form-group">
+            <label htmlFor="victimNationality">피해자 국적 (선택)</label>
+            <select
+              id="victimNationality"
+              name="victimNationality"
+              value={formData.victimNationality}
+              onChange={handleInputChange}
+            >
+              <option value="내국인">내국인</option>
+              <option value="외국인">외국인</option>
+            </select>
+          </div>
         </div>
 
         {/* 피해자 상세 정보 — 직종 / 결혼여부 / 가족관계 / 연락처 */}
@@ -498,6 +723,10 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
               <option value="전기공" />
               <option value="용접공" />
               <option value="보통인부" />
+              <option value="배관공" />
+              <option value="보온공" />
+              <option value="덕트공" />
+              <option value="내선전공" />
             </datalist>
           </div>
 
@@ -599,7 +828,12 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
 
           <div className="form-group">
             <label>재해 상황도 (선택)</label>
-            <SituationDiagram value={situationDiagram} onChange={setSituationDiagram} />
+            <SituationDiagram
+              value={situationDiagram}
+              onChange={setSituationDiagram}
+              /* 사고 발생일을 입력하면 상황도에 재해 발생일이 함께 표시됩니다. (item 1) */
+              disasterDate={formData.disasterDate || formData.accidentDate}
+            />
           </div>
 
           <div className="form-group">
@@ -720,7 +954,7 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
             </div>
 
             <div className="form-group">
-              <label htmlFor="siteManagerName">현장소장대리인 (선택)</label>
+              <label htmlFor="siteManagerName">안전보건관리책임자 (선택)</label>
               <input
                 type="text"
                 id="siteManagerName"
@@ -729,7 +963,119 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
                 onChange={handleInputChange}
                 placeholder="예: 한구현"
               />
+              <p className="field-hint">종전 서식의 ‘현장소장대리인’ 자리입니다.</p>
             </div>
+          </div>
+
+          {/* 본사 서명란 (item 6) */}
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="hqSafetyTeamLeaderName">본사 안전팀장 (선택)</label>
+              <input
+                type="text"
+                id="hqSafetyTeamLeaderName"
+                name="hqSafetyTeamLeaderName"
+                value={formData.hqSafetyTeamLeaderName}
+                onChange={handleInputChange}
+                placeholder="예: 김본사"
+              />
+              <p className="field-hint">보고서 서명란에 함께 인쇄됩니다.</p>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="hqSafetyExecutiveName">본사 안전임원 (선택)</label>
+              <input
+                type="text"
+                id="hqSafetyExecutiveName"
+                name="hqSafetyExecutiveName"
+                value={formData.hqSafetyExecutiveName}
+                onChange={handleInputChange}
+                placeholder="예: 박임원"
+              />
+              <p className="field-hint">보고서 서명란에 함께 인쇄됩니다.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 첨부서류 및 체크란 (item 3) */}
+        <div className="form-section">
+          <h3 className="form-section-title">📎 첨부서류 및 체크란</h3>
+          <p className="form-section-desc">
+            확보한 서류를 체크하고, 파일이 있으면 함께 첨부해주세요. 체크 여부와 첨부파일 목록은
+            사고원인 및 대책 보고서에 함께 출력됩니다.
+          </p>
+
+          <div className="acf-checks">
+            <label className="acf-check">
+              <input
+                type="checkbox"
+                checked={docLaborContract}
+                onChange={e => setDocLaborContract(e.target.checked)}
+              />
+              <span>근로계약서</span>
+            </label>
+            <label className="acf-check">
+              <input
+                type="checkbox"
+                checked={docMedicalOpinion}
+                onChange={e => setDocMedicalOpinion(e.target.checked)}
+              />
+              <span>진단서 및 의사소견서</span>
+            </label>
+          </div>
+
+          <div className="acf-files">
+            <div className="acf-files-head">
+              <strong className="acf-files-title">첨부파일 ({attachments.length}개)</strong>
+              <button
+                type="button"
+                className="btn btn-sm acf-file-add"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingFile}
+              >
+                {uploadingFile ? '첨부 중...' : '+ 파일 첨부'}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="acf-file-input"
+                onChange={handleAttachmentUpload}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.jpg,.jpeg,.png,.gif,.webp,.zip,.txt"
+              />
+            </div>
+
+            {attachments.length === 0 ? (
+              <p className="acf-files-empty">
+                첨부된 파일이 없습니다. (PDF · HWP · 이미지 등, 파일당 최대{' '}
+                {formatFileSize(MAX_FILE_SIZE)})
+              </p>
+            ) : (
+              <ul className="acf-file-list">
+                {attachments.map(att => (
+                  <li key={att.id} className="acf-file-item">
+                    <span className="acf-file-name" title={att.name}>
+                      📄 {att.name}
+                    </span>
+                    <span className="acf-file-size">{formatFileSize(att.size)}</span>
+                    <button
+                      type="button"
+                      className="btn btn-xs acf-file-dl"
+                      onClick={() => downloadAttachment(att)}
+                    >
+                      내려받기
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-xs acf-file-del"
+                      onClick={() => removeAttachment(att)}
+                    >
+                      삭제
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -820,6 +1166,22 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
           </button>
           <button
             type="button"
+            className="btn btn-draft"
+            onClick={handleSaveDraft}
+            title="작성 중인 내용을 저장해 두고 나중에 이어서 작성합니다."
+          >
+            💾 임시저장
+          </button>
+          <button
+            type="button"
+            className="btn btn-draft-load"
+            onClick={() => setDraftOpen(true)}
+            title="임시저장해 둔 사고사례를 불러와 이어서 작성합니다."
+          >
+            📂 불러오기{draftCount > 0 ? ` (${draftCount})` : ''}
+          </button>
+          <button
+            type="button"
             className="btn btn-preview"
             onClick={openPreview}
             title="지금까지 입력한 내용을 회사 서식(A4)으로 미리 봅니다."
@@ -830,6 +1192,12 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
             {buttonLabel}
           </button>
         </div>
+
+        {draftNotice && (
+          <p className="acf-draft-notice" role="status">
+            💾 {draftNotice}
+          </p>
+        )}
 
         {/* 안내사항 */}
         <div className="info-box">
@@ -846,6 +1214,15 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       {/* ---------- 미리보기 (회사 서식 A4) ---------- */}
       {previewCase && (
         <AccidentReport accident={previewCase} onClose={() => setPreviewCase(null)} />
+      )}
+
+      {/* ---------- 임시저장 불러오기 ---------- */}
+      {draftOpen && (
+        <AccidentDraftDialog
+          siteId={lockSite ? formData.siteId : undefined}
+          onClose={() => setDraftOpen(false)}
+          onOpen={openDraft}
+        />
       )}
     </div>
   );
