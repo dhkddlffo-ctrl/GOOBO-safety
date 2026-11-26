@@ -7,7 +7,6 @@ import {
   formatReportNo,
   formatTenure,
 } from '../utils/accidentReport';
-import { getDeadlineInfo } from '../utils/accidentDeadline';
 import './AccidentReport.css';
 
 interface AccidentReportProps {
@@ -88,7 +87,7 @@ const formatDisasterDateTime = (disaster?: string, accident?: string): string =>
  *  ② 목격자 진술서 (FWP-006-3.01) — 목격자 1인당 1장
  *     본인사항 · 작업사항 · 사고목격내용 · 확인 서명
  *  ③ 재해(사고) 상황도 (FWP-006-2-2.01)
- *     재해 발생일시/장소 · 현장 LAYOUT · 현장 사진
+ *     재해 발생일시/장소 · 현장 LAYOUT
  *
  * ⚠️ 각 서류는 `.ar-sheet` 한 장이며, 인쇄 시 두 번째 서류부터
  *    `break-before: page` 로 새 장에서 시작합니다.
@@ -143,15 +142,12 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
     }
   };
 
-  const photos = [...(accident.images ?? []), ...(accident.investigationImages ?? [])].slice(0, 4);
   /* 재해 발생일·장소는 미입력 시 사고 정보로 대체 */
   const disasterDate = accident.disasterDate || accident.accidentDate;
   const disasterPlace = accident.disasterPlace || accident.location;
   const witnesses = accident.witnesses ?? [];
   const docNo = formatReportNo(accident);
   const victimAge = accident.victimAge ?? calcAge(accident.victimBirthDate, accident.accidentDate);
-  /** 사업재해조사표 제출 기한 (사고 발생일 + 1개월) */
-  const deadline = getDeadlineInfo(accident.accidentDate);
 
   const docLabels = [
     '사고원인 및 대책 보고서',
@@ -253,8 +249,10 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
               <tr>
                 <th>결혼여부</th>
                 <td>{accident.victimMaritalStatus || '-'}</td>
+                <th>국적</th>
+                <td>{accident.victimNationality || '-'}</td>
                 <th>가족관계</th>
-                <td colSpan={3}>{accident.victimFamily || '-'}</td>
+                <td>{accident.victimFamily || '-'}</td>
               </tr>
               <tr>
                 <th>사고장소</th>
@@ -272,55 +270,8 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
                 <th>직종</th>
                 <td>{accident.victimJobType || '-'}</td>
               </tr>
-              <tr>
-                <th>국적</th>
-                <td>{accident.victimNationality || '-'}</td>
-                <th>처리결과</th>
-                <td>
-                  {accident.treatmentResult || '미처리'}
-                  {accident.primeContractor ? ` (${accident.primeContractor})` : ''}
-                </td>
-                <th>사업재해조사표</th>
-                <td>{accident.disasterReportSubmitted || '미제출'}</td>
-              </tr>
             </tbody>
           </table>
-
-          {/* ---------- 첨부서류 체크란 ---------- */}
-          <div className="ar-attach-check">
-            <span className="ar-attach-check-title">첨부서류</span>
-            <span className={`ar-attach-check-item${accident.docLaborContract ? ' is-on' : ''}`}>
-              {accident.docLaborContract ? '☑' : '☐'} 근로계약서
-            </span>
-            <span className={`ar-attach-check-item${accident.docMedicalOpinion ? ' is-on' : ''}`}>
-              {accident.docMedicalOpinion ? '☑' : '☐'} 진단서 및 의사소견서
-            </span>
-            {accident.attachments && accident.attachments.length > 0 ? (
-              <span className="ar-attach-check-files">
-                첨부파일 {accident.attachments.length}건:{' '}
-                {accident.attachments.map(a => a.name).join(', ')}
-              </span>
-            ) : null}
-          </div>
-
-          {/* ---------- 사업재해조사표 제출 기한 (사고 발생일 + 1개월) ---------- */}
-          {deadline ? (
-            <div className="ar-deadline">
-              <span className="ar-deadline-title">사업재해조사표 제출 기한</span>
-              <span className="ar-deadline-body">
-                사고 발생일로부터 1개월 이내 ({deadline.deadlineLabel})
-              </span>
-              <span
-                className={`ar-deadline-status${deadline.className ? ` ${deadline.className}` : ''}`}
-              >
-                {accident.disasterReportSubmitted === '제출'
-                  ? '제출 완료'
-                  : accident.disasterReportSubmitted === '제출대상 아님'
-                    ? '제출대상 아님'
-                    : deadline.ddayLabel}
-              </span>
-            </div>
-          ) : null}
 
           {/* ---------- 사고발생경위 ---------- */}
           <div className="ar-field" data-field="description">
@@ -389,18 +340,6 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
               <span className="ar-signer-label">안전보건관리책임자</span>
               <span className="ar-signer-colon">:</span>
               <span className="ar-signer-name">{accident.siteManagerName || ''}</span>
-              <span className="ar-signer-stamp">(서명)</span>
-            </div>
-            <div className="ar-signer">
-              <span className="ar-signer-label">본사 안전팀장</span>
-              <span className="ar-signer-colon">:</span>
-              <span className="ar-signer-name">{accident.hqSafetyTeamLeaderName || ''}</span>
-              <span className="ar-signer-stamp">(서명)</span>
-            </div>
-            <div className="ar-signer">
-              <span className="ar-signer-label">본사 안전임원</span>
-              <span className="ar-signer-colon">:</span>
-              <span className="ar-signer-name">{accident.hqSafetyExecutiveName || ''}</span>
               <span className="ar-signer-stamp">(서명)</span>
             </div>
           </div>
@@ -566,25 +505,6 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
           {accident.situationNote ? (
             <p className="ar-layout-note">※ {accident.situationNote}</p>
           ) : null}
-
-          {/* 현장 사진 */}
-          <div className="ar-layout-photos">
-            <div className="ar-layout-caption">2. 현장 사진</div>
-            {photos.length > 0 ? (
-              <div className="ar-layout-photo-grid">
-                {photos.map((src, i) => (
-                  <figure className="ar-layout-photo" key={i}>
-                    <img src={src} alt={`현장 사진 ${i + 1}`} />
-                    <figcaption>사진 {i + 1}</figcaption>
-                  </figure>
-                ))}
-              </div>
-            ) : (
-              <div className="ar-layout-empty ar-layout-empty-sm">
-                <span>첨부된 현장 사진이 없습니다.</span>
-              </div>
-            )}
-          </div>
 
           <div className="ar-diagram-meta">
             <span>사고 유형: {accident.accidentType}</span>

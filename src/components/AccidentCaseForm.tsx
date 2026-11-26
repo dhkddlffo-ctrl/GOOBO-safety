@@ -88,8 +88,6 @@ const toFormData = (base: AccidentCase) => ({
   relatedEtc: base.relatedEtc ?? '',
   safetyManagerName: base.safetyManagerName ?? '',
   siteManagerName: base.siteManagerName ?? '',
-  hqSafetyTeamLeaderName: base.hqSafetyTeamLeaderName ?? '',
-  hqSafetyExecutiveName: base.hqSafetyExecutiveName ?? '',
   reporterName: base.reporterName,
   reporterPhone: base.reporterPhone,
   disasterReportSubmitted: (base.disasterReportSubmitted ?? '미제출') as DisasterReportStatus,
@@ -151,8 +149,6 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
           relatedEtc: '',
           safetyManagerName: '',
           siteManagerName: '',
-          hqSafetyTeamLeaderName: '',
-          hqSafetyExecutiveName: '',
           reporterName: '',
           reporterPhone: '',
           disasterReportSubmitted: '미제출' as DisasterReportStatus,
@@ -161,8 +157,6 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
         },
   );
 
-  const [images, setImages] = useState<string[]>(() => initialCase?.images ?? []);
-  const [uploading, setUploading] = useState(false);
   /** 재해 상황도 (PNG data URL) */
   const [situationDiagram, setSituationDiagram] = useState(
     () => initialCase?.situationDiagram ?? '',
@@ -205,62 +199,6 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [lockSite, formData.siteId, draftNotice, draftOpen],
   );
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    if (images.length + files.length > 5) {
-      alert('최대 5개의 이미지만 첨부할 수 있습니다.');
-      return;
-    }
-
-    setUploading(true);
-
-    const newImages: string[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-
-      if (file.size > 5 * 1024 * 1024) {
-        alert(`${file.name}은(는) 5MB를 초과합니다.`);
-        continue;
-      }
-
-      if (!file.type.startsWith('image/')) {
-        alert(`${file.name}은(는) 이미지 파일이 아닙니다.`);
-        continue;
-      }
-
-      try {
-        const base64 = await fileToBase64(file);
-        newImages.push(base64);
-      } catch (error) {
-        console.error('이미지 업로드 실패:', error);
-        alert(`${file.name} 업로드에 실패했습니다.`);
-      }
-    }
-
-    setImages([...images, ...newImages]);
-    setUploading(false);
-
-    if (e.target) {
-      e.target.value = '';
-    }
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  };
-
-  const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
-  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -324,8 +262,6 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       relatedEtc: formData.relatedEtc.trim() || undefined,
       safetyManagerName: formData.safetyManagerName.trim() || undefined,
       siteManagerName: formData.siteManagerName.trim() || undefined,
-      hqSafetyTeamLeaderName: formData.hqSafetyTeamLeaderName.trim() || undefined,
-      hqSafetyExecutiveName: formData.hqSafetyExecutiveName.trim() || undefined,
       /* 산재(원청) 선택 시에만 원청사를 보관합니다. */
       primeContractor:
         formData.treatmentResult === '산재(원청)'
@@ -335,7 +271,8 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       docLaborContract: docLaborContract || undefined,
       docMedicalOpinion: docMedicalOpinion || undefined,
       attachments: attachments.length > 0 ? attachments : undefined,
-      images: images.length > 0 ? images : undefined,
+      /* 사고 현장 사진 기능은 제거되었습니다. 기존 자료는 그대로 보존합니다. */
+      images: initialCase?.images,
       status: initialCase?.status ?? '접수',
       createdAt: initialCase?.createdAt ?? new Date().toISOString(),
       reporterName: formData.reporterName,
@@ -432,7 +369,6 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
   /** 임시저장본 불러오기 → 폼 전체를 그 내용으로 채웁니다. */
   const openDraft = (draft: AccidentCase) => {
     setFormData(toFormData(draft));
-    setImages(draft.images ?? []);
     setSituationDiagram(draft.situationDiagram ?? '');
     setWitnesses(draft.witnesses ?? []);
     setDocLaborContract(!!draft.docLaborContract);
@@ -605,9 +541,7 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
               onChange={handleInputChange}
               placeholder="예: 삼성물산(주), 현대건설(주)"
             />
-            <p className="field-hint">
-              산재(원청) 처리 시 원청사명이 사고원인 및 대책 보고서에 함께 출력됩니다.
-            </p>
+            <p className="field-hint">산재(원청) 처리 시 원청사명을 함께 기록합니다.</p>
           </div>
         )}
 
@@ -966,43 +900,14 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
               <p className="field-hint">종전 서식의 ‘현장소장대리인’ 자리입니다.</p>
             </div>
           </div>
-
-          {/* 본사 서명란 (item 6) */}
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="hqSafetyTeamLeaderName">본사 안전팀장 (선택)</label>
-              <input
-                type="text"
-                id="hqSafetyTeamLeaderName"
-                name="hqSafetyTeamLeaderName"
-                value={formData.hqSafetyTeamLeaderName}
-                onChange={handleInputChange}
-                placeholder="예: 김본사"
-              />
-              <p className="field-hint">보고서 서명란에 함께 인쇄됩니다.</p>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="hqSafetyExecutiveName">본사 안전임원 (선택)</label>
-              <input
-                type="text"
-                id="hqSafetyExecutiveName"
-                name="hqSafetyExecutiveName"
-                value={formData.hqSafetyExecutiveName}
-                onChange={handleInputChange}
-                placeholder="예: 박임원"
-              />
-              <p className="field-hint">보고서 서명란에 함께 인쇄됩니다.</p>
-            </div>
-          </div>
         </div>
 
         {/* 첨부서류 및 체크란 (item 3) */}
         <div className="form-section">
           <h3 className="form-section-title">📎 첨부서류 및 체크란</h3>
           <p className="form-section-desc">
-            확보한 서류를 체크하고, 파일이 있으면 함께 첨부해주세요. 체크 여부와 첨부파일 목록은
-            사고원인 및 대책 보고서에 함께 출력됩니다.
+            확보한 서류를 체크하고, 파일이 있으면 함께 첨부해주세요. 첨부한 파일은 이 사고사례에
+            보관되며 언제든 내려받을 수 있습니다.
           </p>
 
           <div className="acf-checks">
@@ -1075,47 +980,6 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
                   </li>
                 ))}
               </ul>
-            )}
-          </div>
-        </div>
-
-        {/* 사진 첨부 */}
-        <div className="form-group">
-          <label>사고 현장 사진 (선택, 최대 5개)</label>
-          <div className="image-upload-section">
-            {images.length > 0 && (
-              <div className="image-preview-grid">
-                {images.map((img, index) => (
-                  <div key={index} className="image-preview-item">
-                    <img src={img} alt={`사고 현장 ${index + 1}`} />
-                    <button
-                      type="button"
-                      className="remove-image-btn"
-                      onClick={() => removeImage(index)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {images.length < 5 && (
-              <div className="image-upload-area">
-                <input
-                  type="file"
-                  id="imageUpload"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  disabled={uploading}
-                />
-                <label htmlFor="imageUpload" className="upload-label">
-                  <span className="upload-icon">📷</span>
-                  <span>{uploading ? '업로드 중...' : '사진 추가하기'}</span>
-                  <span className="upload-hint">JPG, PNG (최대 5MB)</span>
-                </label>
-              </div>
             )}
           </div>
         </div>
