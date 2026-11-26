@@ -299,3 +299,23 @@
     display: none !important;
   }
 }
+
+/* 미리보기 버튼 — 저장 버튼과 구분되는 보조 색 */
+.acf .btn-preview {
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.acf .btn-preview:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+
+@media (max-width: 768px) {
+  .acf .btn-preview {
+    width: 100%;
+  }
+}

@@ -4,6 +4,7 @@ import { generateId } from '../utils/storage';
 import { formatTenure } from '../utils/accidentReport';
 import SituationDiagram from './SituationDiagram';
 import WitnessEditor from './WitnessEditor';
+import AccidentReport from './AccidentReport';
 import './AccidentCaseForm.css';
 
 /**
@@ -139,6 +140,8 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
   const [witnesses, setWitnesses] = useState<WitnessStatement[]>(
     () => initialCase?.witnesses ?? [],
   );
+  /** 미리보기로 띄울 사고사례 (null 이면 닫힘) */
+  const [previewCase, setPreviewCase] = useState<AccidentCase | null>(null);
   /** 저장 버튼 문구 — 수정 모드면 '수정 저장' */
   const buttonLabel = submitLabel ?? (initialCase ? '수정 저장' : '사고사례 등록');
 
@@ -214,35 +217,20 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (formData.siteId === 0) {
-      alert('현장을 선택해주세요.');
-      return;
-    }
-
-    if (!formData.accidentDate) {
-      alert('사고 발생 일시를 입력해주세요.');
-      return;
-    }
-
+  /** 현재 입력값으로 사고사례 객체를 만듭니다. (미리보기·저장 공용) */
+  const collectCase = (): AccidentCase => {
     /*
      * 현장 고정 모드(현장 상세 게시판)에서는 sites 목록을 넘기지 않으므로
      * lockSiteName 으로 현장 이름을 확인합니다.
      */
     const selectedSite = sites.find(s => s.id === formData.siteId);
-    const resolvedSiteName = selectedSite?.name ?? (lockSite ? lockSiteName : undefined);
-    if (!resolvedSiteName) {
-      alert('선택한 현장을 찾을 수 없습니다.');
-      return;
-    }
+    const resolvedSiteName = selectedSite?.name ?? (lockSite ? lockSiteName : '') ?? '현장 미지정';
 
-    const accidentCase: AccidentCase = {
+    return {
       /* 수정 모드에서는 id · 작성일 · 진행상태를 그대로 유지합니다. */
       id: initialCase?.id ?? generateId(),
       siteId: formData.siteId,
-      siteName: resolvedSiteName,
+      siteName: resolvedSiteName || '현장 미지정',
       accidentDate: formData.accidentDate,
       accidentType: formData.accidentType,
       severity: formData.severity,
@@ -280,8 +268,34 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       disasterReportSubmitted: formData.disasterReportSubmitted,
       treatmentResult: formData.treatmentResult,
     };
+  };
 
-    onSaved(accidentCase);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (formData.siteId === 0) {
+      alert('현장을 선택해주세요.');
+      return;
+    }
+
+    if (!formData.accidentDate) {
+      alert('사고 발생 일시를 입력해주세요.');
+      return;
+    }
+
+    const selectedSite = sites.find(s => s.id === formData.siteId);
+    const resolvedSiteName = selectedSite?.name ?? (lockSite ? lockSiteName : undefined);
+    if (!resolvedSiteName) {
+      alert('선택한 현장을 찾을 수 없습니다.');
+      return;
+    }
+
+    onSaved(collectCase());
+  };
+
+  /** 미리보기 — 입력한 내용 그대로 회사 서식(A4)으로 확인합니다. */
+  const openPreview = () => {
+    setPreviewCase(collectCase());
   };
 
   return (
@@ -804,6 +818,14 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
           <button type="button" className="btn btn-secondary" onClick={onCancel}>
             취소
           </button>
+          <button
+            type="button"
+            className="btn btn-preview"
+            onClick={openPreview}
+            title="지금까지 입력한 내용을 회사 서식(A4)으로 미리 봅니다."
+          >
+            👁️ 미리보기 (A4)
+          </button>
           <button type="submit" className="btn btn-primary">
             {buttonLabel}
           </button>
@@ -820,6 +842,11 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
           </ul>
         </div>
       </form>
+
+      {/* ---------- 미리보기 (회사 서식 A4) ---------- */}
+      {previewCase && (
+        <AccidentReport accident={previewCase} onClose={() => setPreviewCase(null)} />
+      )}
     </div>
   );
 };

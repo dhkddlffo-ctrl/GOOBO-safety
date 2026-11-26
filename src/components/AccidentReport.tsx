@@ -38,8 +38,7 @@ const calcAge = (birth?: string, base?: string): number | undefined => {
   if (Number.isNaN(b.getTime()) || Number.isNaN(t.getTime())) return undefined;
   let age = t.getFullYear() - b.getFullYear();
   const beforeBirthday =
-    t.getMonth() < b.getMonth() ||
-    (t.getMonth() === b.getMonth() && t.getDate() < b.getDate());
+    t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate());
   if (beforeBirthday) age -= 1;
   return age > 0 ? age : undefined;
 };
@@ -95,7 +94,11 @@ const formatDisasterDateTime = (disaster?: string, accident?: string): string =>
  *    `.ar-sheet` 에 break-inside: avoid 를 걸면 내용이 넘칠 때 잘리므로
  *    반드시 auto 로 두어야 합니다.
  */
-const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, autoPrint = false }) => {
+const AccidentReport: React.FC<AccidentReportProps> = ({
+  accident,
+  onClose,
+  autoPrint = false,
+}) => {
   const host = useMemo(() => {
     const el = document.createElement('div');
     el.className = 'accident-report-portal';
@@ -145,8 +148,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
   const disasterPlace = accident.disasterPlace || accident.location;
   const witnesses = accident.witnesses ?? [];
   const docNo = formatReportNo(accident);
-  const victimAge =
-    accident.victimAge ?? calcAge(accident.victimBirthDate, accident.accidentDate);
+  const victimAge = accident.victimAge ?? calcAge(accident.victimBirthDate, accident.accidentDate);
 
   const docLabels = [
     '사고원인 및 대책 보고서',
@@ -200,8 +202,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
                 <tr>
                   <th rowSpan={2} className="ar-approval-role">
                     결
-                    <br />
-                    재
+                    <br />재
                   </th>
                   <th className="ar-approval-cell">작성</th>
                   <th className="ar-approval-cell">검토</th>
@@ -272,7 +273,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
           </table>
 
           {/* ---------- 사고발생경위 ---------- */}
-          <div className="ar-field">
+          <div className="ar-field" data-field="description">
             <div className="ar-field-title">사고발생경위</div>
             <div className="ar-field-body">
               <p className="ar-field-hint">(6하원칙에 따라 상세히 기술하시오)</p>
@@ -281,7 +282,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
           </div>
 
           {/* ---------- 조치 사항 ---------- */}
-          <div className="ar-field">
+          <div className="ar-field" data-field="action">
             <div className="ar-field-title">조치 사항</div>
             <div className="ar-field-body">
               <p className="ar-field-text">{accident.actionTaken || '-'}</p>
@@ -289,7 +290,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
           </div>
 
           {/* ---------- 사고원인 ---------- */}
-          <div className="ar-field">
+          <div className="ar-field" data-field="cause">
             <div className="ar-field-title">사고원인</div>
             <div className="ar-field-body">
               <p className="ar-field-text">{accident.cause || '-'}</p>
@@ -297,7 +298,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
           </div>
 
           {/* ---------- 예방대책 ---------- */}
-          <div className="ar-field">
+          <div className="ar-field" data-field="preventive">
             <div className="ar-field-title">예방대책</div>
             <div className="ar-field-body">
               <p className="ar-field-text">{accident.preventiveMeasures || '-'}</p>
@@ -305,10 +306,8 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
           </div>
 
           {/* ---------- 관련원부 ---------- */}
-          <div className="ar-field">
-            <div className="ar-field-title">
-              관련원부: 안전관리팀장 현장방문 확인내용 / 기타
-            </div>
+          <div className="ar-field" data-field="related">
+            <div className="ar-field-title">관련원부: 안전관리팀장 현장방문 확인내용 / 기타</div>
             <div className="ar-field-body">
               {accident.relatedNotes ? (
                 <div className="ar-field-split">
@@ -375,23 +374,22 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
                     인
                     <br />
                     사
-                    <br />
-                    항
+                    <br />항
                   </th>
                   <th>본적</th>
                   <td colSpan={3}>{w.permanentAddress || '-'}</td>
                 </tr>
-                <tr>
+                <tr data-wrow="person">
                   <th>주소</th>
                   <td colSpan={3}>{w.address || '-'}</td>
                 </tr>
-                <tr>
+                <tr data-wrow="person">
                   <th>성명</th>
                   <td>{w.name || '-'}</td>
                   <th>주민등록번호</th>
                   <td>{w.residentId || '-'}</td>
                 </tr>
-                <tr>
+                <tr data-wrow="person">
                   <th>직종</th>
                   <td>{w.jobType || '-'}</td>
                   <th>연락처(TEL)</th>
@@ -406,23 +404,22 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
                     업
                     <br />
                     사
-                    <br />
-                    항
+                    <br />항
                   </th>
                   <th>사고자가 하던일</th>
                   <td colSpan={3}>{w.victimTask || '-'}</td>
                 </tr>
-                <tr>
+                <tr data-wrow="task">
                   <th>목격자가 하던일</th>
                   <td colSpan={3}>{w.witnessTask || '-'}</td>
                 </tr>
-                <tr>
+                <tr data-wrow="task">
                   <th>같이 일하던사람</th>
                   <td colSpan={3}>{w.coworker || '-'}</td>
                 </tr>
 
                 {/* 사고목격내용 */}
-                <tr>
+                <tr data-wrow="content">
                   <th colSpan={2} className="ar-witness-content-title">
                     사고목격내용
                   </th>
@@ -452,12 +449,8 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
 
             {/* 진술자 서명 */}
             <div className="ar-witness-signrow">
-              <span className="ar-witness-signitem">
-                소속 : {w.affiliation || '구보공영'}
-              </span>
-              <span className="ar-witness-signitem">
-                직종(직책) : {w.jobType || '-'}
-              </span>
+              <span className="ar-witness-signitem">소속 : {w.affiliation || '구보공영'}</span>
+              <span className="ar-witness-signitem">직종(직책) : {w.jobType || '-'}</span>
               <span className="ar-witness-signitem">
                 성명 : {w.name || '-'}
                 <span className="ar-signer-stamp">(서명)</span>
@@ -497,11 +490,7 @@ const AccidentReport: React.FC<AccidentReportProps> = ({ accident, onClose, auto
           <div className="ar-layout">
             <div className="ar-layout-caption">1. 현장 LAYOUT (사고위치)</div>
             {accident.situationDiagram ? (
-              <img
-                className="ar-layout-img"
-                src={accident.situationDiagram}
-                alt="재해 상황도"
-              />
+              <img className="ar-layout-img" src={accident.situationDiagram} alt="재해 상황도" />
             ) : (
               <div className="ar-layout-empty">
                 <span>재해 상황도가 작성되지 않았습니다.</span>

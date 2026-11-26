@@ -57,7 +57,9 @@
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background 0.15s, transform 0.15s;
+  transition:
+    background 0.15s,
+    transform 0.15s;
 }
 
 .ar-btn:hover {
@@ -401,9 +403,31 @@
   text-align: center;
 }
 
-.ar-witness-content-cell {
+/*
+ * 본인사항 / 작업사항은 한 줄짜리 입력칸이므로 최소 높이로 조입니다.
+ * (실제 회사 서식도 이 두 묶음은 얇고, '사고목격내용' 칸이 가장 넓습니다)
+ */
+.ar-witness-table tr[data-wrow='person'] th,
+.ar-witness-table tr[data-wrow='person'] td {
+  padding-top: 0.16rem;
+  padding-bottom: 0.16rem;
+  font-size: 8.5pt;
+  line-height: 1.3;
+}
+
+.ar-witness-table tr[data-wrow='task'] th,
+.ar-witness-table tr[data-wrow='task'] td {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  font-size: 8.5pt;
+  line-height: 1.35;
+}
+
+/* 사고목격내용 — 남는 높이를 이 칸이 가져갑니다. */
+.ar-witness-table tr[data-wrow='content'] > .ar-witness-content-cell {
   vertical-align: top;
-  height: 70mm; /* 서식처럼 빈 칸이어도 높이 확보 */
+  height: 100%;
+  min-height: 108mm;
 }
 
 .ar-witness-confirm {
@@ -572,6 +596,63 @@
   background: #fee2e2;
   color: #991b1b;
   border-color: #fca5a5;
+}
+
+/* ================================================================
+   A4 한 장 채우기
+   ------------------------------------------------------------------
+   서식은 A4(210×297mm) 고정 크기이지만, 작성 내용이 적으면 용지
+   아래쪽이 크게 비어 종이 서식처럼 보이지 않습니다.
+   .ar-sheet 가 세로 flex 이므로 남는 높이를 입력 칸(필드)에 나눠
+   배분해, 내용이 짧아도 A4 비율을 그대로 채우도록 합니다.
+   (내용이 길어 한 장을 넘으면 늘어나지 않고 그대로 다음 장으로 흐릅니다)
+   ================================================================ */
+/* 남는 높이를 칸별 비중에 따라 나눕니다 (회사 서식의 칸 비율에 맞춤) */
+.ar-sheet > .ar-field {
+  flex: 1 1 auto;
+}
+
+/* 사고발생경위 · 사고원인 · 예방대책은 서식에서 가장 넓은 칸 */
+.ar-sheet > .ar-field[data-field='description'] {
+  flex-grow: 2.2;
+}
+
+.ar-sheet > .ar-field[data-field='cause'],
+.ar-sheet > .ar-field[data-field='preventive'] {
+  flex-grow: 1.7;
+}
+
+.ar-sheet > .ar-field[data-field='action'] {
+  flex-grow: 1.15;
+}
+
+.ar-sheet > .ar-field[data-field='related'] {
+  flex-grow: 1;
+}
+
+/* 경위·조치·원인·예방 칸 안에서 글이 위에서부터 채워지도록 */
+.ar-sheet > .ar-field > .ar-field-body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 재해(사고) 상황도 — 상황도/사진 영역이 남는 높이를 채웁니다. */
+.ar-sheet > .ar-layout {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ar-sheet > .ar-layout > .ar-layout-img,
+.ar-sheet > .ar-layout > .ar-layout-empty {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+/* 목격자 진술서 — 표가 남는 높이를 채우고 '사고목격내용' 칸이 늘어납니다. */
+.ar-sheet > .ar-witness-table {
+  flex: 1 1 auto;
+  height: 100%;
 }
 
 /* ================================================================
