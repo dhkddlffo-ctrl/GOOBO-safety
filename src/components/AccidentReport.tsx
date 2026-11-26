@@ -6,6 +6,7 @@ import {
   formatPrintedAt,
   formatReportNo,
   formatTenure,
+  resolveSigners,
 } from '../utils/accidentReport';
 import './AccidentReport.css';
 
@@ -146,6 +147,8 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
   const disasterDate = accident.disasterDate || accident.accidentDate;
   const disasterPlace = accident.disasterPlace || accident.location;
   const witnesses = accident.witnesses ?? [];
+  /* 서명란 — 새 signers 배열이 있으면 그것을, 없으면 예전 4개 고정 필드를 사용합니다. */
+  const signers = resolveSigners(accident);
   const docNo = formatReportNo(accident);
   const victimAge = accident.victimAge ?? calcAge(accident.victimBirthDate, accident.accidentDate);
 
@@ -328,33 +331,19 @@ const AccidentReport: React.FC<AccidentReportProps> = ({
             </div>
           </div>
 
-          {/* ---------- 서명 (2줄 × 2명 = 4명) ---------- */}
-          <div className="ar-signers">
-            <div className="ar-signer">
-              <span className="ar-signer-label">안전관리자</span>
-              <span className="ar-signer-colon">:</span>
-              <span className="ar-signer-name">{accident.safetyManagerName || ''}</span>
-              <span className="ar-signer-stamp">(서명)</span>
+          {/* ---------- 서명란 (직책 추가·삭제 자유 · 2열 배치) ---------- */}
+          {signers.length > 0 ? (
+            <div className="ar-signers">
+              {signers.map(s => (
+                <div className="ar-signer" key={s.id}>
+                  <span className="ar-signer-label">{s.role || ''}</span>
+                  <span className="ar-signer-colon">:</span>
+                  <span className="ar-signer-name">{s.name || ''}</span>
+                  <span className="ar-signer-stamp">(서명)</span>
+                </div>
+              ))}
             </div>
-            <div className="ar-signer">
-              <span className="ar-signer-label">안전보건관리책임자</span>
-              <span className="ar-signer-colon">:</span>
-              <span className="ar-signer-name">{accident.siteManagerName || ''}</span>
-              <span className="ar-signer-stamp">(서명)</span>
-            </div>
-            <div className="ar-signer">
-              <span className="ar-signer-label">본사 안전팀장</span>
-              <span className="ar-signer-colon">:</span>
-              <span className="ar-signer-name">{accident.hqSafetyTeamLeaderName || ''}</span>
-              <span className="ar-signer-stamp">(서명)</span>
-            </div>
-            <div className="ar-signer">
-              <span className="ar-signer-label">본사 안전임원</span>
-              <span className="ar-signer-colon">:</span>
-              <span className="ar-signer-name">{accident.hqSafetyExecutiveName || ''}</span>
-              <span className="ar-signer-stamp">(서명)</span>
-            </div>
-          </div>
+          ) : null}
 
           {formFooter(FORM_CAUSE)}
         </div>

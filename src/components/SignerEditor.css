@@ -1,0 +1,195 @@
+/* ================================================================
+   서명란 편집기 (사고원인 및 대책 보고서 · 서식 FWP-006)
+   ================================================================ */
+
+.signer-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.signer-empty {
+  margin: 0;
+  padding: 0.75rem 0.875rem;
+  border: 1px dashed var(--line2, #e5e7eb);
+  border-radius: 8px;
+  background: #f9fafb;
+  font-size: 0.8125rem;
+  color: var(--mute, #6b7280);
+}
+
+/* ---------------- 목록 ---------------- */
+.signer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.signer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--line2, #e5e7eb);
+  border-left: 3px solid var(--navy, #0c2a4d);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.signer-no {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #eef2f7;
+  color: var(--navy, #0c2a4d);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.signer-role-input,
+.signer-name-input {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.4375rem 0.5625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: var(--ink, #111827);
+  background: #fff;
+}
+
+.signer-role-input {
+  font-weight: 600;
+}
+
+.signer-role-input:focus,
+.signer-name-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.signer-role-input::placeholder,
+.signer-name-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.signer-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.signer-icon-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line2, #e5e7eb);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--mute, #6b7280);
+  font-size: 0.8125rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.signer-icon-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #cbd5e1;
+  color: var(--ink, #111827);
+}
+
+.signer-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.signer-icon-btn.is-danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: var(--red, #dc2626);
+}
+
+/* ---------------- 하단 버튼 / 빠른 추가 ---------------- */
+.signer-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+.signer-quick {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.signer-quick-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mute, #6b7280);
+}
+
+.signer-quick-btn {
+  padding: 0.25rem 0.5rem;
+  border: 1px dashed #c7d2fe;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.signer-quick-btn:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+
+.signer-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--mute, #6b7280);
+}
+
+/* ---------------- 좁은 화면 ---------------- */
+@media (max-width: 640px) {
+  .signer-row {
+    flex-wrap: wrap;
+  }
+
+  .signer-role-input,
+  .signer-name-input {
+    flex: 1 1 100%;
+  }
+
+  .signer-actions {
+    margin-left: auto;
+  }
+}
+
+@media print {
+  .signer-editor {
+    display: none !important;
+  }
+}

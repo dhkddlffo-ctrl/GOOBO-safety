@@ -5,7 +5,7 @@
  * 순수 함수 모음입니다. (화면 / 인쇄 / 테스트에서 동일하게 사용)
  */
 
-import { AccidentCase } from '../types';
+import { AccidentCase, AccidentSigner } from '../types';
 
 const pad2 = (n: number): string => String(n).padStart(2, '0');
 
@@ -114,4 +114,70 @@ export const formatPrintedAt = (now: Date = new Date()): string => {
 export const formatVictim = (accident: Pick<AccidentCase, 'victimName' | 'victimAge'>): string => {
   const name = accident.victimName?.trim() || '미제공';
   return accident.victimAge ? `${name} (${accident.victimAge}세)` : name;
+};
+
+/* ------------------------------------------------------------------ */
+/* 서명란                                                              */
+/* ------------------------------------------------------------------ */
+
+/** 서명란 기본 직책 (기존 고정 4개 항목과 동일) */
+export const DEFAULT_SIGNER_ROLES = [
+  '안전관리자',
+  '안전보건관리책임자',
+  '본사 안전팀장',
+  '본사 안전임원',
+] as const;
+
+/**
+ * 서명란 목록을 만듭니다. (추가/삭제 편집용 기본값)
+ *
+ * 기존 데이터(고정 4개 필드)가 있으면 그 값을 채워 넣습니다.
+ */
+export const buildDefaultSigners = (
+  accident?: Pick<
+    AccidentCase,
+    'safetyManagerName' | 'siteManagerName' | 'hqSafetyTeamLeaderName' | 'hqSafetyExecutiveName'
+  >,
+): AccidentSigner[] => {
+  const legacyNames = [
+    accident?.safetyManagerName,
+    accident?.siteManagerName,
+    accident?.hqSafetyTeamLeaderName,
+    accident?.hqSafetyExecutiveName,
+  ];
+  return DEFAULT_SIGNER_ROLES.map((role, i) => {
+    const name = legacyNames[i]?.trim();
+    return {
+      id: `signer-${i + 1}`,
+      role,
+      ...(name ? { name } : {}),
+    };
+  });
+};
+
+/**
+ * 보고서에 인쇄할 서명란을 결정합니다.
+ *
+ * 1) 새 `signers` 배열이 있으면 그대로 사용합니다. (직책/성명 중 하나라도 입력된 행만)
+ * 2) 없으면 기존 4개 고정 필드에서 만들어 냅니다. (이전에 저장된 사고사례 호환)
+ */
+export const resolveSigners = (
+  accident: Pick<
+    AccidentCase,
+    | 'signers'
+    | 'safetyManagerName'
+    | 'siteManagerName'
+    | 'hqSafetyTeamLeaderName'
+    | 'hqSafetyExecutiveName'
+  >,
+): AccidentSigner[] => {
+  const custom = accident.signers;
+  /* signers 배열이 있으면(빈 배열 포함) 그것을 원본으로 씁니다.
+     → 사용자가 서명란을 전부 삭제한 경우에도 예전 값이 되살아나지 않습니다. */
+  if (Array.isArray(custom)) {
+    return custom
+      .map(s => ({ ...s, role: s.role?.trim() ?? '', name: s.name?.trim() || undefined }))
+      .filter(s => s.role || s.name);
+  }
+  return buildDefaultSigners(accident);
 };

@@ -318,6 +318,15 @@ export interface AccidentAttachment {
   uploadedAt: string;
 }
 
+// 서명란 (회사 서식 FWP-006 · 사고원인 및 대책 보고서)
+export interface AccidentSigner {
+  id: string;
+  /** 직책 (예: 안전관리자, 본사 안전팀장) */
+  role: string;
+  /** 성명 (인쇄 후 수기 서명) */
+  name?: string;
+}
+
 // 목격자 진술서 (회사 서식 FWP-006-3.01)
 export interface WitnessStatement {
   id: string;
@@ -392,6 +401,8 @@ export interface AccidentCase {
   siteManagerName?: string; // 안전보건관리책임자 (구 '현장소장대리인')
   hqSafetyTeamLeaderName?: string; // 본사 안전팀장 (서명란)
   hqSafetyExecutiveName?: string; // 본사 안전임원 (서명란)
+  /** 서명란 (직책·성명 목록 · 추가/삭제 자유) — 없으면 위 4개 필드에서 자동 생성 */
+  signers?: AccidentSigner[];
   /* ---- 재해(사고) 상황 ---- */
   disasterDate?: string; // 재해 발생일 (yyyy-mm-dd)
   disasterPlace?: string; // 재해 발생 장소

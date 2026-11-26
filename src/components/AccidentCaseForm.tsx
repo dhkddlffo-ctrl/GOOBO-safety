@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import {
   AccidentAttachment,
   AccidentCase,
+  AccidentSigner,
   DisasterReportStatus,
   NationalityType,
   Site,
@@ -14,7 +15,7 @@ import {
   getAccidentDraftsForSite,
   saveAccidentDraft,
 } from '../utils/storage';
-import { formatTenure } from '../utils/accidentReport';
+import { buildDefaultSigners, formatTenure, resolveSigners } from '../utils/accidentReport';
 import { getDeadlineInfo } from '../utils/accidentDeadline';
 import {
   MAX_FILE_SIZE,
@@ -25,6 +26,7 @@ import {
   deleteFile,
 } from '../utils/documentStorage';
 import SituationDiagram from './SituationDiagram';
+import SignerEditor from './SignerEditor';
 import WitnessEditor from './WitnessEditor';
 import AccidentReport from './AccidentReport';
 import AccidentDraftDialog from './AccidentDraftDialog';
@@ -169,6 +171,13 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
   const [witnesses, setWitnesses] = useState<WitnessStatement[]>(
     () => initialCase?.witnesses ?? [],
   );
+  /**
+   * 서명란 (직책 · 성명) — 자유롭게 추가/삭제합니다.
+   * 기존 사고사례를 수정하는 경우 예전 고정 필드 값으로 기본 서명란을 만듭니다.
+   */
+  const [signers, setSigners] = useState<AccidentSigner[]>(() =>
+    initialCase ? resolveSigners(initialCase) : buildDefaultSigners(),
+  );
   /** 미리보기로 띄울 사고사례 (null 이면 닫힘) */
   const [previewCase, setPreviewCase] = useState<AccidentCase | null>(null);
   /** 첨부서류 체크란 */
@@ -268,6 +277,13 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
       siteManagerName: formData.siteManagerName.trim() || undefined,
       hqSafetyTeamLeaderName: formData.hqSafetyTeamLeaderName.trim() || undefined,
       hqSafetyExecutiveName: formData.hqSafetyExecutiveName.trim() || undefined,
+      /*
+       * 서명란은 이 배열이 원본입니다. (항상 저장 — 전부 지운 경우까지 반영)
+       * 직책·성명이 모두 비어 있는 행만 걸러냅니다.
+       */
+      signers: signers
+        .map(s => ({ ...s, role: s.role.trim(), name: s.name?.trim() || undefined }))
+        .filter(s => s.role || s.name),
       /* 산재(원청) 선택 시에만 원청사를 보관합니다. */
       primeContractor:
         formData.treatmentResult === '산재(원청)'
@@ -377,6 +393,7 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
     setFormData(toFormData(draft));
     setSituationDiagram(draft.situationDiagram ?? '');
     setWitnesses(draft.witnesses ?? []);
+    setSigners(draft.signers && draft.signers.length > 0 ? draft.signers : resolveSigners(draft));
     setDocLaborContract(!!draft.docLaborContract);
     setDocMedicalOpinion(!!draft.docMedicalOpinion);
     setAttachments(draft.attachments ?? []);
@@ -880,62 +897,14 @@ const AccidentCaseForm: React.FC<AccidentCaseFormProps> = ({
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="safetyManagerName">안전관리자 (선택)</label>
-              <input
-                type="text"
-                id="safetyManagerName"
-                name="safetyManagerName"
-                value={formData.safetyManagerName}
-                onChange={handleInputChange}
-                placeholder="예: 이서진"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="siteManagerName">안전보건관리책임자 (선택)</label>
-              <input
-                type="text"
-                id="siteManagerName"
-                name="siteManagerName"
-                value={formData.siteManagerName}
-                onChange={handleInputChange}
-                placeholder="예: 한구현"
-              />
-              <p className="field-hint">종전 서식의 ‘현장소장대리인’ 자리입니다.</p>
-            </div>
-          </div>
-
-          {/* 본사 서명란 */}
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="hqSafetyTeamLeaderName">본사 안전팀장 (선택)</label>
-              <input
-                type="text"
-                id="hqSafetyTeamLeaderName"
-                name="hqSafetyTeamLeaderName"
-                value={formData.hqSafetyTeamLeaderName}
-                onChange={handleInputChange}
-                placeholder="예: 김본사"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="hqSafetyExecutiveName">본사 안전임원 (선택)</label>
-              <input
-                type="text"
-                id="hqSafetyExecutiveName"
-                name="hqSafetyExecutiveName"
-                value={formData.hqSafetyExecutiveName}
-                onChange={handleInputChange}
-                placeholder="예: 박임원"
-              />
-              <p className="field-hint">
-                위 4명(안전관리자 · 안전보건관리책임자 · 본사 안전팀장 · 본사 안전임원)은 보고서
-                서명란에 2줄로 함께 인쇄됩니다.
-              </p>
-            </div>
+          {/* 서명란 — 직책을 자유롭게 추가·삭제 */}
+          <div className="form-group">
+            <label>서명란 (선택)</label>
+            <p className="field-hint">
+              보고서 서명란에 인쇄할 직책을 추가하거나 삭제할 수 있습니다. 인쇄 후 수기로
+              서명합니다.
+            </p>
+            <SignerEditor value={signers} onChange={setSigners} />
           </div>
         </div>
 
